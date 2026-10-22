@@ -216,12 +216,16 @@ export async function getDashboard() {
 /**
  * Connect to SSE live stream: GET /api/dashboard/stream?token=...
  */
-export function openDashboardStream({ onStats, onScan, onDeparture, onError }) {
+export function openDashboardStream({ onStats, onScan, onDeparture, onError, onOpen }) {
   const token = getMonitorToken();
   if (!token) throw new Error('Monitor token required for live stream');
 
   const streamUrl = `/api/dashboard/stream?token=${encodeURIComponent(token)}`;
   const es = new EventSource(streamUrl);
+
+  es.onopen = (e) => {
+    onOpen?.(e);
+  };
 
   es.addEventListener('stats', (e) => {
     try {
@@ -389,6 +393,52 @@ export async function endEvent(eventId) {
     method: 'POST',
     headers,
   });
+}
+
+/**
+ * Incident timeline for a guest: GET /api/events/:id/guests/:guestId/timeline
+ */
+export async function getGuestTimeline(eventId, guestId) {
+  const headers = {};
+  const pin = getAdminPin();
+  if (pin) headers['X-Admin-Pin'] = pin;
+
+  return request(`/api/events/${encodeURIComponent(eventId)}/guests/${encodeURIComponent(guestId)}/timeline`, { headers });
+}
+
+/**
+ * Update event settings (e.g. capacity): PATCH /api/events/:id
+ */
+export async function updateEvent(eventId, updates = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  const pin = getAdminPin();
+  if (pin) headers['X-Admin-Pin'] = pin;
+
+  return request(`/api/events/${encodeURIComponent(eventId)}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify(updates),
+  });
+}
+
+/**
+ * Capacity helpers (persisted on event if server supports it, otherwise localStorage)
+ */
+export function getEventCapacity(eventId) {
+  if (!eventId) return null;
+  const raw = localStorage.getItem(`hb_capacity_${eventId}`);
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+export function saveEventCapacity(eventId, capacity) {
+  if (!eventId) return;
+  const parsed = parseInt(capacity, 10);
+  if (Number.isFinite(parsed) && parsed > 0) {
+    localStorage.setItem(`hb_capacity_${eventId}`, String(parsed));
+  } else {
+    localStorage.removeItem(`hb_capacity_${eventId}`);
+  }
 }
 
 // --- Formatters & Helpers ---

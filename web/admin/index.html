@@ -77,6 +77,13 @@
             <label class="form-label" for="admin-pin">8-digit Admin PIN</label>
             <input type="password" id="admin-pin" class="input input-code" maxlength="8" placeholder="••••••••" required>
           </div>
+          <div class="form-group">
+            <label class="form-label" for="admin-monitor-code">6-character Door Monitor Code (optional)</label>
+            <input type="text" id="admin-monitor-code" class="input input-code" maxlength="6" placeholder="e.g. ABC123">
+            <p class="text-muted" style="font-size: 0.8rem; margin-top: 0.25rem;">
+              Enables guest roster lookup for incident timelines
+            </p>
+          </div>
           <button type="submit" class="btn btn-secondary btn-block mt-sm">
             Access Event Admin
           </button>
@@ -130,12 +137,24 @@
             <span id="admin-stat-groups" class="stat-value">0</span>
           </div>
         </div>
+
+        <!-- Venue Capacity Setting -->
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <label class="form-label" for="admin-event-capacity" style="margin-bottom: 0; font-weight: 700;">Venue Capacity:</label>
+            <input type="number" id="admin-event-capacity" class="input" style="max-width: 140px; min-height: 40px; padding: 0.3rem 0.75rem;" min="1" max="10000" placeholder="e.g. 150">
+            <button id="btn-save-capacity" class="btn btn-secondary" style="min-height: 40px; padding: 0.3rem 0.9rem; font-size: 0.9rem;" type="button">Save Limit</button>
+            <span id="capacity-save-status" class="text-muted" style="font-size: 0.85rem;">(Warns dashboard at 90% and 100%)</span>
+          </div>
+          <span id="capacity-badge-admin" class="badge badge-muted">No limit</span>
+        </div>
       </div>
 
       <!-- Navigation Tabs -->
       <nav class="admin-tabs no-print">
         <button class="admin-tab active" data-tab="guests" type="button">👥 Guest Import</button>
         <button class="admin-tab" data-tab="bands" type="button">🏷️ Wristbands</button>
+        <button class="admin-tab" data-tab="timeline" type="button">⏱️ Incident Timeline</button>
         <button class="admin-tab" data-tab="export" type="button">📥 Data &amp; Close</button>
       </nav>
 
@@ -145,6 +164,23 @@
         <div class="card">
           <h2>Connect Luma API</h2>
           <p class="text-muted mt-sm">Sync guest list directly from your Luma event</p>
+
+          <!-- Help Guide -->
+          <div class="luma-guide-box mt-md">
+            <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-amber); display: flex; align-items: center; gap: 0.4rem;">
+              <span>ℹ️</span> Where to find your Luma API Key &amp; Event ID
+            </h3>
+            <ol style="margin: 0.5rem 0 0 1.25rem; padding: 0; line-height: 1.6; font-size: 0.88rem; color: var(--text-muted);">
+              <li>Log into your host account on <a href="https://lu.ma" target="_blank" rel="noopener" style="color: var(--accent-amber); text-decoration: underline;">lu.ma</a>.</li>
+              <li>Go to <strong>Settings</strong> (click your avatar at top-right) &rarr; <strong>API</strong> (or visit <a href="https://lu.ma/settings/api" target="_blank" rel="noopener" style="color: var(--accent-amber); text-decoration: underline;">lu.ma/settings/api</a>).</li>
+              <li>Click <strong>Create API Key</strong>, choose a label (e.g. <em>Homebound</em>), and copy the key (begins with <code>luma_api_...</code>).</li>
+              <li>Open your event's management page: the <strong>Event API ID</strong> is in the URL or under <strong>Event Settings &rarr; API</strong> (format: <code>evt-...</code>).</li>
+            </ol>
+            <p class="text-dim mt-sm" style="font-size: 0.8rem; margin-bottom: 0;">
+              🔒 Encrypted: Your API key is encrypted with AES-256 on the server and is never stored in plaintext.
+            </p>
+          </div>
+
           <form id="luma-form" class="mt-md">
             <div class="form-group">
               <label class="form-label" for="luma-api-key">Luma API Key</label>
@@ -225,19 +261,29 @@
           <p class="text-muted mt-sm">Generate printable sheets with QR codes and 4-letter short codes</p>
           <div style="display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap;">
             <button id="btn-view-sheet" class="btn btn-secondary" type="button">
-              🖨️ View &amp; Print Band Sheet
+              🖨️ View Standard Cards
+            </button>
+            <button id="btn-view-avery" class="btn btn-secondary" type="button">
+              🏷️ View Avery 2"×1" Labels
             </button>
             <a id="btn-download-nfc-csv" class="btn btn-secondary" href="#" download="bands.csv">
-              🏷️ Download NFC Tag CSV
+              📥 Download NFC Tag CSV
             </a>
           </div>
         </div>
 
         <!-- Rendered Printable Grid Area -->
         <div id="print-sheet-area" class="printable-sheet-container card">
-          <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h2>Print Preview</h2>
-            <div style="display: flex; gap: 0.5rem;">
+          <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <h2 id="sheet-preview-title">Print Preview (Standard Wristband Cards)</h2>
+              <p id="sheet-preview-desc" class="text-muted" style="font-size: 0.85rem;">Formatted for letter size sheets</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+              <div class="filter-tabs" style="padding: 0.2rem;">
+                <button id="btn-format-standard" class="filter-tab active" type="button">Standard Cards</button>
+                <button id="btn-format-avery" class="filter-tab" type="button">Avery 2"×1"</button>
+              </div>
               <button id="btn-trigger-print" class="btn btn-primary" type="button">Print Sheet</button>
               <button id="btn-close-print-sheet" class="btn btn-secondary" type="button">Close</button>
             </div>
@@ -246,7 +292,101 @@
         </div>
       </section>
 
-      <!-- TAB 3: Data Export & End Event -->
+      <!-- TAB 3: Incident Timeline -->
+      <section id="tab-timeline" class="admin-section">
+        <div class="card no-print">
+          <h2>Incident Timeline &amp; Follow-up</h2>
+          <p class="text-muted mt-sm">Search any guest to reconstruct their chronological timeline, entries, exits, and companions.</p>
+
+          <!-- Audit Log Notice -->
+          <div class="badge badge-amber mt-md" style="width: 100%; justify-content: center; font-size: 0.9rem; padding: 0.65rem;">
+            🔒 Notice: Every guest timeline lookup is permanently recorded in the event audit log.
+          </div>
+
+          <!-- Monitor session check for search -->
+          <div id="timeline-auth-helper" class="mt-md hidden" style="background-color: var(--bg-surface); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border);">
+            <p style="font-size: 0.9rem; margin-bottom: 0.5rem;"><strong>Door Monitor Code Required for Live Search:</strong></p>
+            <div style="display: flex; gap: 0.5rem;">
+              <input type="text" id="timeline-monitor-code-input" class="input input-code" maxlength="6" placeholder="ABC123" style="max-width: 140px;">
+              <button id="btn-connect-timeline-monitor" class="btn btn-secondary" type="button">Connect Roster Search</button>
+            </div>
+          </div>
+
+          <!-- Guest Search Input -->
+          <div class="mt-md" style="position: relative;">
+            <label class="form-label" for="timeline-search-input">Search Guest</label>
+            <input type="search" id="timeline-search-input" class="input" placeholder="Type guest name (e.g. Maya) or band code..." autocomplete="off">
+            <div id="timeline-search-results" class="search-dropdown hidden"></div>
+          </div>
+        </div>
+
+        <!-- Rendered Guest Timeline Card -->
+        <div id="timeline-card" class="card hidden">
+          <div class="timeline-header">
+            <div>
+              <span class="badge badge-amber" style="font-size: 0.75rem; margin-bottom: 0.35rem;">Audit Trailed Incident Report</span>
+              <h2 id="tl-guest-name" style="font-size: 2rem; margin: 0.2rem 0;">Guest Name</h2>
+              <div id="tl-guest-meta" class="text-muted" style="font-size: 0.95rem;">
+                Email: — · Phone: —
+              </div>
+            </div>
+            <div class="no-print" style="display: flex; gap: 0.5rem; align-items: flex-start;">
+              <button id="btn-print-timeline" class="btn btn-primary" type="button" style="min-height: 44px;">
+                🖨️ Print Report
+              </button>
+              <button id="btn-close-timeline" class="btn btn-secondary" type="button" style="min-height: 44px;">
+                ✕ Close
+              </button>
+            </div>
+          </div>
+
+          <!-- Summary Chips & Last Seen Inside Line -->
+          <div class="tl-summary-box mt-md">
+            <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+              <span id="tl-band-chip" class="band-chip" style="font-size: 1rem; padding: 0.3rem 0.7rem;">Band: —</span>
+              <span id="tl-age-badge" class="badge badge-muted">Age: —</span>
+              <span id="tl-state-badge" class="badge badge-muted">ID State: —</span>
+            </div>
+
+            <!-- Prominent "Last seen inside" Line -->
+            <div class="tl-last-seen-banner mt-md">
+              <span style="font-size: 1.4rem;">📍</span>
+              <div>
+                <div style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700;">Location Status</div>
+                <div style="font-size: 1.15rem; font-weight: 800; color: var(--text);">
+                  Last seen inside: <span id="tl-last-seen-val" style="color: var(--accent-amber);">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Companions Banner (Latest Left With) -->
+          <div id="tl-companions-card" class="tl-companions-box mt-md hidden">
+            <div style="font-weight: 700; margin-bottom: 0.25rem;">Left Together With:</div>
+            <div id="tl-companions-list" style="color: var(--accent-amber); font-weight: 600;"></div>
+          </div>
+
+          <!-- Vertical Timeline Events -->
+          <div class="mt-lg">
+            <h3 style="font-size: 1.15rem; font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 0.6rem; margin-bottom: 1.25rem;">
+              Chronological Timeline
+            </h3>
+            <div id="tl-events-container" class="vertical-timeline">
+              <!-- Rendered vertical timeline steps -->
+            </div>
+          </div>
+
+          <!-- Print Footer -->
+          <div class="print-timeline-footer print-only mt-lg">
+            <div style="border-top: 2px solid #000; padding-top: 0.5rem; font-size: 0.85rem; color: #444; display: flex; justify-content: space-between;">
+              <span>Homebound Safety Record · Confidential Incident Follow-up</span>
+              <span id="tl-print-meta">Generated: ...</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: Data Export & End Event -->
       <section id="tab-export" class="admin-section">
         <!-- CSV Export -->
         <div class="card">
@@ -286,6 +426,16 @@
       <div class="modal-body">
         <div class="badge badge-amber" style="width: 100%; justify-content: center; font-size: 0.95rem; padding: 0.6rem;">
           ⚠️ Save this Admin PIN now. For privacy, it is hashed on the server and will NEVER be shown again!
+        </div>
+
+        <!-- Single Copy All Details Button -->
+        <div class="mt-md">
+          <button id="btn-copy-all" class="btn btn-primary btn-block" style="font-size: 1.05rem; padding: 0.75rem;" type="button">
+            📋 Copy All Details (PIN, Monitor Code, Door Link)
+          </button>
+          <div id="copy-all-feedback" class="badge badge-green hidden mt-xs" style="width: 100%; justify-content: center;">
+            ✓ All event details copied to clipboard!
+          </div>
         </div>
 
         <div class="secret-box mt-md">
