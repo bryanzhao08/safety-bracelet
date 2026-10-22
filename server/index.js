@@ -63,7 +63,8 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
   const audit = (id, actor, action, detail = {}) => run('INSERT INTO audit (id,eventId,actor,action,at,detail) VALUES (?,?,?,?,?,?)', randomToken(), id, actor, action, at(), JSON.stringify(detail));
   const emit = (id, type, data) => { for (const res of streams.get(id) ?? []) res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`); };
   const emitStats = id => { const s = counts(id); emit(id, 'stats', { inside: s.inside, checkedIn: s.checkedIn, left: s.left }); };
-  const baseUrl = req => `${req.socket.encrypted || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http'}://${req.headers.host}`;
+  const httpsRequest = req => req.socket.encrypted || req.headers['x-forwarded-proto']?.split(',')[0]?.trim().toLowerCase() === 'https';
+  const baseUrl = req => `${httpsRequest(req) ? 'https' : 'http'}://${req.headers.host}`;
   const rate = (key, max, ms) => { const t = new Date(now()).getTime(), recent = (rates.get(key) ?? []).filter(x => t - x < ms); if (recent.length >= max) throw fail(429, 'rate_limited'); recent.push(t); rates.set(key, recent); };
   const publicEvent = e => ({ id: e.id, name: e.name, startsAt: e.startsAt, endsAt: e.endsAt, retentionDays: e.retentionDays, createdAt: e.createdAt });
   const guestPublic = g => ({ id: g.id, name: g.name });
@@ -88,7 +89,7 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
       if (!text(b.name, 80) || !text(b.monitorCode, 6) || !secureEqual(b.monitorCode, e.monitorCode)) throw fail(403, 'invalid_monitor_code');
       const token = randomToken();
       run('INSERT INTO monitor_sessions (token,eventId,name,createdAt) VALUES (?,?,?,?)', token, e.id, b.name.trim(), at());
-      res.setHeader('Set-Cookie', `hb_monitor=${token}; Path=/; HttpOnly; SameSite=Lax${req.socket.encrypted || req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : ''}`);
+      res.setHeader('Set-Cookie', `hb_monitor=${token}; Path=/; HttpOnly; SameSite=Lax${httpsRequest(req) ? '; Secure' : ''}`);
       return json(res, 200, { monitorToken: token, event: { id: e.id, name: e.name } });
     }
     if ((m = p.match(/^\/api\/events\/([^/]+)\/import\/luma$/)) && method === 'POST') {

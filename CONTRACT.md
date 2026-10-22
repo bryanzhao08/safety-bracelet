@@ -66,6 +66,13 @@ audit(id PK, eventId, actor, action, at, detail JSON)
 **Retention job** (hourly): deletes guests, bands, scans and departures, and keeps a summary row
 (counts only) in audit, `retentionDays` after `endsAt`.
 
+**Reliability and extras**
+- All monitor POSTs accept an `Idempotency-Key` header (≤ 64 chars). The same key with the same route returns the original
+  response without re-applying it (keys kept 48 h). Offline door scans use the client timestamp `at` if provided (±12 h of now).
+- `PATCH /api/events/:id {capacity?:int, name?}` (admin). `capacity` is also returned in `GET /api/dashboard`.
+- `POST /api/pilot {chapter, school, email, eventSize?, note?}` (public, rate-limited 5/hour/IP) stores pilot sign-ups;
+  `GET /api/pilot` (header `X-Owner-Token` = env `HB_OWNER_TOKEN`) lists them.
+
 ## Invariants (tests)
 1. Monitor endpoints never return email or phone; nothing ever returns or stores a raw license number or address.
 2. Two or more bands in one departure share a groupId; the export lists each person's group-mates.

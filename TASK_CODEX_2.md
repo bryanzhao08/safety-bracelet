@@ -12,3 +12,7 @@
 4. **Deploy:** a `Dockerfile` (node:24-slim, non-root, SQLite on a volume at /data, HB_DB=/data/homebound.sqlite,
    HB_DATA_DIR=/data), a `fly.toml` with a 1 GB volume mount, and `DEPLOY.md` (fly launch / volume / secrets, and how to
    back up the SQLite file). Behind a proxy, cookies must be Secure and `X-Forwarded-Proto` respected.
+
+## After item 4 (added by Claude)
+5. CONTRACT.md "Reliability and extras": `Idempotency-Key` on monitor POSTs plus client `at` for offline scans, `PATCH /api/events/:id`
+   (capacity, name) with capacity in the dashboard, and `/api/pilot` (public POST, rate-limited; owner-token GET). Tests for each.
