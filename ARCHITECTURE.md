@@ -9,7 +9,8 @@ from **Luma** (API) or **Partiful** (CSV export).
  Luma API / Partiful CSV ──► import guests (name, email, phone)
                                    │
  Door phone (monitor) ── tap band ─┼─► server ──► SQLite (guests, bands, scans, departures)
-   • IN:  tap band → pick/confirm guest name (first tap links band ↔ guest)
+   • IN:  scan ID barcode (PDF417 on back of US licenses) → name, 21+ check, guest-list match → tap band to link
+          (no ID? search the guest list by name instead)
    • OUT: tap band(s) → "Leaving alone" or "Leaving together" (tap 2+ bands within 30 s = one group)
                                    │
  Monitor/organizer dashboard ◄─ SSE ─ live: inside count, roster, recent exits with groups, who's still inside
@@ -36,3 +37,13 @@ from **Luma** (API) or **Partiful** (CSV export).
 - **Consent:** the door screen shows a one-line notice to read to guests ("We log check-in/out and who you leave
   with for safety; deleted after 30 days").
 - **Retention:** everything for an event is deleted `retentionDays` (default 30) after the event ends.
+
+## ID scanning
+- **Format:** US driver's licenses and state IDs carry an **AAMVA PDF417** barcode. The door page decodes it with the camera:
+  `BarcodeDetector({formats:['pdf417']})` where supported (Android Chrome), otherwise vendored **ZXing JS** (Apache-2.0)
+  in `web/shared/vendor/`. AAMVA fields are parsed on the device: DCS last name, DAC first name, DBB date of birth,
+  DBA expiry, DAJ state, DAQ number.
+- **Data minimization:** only name, DOB, state, expiry and the license number go to the server, and the number is turned
+  into an event-scoped HMAC and discarded. No address, no photo, no raw barcode stored.
+- **Shown at the door:** a big 21+ / UNDER 21 / EXPIRED badge, the guest-list match (or walk-in), and a duplicate-entry warning.
+- **Legal:** some states restrict retention of scanned license data (e.g. California Civil Code 1798.90.1). Confirm before launch.

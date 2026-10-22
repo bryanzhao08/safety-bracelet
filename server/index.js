@@ -5,263 +5,276 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { openDb } from './db.js';
 import { randomToken, shortCode, secureEqual, hashPin, verifyPin } from './tokens.js';
+import { csvGuests, csvEscape, encryptApiKey, fetchLumaGuests } from './imports.js';
 import { createJobs } from './jobs.js';
-import { createNotifier } from './notify.js';
 
 const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../web');
-const types = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.json':'application/json; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png', '.ico':'image/x-icon', '.webmanifest':'application/manifest+json' };
-const fail = (status, error, message = error.replaceAll('_',' ')) => Object.assign(new Error(message), {status,error});
-const iso = d => new Date(d).toISOString();
-const own = (o,k) => Object.prototype.hasOwnProperty.call(o,k);
+const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+const fail = (status, error, message = error.replaceAll('_', ' ')) => Object.assign(new Error(message), { status, error });
+const text = (value, max = 200) => typeof value === 'string' && value.trim().length > 0 && value.trim().length <= max;
+const iso = value => new Date(value).toISOString();
+const alphabet = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+const code6 = () => Array.from({ length: 6 }, () => alphabet[randomInt(alphabet.length)]).join('');
 
-export function createServer({ db = openDb(), now = () => new Date(), notify, startJobs = true } = {}) {
-  if (!notify) { const ready=createNotifier({db}); notify=async(target,message)=>(await ready).notify(target,message); }
-  const streams = new Map();
-  const limits = new Map();
-  const jobs = createJobs({db,now,notify});
-  const q = (sql,...args) => db.prepare(sql).get(...args);
-  const all = (sql,...args) => db.prepare(sql).all(...args);
-  const run = (sql,...args) => db.prepare(sql).run(...args);
-  const current = () => iso(now());
-  const send = (res,status,data,headers={}) => { res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store',...headers}); res.end(JSON.stringify(data)); };
-  const parse = async req => {
-    let raw='';
-    for await (const part of req) { raw += part; if(raw.length>65536) throw fail(413,'too_large'); }
-    if(!raw) return {};
-    try { const value=JSON.parse(raw); if(!value || Array.isArray(value) || typeof value!=='object') throw Error(); return value; }
-    catch { throw fail(400,'invalid_json'); }
+export function createServer({ db = openDb(), now = () => new Date(), fetcher = fetch, startJobs = true } = {}) {
+  const jobs = createJobs({ db, now });
+  const streams = new Map(), rates = new Map();
+  const one = (sql, ...args) => db.prepare(sql).get(...args);
+  const many = (sql, ...args) => db.prepare(sql).all(...args);
+  const run = (sql, ...args) => db.prepare(sql).run(...args);
+  const at = () => iso(now());
+  const json = (res, status, value) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(value)); };
+  const csv = (res, body) => { res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment', 'Cache-Control': 'no-store' }); res.end(body); };
+  const readBody = async (req, limit = 2_000_000) => {
+    const chunks = []; let size = 0;
+    for await (const chunk of req) { size += chunk.length; if (size > limit) throw fail(413, 'too_large'); chunks.push(chunk); }
+    return Buffer.concat(chunks).toString('utf8');
   };
-  const field = (v,max=1000) => typeof v==='string' && v.trim() && v.length<=max;
-  const getEvent = id => q('SELECT * FROM events WHERE id=?',id) || (()=>{throw fail(404,'event_not_found')})();
-  const getBand = token => q('SELECT * FROM bands WHERE token=?',token) || (()=>{throw fail(404,'band_not_found')})();
-  const getDevice = req => {
-    const match = (req.headers.cookie||'').match(/(?:^|;\s*)hb_device=([^;]+)/);
-    if(!match) return null;
-    try{return decodeURIComponent(match[1]);}catch{throw fail(400,'invalid_cookie');}
-  };
-  const device = req => {
-    const id=getDevice(req);
-    if(!id || !q('SELECT id FROM devices WHERE id=?',id)) throw fail(401,'guest_required');
-    run('UPDATE devices SET lastSeenAt=? WHERE id=?',current(),id);
-    return id;
-  };
-  const guestBand = (req,token) => {
-    const id=device(req), band=getBand(token);
-    if(!band.deviceId || !secureEqual(id,band.deviceId)) throw fail(403,'band_linked_elsewhere');
-    return {id,band};
-  };
-  const admin = (req,id) => {
-    const event=getEvent(id), pin=req.headers['x-admin-pin'];
-    if(typeof pin!=='string' || !verifyPin(pin,event.adminPinHash)) throw fail(403,'admin_required');
-    return event;
-  };
-  const monitor = (req,url,query=false) => {
-    const bearer=req.headers.authorization?.match(/^Bearer (.+)$/)?.[1];
-    const token=query ? url.searchParams.get('token') : bearer;
-    if(!token) throw fail(401,'monitor_required');
-    const sessions=all('SELECT * FROM monitor_sessions');
-    const session=sessions.find(s=>secureEqual(s.token,token));
-    if(!session) throw fail(403,'monitor_required');
+  const body = async req => { const raw = await readBody(req, 65_536); if (!raw) return {}; try { const data = JSON.parse(raw); if (!data || Array.isArray(data) || typeof data !== 'object') throw Error(); return data; } catch { throw fail(400, 'invalid_json'); } };
+  const event = id => one('SELECT * FROM events WHERE id=?', id) ?? (() => { throw fail(404, 'event_not_found'); })();
+  const admin = (req, id) => { const e = event(id), pin = req.headers['x-admin-pin']; if (typeof pin !== 'string' || !verifyPin(pin, e.adminPinHash)) throw fail(403, 'admin_required'); return e; };
+  const bearer = req => req.headers.authorization?.match(/^Bearer ([0-9a-f]{32})$/)?.[1];
+  const monitor = (req, url, query = false) => {
+    const token = query ? url.searchParams.get('token') : bearer(req);
+    if (!token) throw fail(401, 'monitor_required');
+    const session = one('SELECT * FROM monitor_sessions WHERE token=?', token);
+    if (!session || !secureEqual(token, session.token) || !one('SELECT id FROM events WHERE id=?', session.eventId)) throw fail(403, 'monitor_required');
     return session;
   };
-  const rate = (key,max,windowMs) => {
-    const time=now().getTime(), old=(limits.get(key)||[]).filter(t=>time-t<windowMs);
-    if(old.length>=max) throw fail(429,'rate_limited');
-    old.push(time); limits.set(key,old);
+  const bandFor = (session, value, byCode = false) => {
+    const band = one(byCode ? 'SELECT * FROM bands WHERE eventId=? AND shortCode=?' : 'SELECT * FROM bands WHERE eventId=? AND token=?', session.eventId, value);
+    if (!band) throw fail(404, 'band_not_found');
+    return band;
   };
-  const inside = token => q('SELECT direction FROM presence WHERE bandToken=? ORDER BY at DESC,id DESC LIMIT 1',token)?.direction==='in';
-  const insideCount = eventId => q("SELECT COUNT(*) n FROM bands b WHERE b.eventId=? AND (SELECT direction FROM presence p WHERE p.bandToken=b.token ORDER BY at DESC,id DESC LIMIT 1)='in'",eventId).n;
-  const stats = eventId => ({bands:q('SELECT COUNT(*) n FROM bands WHERE eventId=?',eventId).n,inside:insideCount(eventId),entered:q("SELECT COUNT(*) n FROM presence WHERE eventId=? AND direction='in'",eventId).n,exited:q("SELECT COUNT(*) n FROM presence WHERE eventId=? AND direction='out'",eventId).n,openHelp:q("SELECT COUNT(*) n FROM help_requests WHERE eventId=? AND status!='resolved'",eventId).n});
-  const publicEvent = e => ({id:e.id,name:e.name,org:e.org,startsAt:e.startsAt,endsAt:e.endsAt,capacity:e.capacity,createdAt:e.createdAt});
-  const publicHelp = h => ({id:h.id,bandShortCode:h.bandShortCode,note:h.note,location:h.location,createdAt:h.createdAt,status:h.status,ackBy:h.ackBy,resolvedAt:h.resolvedAt,resolution:h.resolution});
-  const publicDeparture = d => ({id:d.id,leftAt:d.leftAt,leavingWith:d.leavingWith,destination:d.destination,expectedHomeAt:d.expectedHomeAt,status:d.status,homeAt:d.homeAt});
-  const audit = (eventId,action,detail={}) => run('INSERT INTO audit (id,eventId,actor,action,at,detail) VALUES (?,?,?,?,?,?)',randomToken(),eventId,'organizer',action,current(),JSON.stringify(detail));
-  const emit = (eventId,type,data) => { for(const res of streams.get(eventId)||[]) res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`); };
-  const emitStats = eventId => { const s=stats(eventId); emit(eventId,'stats',{inside:s.inside,entered:s.entered,exited:s.exited}); };
-  const notifyCircle = async (tokens,message) => { for(const circleToken of tokens) await notify({type:'circle',circleToken},message); };
-  const shared = d => { try{return JSON.parse(d.sharedWith||'[]');}catch{return [];} };
-
-  async function api(req,res,url) {
-    const p=url.pathname, method=req.method;
-    let m;
-    if(method==='POST' && p==='/api/events') {
-      const b=await parse(req);
-      if(!field(b.name,120)||!field(b.org,120)||!Number.isFinite(Date.parse(b.startsAt))||!Number.isFinite(Date.parse(b.endsAt))||Date.parse(b.endsAt)<=Date.parse(b.startsAt)|| (b.capacity!==undefined && (!Number.isInteger(b.capacity)||b.capacity<1))) throw fail(400,'invalid_event');
-      const id=randomToken(), pin=String(randomInt(100000000)).padStart(8,'0'), code=shortCode()+shortCode().slice(0,2), at=current();
-      run('INSERT INTO events (id,name,org,startsAt,endsAt,capacity,adminPinHash,monitorCode,retentionHours,createdAt) VALUES (?,?,?,?,?,?,?,?,?,?)',id,b.name.trim(),b.org.trim(),iso(b.startsAt),iso(b.endsAt),b.capacity??null,hashPin(pin),code,48,at);
-      audit(id,'event_created');
-      return send(res,201,{eventId:id,adminPin:pin,monitorCode:code});
-    }
-    if((m=p.match(/^\/api\/events\/([^/]+)\/monitor-session$/)) && method==='POST') {
-      const event=getEvent(m[1]), b=await parse(req);
-      if(!field(b.monitorCode,6)||!secureEqual(event.monitorCode,b.monitorCode)||!field(b.name,80)) throw fail(403,'invalid_monitor_code');
-      const token=randomToken(); run('INSERT INTO monitor_sessions (token,eventId,name,createdAt) VALUES (?,?,?,?)',token,event.id,b.name.trim(),current());
-      return send(res,200,{monitorToken:token,event:{id:event.id,name:event.name}});
-    }
-    if((m=p.match(/^\/api\/events\/([^/]+)\/bands\.csv$/)) && method==='GET') {
-      admin(req,m[1]); const rows=all('SELECT token,shortCode FROM bands WHERE eventId=? ORDER BY createdAt,shortCode',m[1]);
-      const base=`${req.headers['x-forwarded-proto']==='https'?'https':req.socket.encrypted?'https':'http'}://${req.headers.host}`;
-      res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Cache-Control':'no-store'});
-      return res.end('shortCode,url\r\n'+rows.map(b=>`${b.shortCode},${base}/b/${b.token}\r\n`).join(''));
-    }
-    if((m=p.match(/^\/api\/events\/([^/]+)\/bands$/)) && method==='POST') {
-      admin(req,m[1]); const b=await parse(req);
-      if(!Number.isInteger(b.count)||b.count<1||b.count>2000) throw fail(400,'invalid_count');
-      const base=`${req.headers['x-forwarded-proto']==='https'?'https':req.socket.encrypted?'https':'http'}://${req.headers.host}`;
-      const bands=[]; const insert=db.prepare('INSERT INTO bands (token,eventId,shortCode,deviceId,displayName,createdAt) VALUES (?,?,?,?,?,?)');
-      for(let i=0;i<b.count;i++) { let code; do {code=shortCode();} while(q('SELECT token FROM bands WHERE eventId=? AND shortCode=?',m[1],code)); const token=randomToken(); insert.run(token,m[1],code,null,null,current()); bands.push({token,shortCode:code,url:`${base}/b/${token}`}); }
-      audit(m[1],'bands_created',{count:b.count});
-      return send(res,200,{bands});
-    }
-    if((m=p.match(/^\/api\/events\/([^/]+)\/incidents$/)) && method==='GET') {
-      admin(req,m[1]); return send(res,200,{incidents:all('SELECT * FROM help_requests WHERE eventId=? ORDER BY createdAt DESC',m[1]).map(publicHelp)});
-    }
-    if((m=p.match(/^\/api\/events\/([^/]+)\/end$/)) && method==='POST') {
-      admin(req,m[1]); const at=current(); run('UPDATE events SET endsAt=? WHERE id=?',at,m[1]); audit(m[1],'event_ended'); return send(res,200,{endsAt:at});
-    }
-    if((m=p.match(/^\/api\/events\/([^/]+)$/)) && method==='GET') {
-      const event=admin(req,m[1]); return send(res,200,{event:publicEvent(event),stats:stats(event.id)});
-    }
-    if(method==='POST' && p==='/api/door/scan') {
-      const session=monitor(req,url), b=await parse(req);
-      rate(`scan:${session.token}`,3000,60000);
-      if(!['in','out','toggle'].includes(b.direction)||(!b.bandToken&&!b.shortCode)) throw fail(400,'invalid_scan');
-      const band=b.bandToken ? getBand(b.bandToken) : q('SELECT * FROM bands WHERE eventId=? AND shortCode=?',session.eventId,b.shortCode);
-      if(!band||band.eventId!==session.eventId) throw fail(404,'band_not_found');
-      const was=inside(band.token), direction=b.direction==='toggle'?(was?'out':'in'):b.direction;
-      const at=current(); let warning;
-      if(direction==='in'&&was) warning='already_inside';
-      else if(direction==='out'&&!was) warning='not_inside';
-      else {
-        const capacity=getEvent(session.eventId).capacity;
-        if(direction==='in'&&capacity!==null&&insideCount(session.eventId)>=capacity) warning='capacity';
-        else { run('INSERT INTO presence (id,bandToken,eventId,direction,at,by) VALUES (?,?,?,?,?,?)',randomToken(),band.token,band.eventId,direction,at,'monitor'); emit(session.eventId,'scan',{shortCode:band.shortCode,direction,inside:direction==='in'}); emitStats(session.eventId); }
-      }
-      return send(res,200,{band:{shortCode:band.shortCode,...(band.displayName?{displayName:band.displayName}:{})},inside:warning?was:direction==='in',at,...(warning?{warning}:{})});
-    }
-    if(method==='GET' && p==='/api/monitor/state') {
-      const session=monitor(req,url), event=getEvent(session.eventId);
-      const bands=all('SELECT token,shortCode,displayName FROM bands WHERE eventId=?',event.id);
-      const insideBands=bands.flatMap(b=>{const latest=q('SELECT direction,at FROM presence WHERE bandToken=? ORDER BY at DESC,id DESC LIMIT 1',b.token);return latest?.direction==='in'?[{shortCode:b.shortCode,...(b.displayName?{displayName:b.displayName}:{}),since:latest.at}]:[]});
-      const help=all("SELECT * FROM help_requests WHERE eventId=? AND status!='resolved' ORDER BY createdAt",event.id).map(publicHelp);
-      return send(res,200,{event:{id:event.id,name:event.name},inside:insideBands.length,capacity:event.capacity,insideBands,help});
-    }
-    if(method==='GET' && p==='/api/monitor/stream') {
-      const session=monitor(req,url,true); res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache','Connection':'keep-alive'}); res.write(': connected\n\n');
-      if(!streams.has(session.eventId)) streams.set(session.eventId,new Set()); streams.get(session.eventId).add(res);
-      const heartbeat=setInterval(()=>res.write(': heartbeat\n\n'),20000); heartbeat.unref();
-      req.on('close',()=>{clearInterval(heartbeat);streams.get(session.eventId)?.delete(res)}); return;
-    }
-    if((m=p.match(/^\/api\/monitor\/help\/([^/]+)\/(ack|resolve)$/)) && method==='POST') {
-      const session=monitor(req,url), h=q('SELECT * FROM help_requests WHERE id=? AND eventId=?',m[1],session.eventId); if(!h) throw fail(404,'help_not_found');
-      if(m[2]==='ack') run("UPDATE help_requests SET status='ack',ackBy=? WHERE id=?",session.name,h.id);
-      else {const b=await parse(req);if(!field(b.resolution,1000)) throw fail(400,'invalid_resolution');run("UPDATE help_requests SET status='resolved',resolvedAt=?,resolution=? WHERE id=?",current(),b.resolution.trim(),h.id);}
-      const updated=publicHelp(q('SELECT * FROM help_requests WHERE id=?',h.id));emit(session.eventId,'help_update',{helpRequest:updated});return send(res,200,{helpRequest:updated});
-    }
-    if((m=p.match(/^\/api\/bands\/([^/]+)$/)) && method==='GET') {
-      const band=getBand(m[1]), event=getEvent(band.eventId); let id=getDevice(req);
-      if(!id||!q('SELECT id FROM devices WHERE id=?',id)) {id=randomToken();run('INSERT INTO devices (id,createdAt,lastSeenAt) VALUES (?,?,?)',id,current(),current());res.setHeader('Set-Cookie',`hb_device=${encodeURIComponent(id)}; Path=/; HttpOnly; SameSite=Lax${req.socket.encrypted||req.headers['x-forwarded-proto']==='https'?'; Secure':''}`);}
-      if(band.deviceId&&!secureEqual(id,band.deviceId)) throw fail(403,'band_linked_elsewhere');
-      if(!band.deviceId) run('UPDATE bands SET deviceId=? WHERE token=?',id,band.token);
-      const circles=all('SELECT token,label,createdAt FROM circles WHERE deviceId=? AND eventId=?',id,event.id);
-      const dep=q("SELECT * FROM departures WHERE bandToken=? AND status IN ('active','alerted') ORDER BY leftAt DESC LIMIT 1",band.token);
-      return send(res,200,{band:{shortCode:band.shortCode,displayName:band.displayName},event:{id:event.id,name:event.name,endsAt:event.endsAt},inside:inside(band.token),mine:true,circles,...(dep?{activeDeparture:publicDeparture(dep)}:{})});
-    }
-    if((m=p.match(/^\/api\/bands\/([^/]+)\/name$/)) && method==='PUT') {
-      guestBand(req,m[1]);const b=await parse(req);if(b.displayName!==null&&b.displayName!==''&&(!field(b.displayName,24))) throw fail(400,'invalid_name');
-      run('UPDATE bands SET displayName=? WHERE token=?',b.displayName?.trim()||null,m[1]);return send(res,200,{displayName:b.displayName?.trim()||null});
-    }
-    if(method==='POST'&&p==='/api/circles') {
-      const id=device(req), b=await parse(req);if(!field(b.label,80)||!field(b.eventId,100)) throw fail(400,'invalid_circle');
-      if(!q('SELECT token FROM bands WHERE deviceId=? AND eventId=?',id,b.eventId)) throw fail(403,'guest_required');
-      const token=randomToken();run('INSERT INTO circles (token,deviceId,eventId,label,createdAt) VALUES (?,?,?,?,?)',token,id,b.eventId,b.label.trim(),current());
-      return send(res,201,{circleToken:token,inviteUrl:`${req.socket.encrypted||req.headers['x-forwarded-proto']==='https'?'https':'http'}://${req.headers.host}/c/${token}`});
-    }
-    if((m=p.match(/^\/api\/circles\/([^/]+)$/)) && method==='DELETE') {
-      const id=device(req), c=q('SELECT * FROM circles WHERE token=?',m[1]);if(!c) throw fail(404,'circle_not_found');if(!secureEqual(id,c.deviceId)) throw fail(403,'guest_required');
-      run('DELETE FROM circle_members WHERE circleToken=?',c.token);run('DELETE FROM circles WHERE token=?',c.token);return send(res,200,{deleted:true});
-    }
-    if(method==='POST'&&p==='/api/push/guest') {
-      const id=device(req), b=await parse(req);if(!b.subscription||typeof b.subscription!=='object') throw fail(400,'invalid_subscription');
-      run('INSERT INTO guest_push (deviceId,subscription) VALUES (?,?) ON CONFLICT(deviceId) DO UPDATE SET subscription=excluded.subscription',id,JSON.stringify(b.subscription));return send(res,200,{ok:true});
-    }
-    if(method==='POST'&&p==='/api/departures') {
-      const b=await parse(req);if(!field(b.bandToken,200)||!['home','friend','other'].includes(b.destination)||!Number.isFinite(Date.parse(b.expectedHomeAt))||Date.parse(b.expectedHomeAt)<=now().getTime()|| (b.leavingWith!==undefined&&b.leavingWith!==null&&typeof b.leavingWith!=='string')) throw fail(400,'invalid_departure');
-      const {id,band}=guestBand(req,b.bandToken);const circles=all('SELECT token FROM circles WHERE deviceId=? AND eventId=?',id,band.eventId).map(c=>c.token);
-      const chosen=b.sharedWith===undefined?circles:b.sharedWith;if(!Array.isArray(chosen)||chosen.some(t=>!circles.includes(t))) throw fail(403,'invalid_shared_with');
-      const recipients=[...new Set(chosen)];
-      run("UPDATE departures SET status='cancelled' WHERE bandToken=? AND status IN ('active','alerted')",band.token);
-      const departureId=randomToken(), leftAt=current();
-      run('INSERT INTO departures (id,bandToken,eventId,deviceId,leftAt,leavingWith,destination,expectedHomeAt,sharedWith,status,homeAt) VALUES (?,?,?,?,?,?,?,?,?,?,?)',departureId,band.token,band.eventId,id,leftAt,b.leavingWith?.trim()||null,b.destination,iso(b.expectedHomeAt),JSON.stringify(recipients),'active',null);
-      if(inside(band.token)) {run('INSERT INTO presence (id,bandToken,eventId,direction,at,by) VALUES (?,?,?,?,?,?)',randomToken(),band.token,band.eventId,'out',leftAt,'guest');emit(band.eventId,'scan',{shortCode:band.shortCode,direction:'out',inside:false});emitStats(band.eventId);}
-      const message=`${band.displayName||'Your friend'} left at ${leftAt}${b.leavingWith?.trim()?`, with ${b.leavingWith.trim()}`:''}${b.destination==='home'?', heading home':''}`;
-      await notifyCircle(recipients,message);
-      return send(res,201,{departure:publicDeparture(q('SELECT * FROM departures WHERE id=?',departureId))});
-    }
-    if((m=p.match(/^\/api\/departures\/([^/]+)\/(home|cancel)$/)) && method==='POST') {
-      const id=device(req), dep=q('SELECT * FROM departures WHERE id=?',m[1]);if(!dep) throw fail(404,'departure_not_found');if(!secureEqual(id,dep.deviceId)) throw fail(403,'guest_required');
-      if(['active','alerted'].includes(dep.status)) {
-        if(m[2]==='home') {const at=current();run("UPDATE departures SET status='home',homeAt=? WHERE id=?",at,dep.id);const band=getBand(dep.bandToken);await notifyCircle(shared(dep),`${band.displayName||'Your friend'} is home safe ✅`);}
-        else run("UPDATE departures SET status='cancelled' WHERE id=?",dep.id);
-      } else if((m[2]==='home'&&dep.status!=='home')||(m[2]==='cancel'&&dep.status!=='cancelled')) throw fail(409,'departure_closed');
-      return send(res,200,{departure:publicDeparture(q('SELECT * FROM departures WHERE id=?',dep.id))});
-    }
-    if(method==='POST'&&p==='/api/help') {
-      const b=await parse(req), cookieId=getDevice(req), id=cookieId&&q('SELECT id FROM devices WHERE id=?',cookieId)?cookieId:req.socket.remoteAddress||'anonymous';rate(`help:${id}`,3,600000);
-      if(!field(b.eventId,200)) throw fail(400,'invalid_help');getEvent(b.eventId);
-      let bandShortCode=null;if(b.bandToken){const band=getBand(b.bandToken);if(band.eventId!==b.eventId) throw fail(403,'invalid_band');if(getDevice(req)&&(!band.deviceId||!secureEqual(getDevice(req),band.deviceId))) throw fail(403,'band_linked_elsewhere');bandShortCode=band.shortCode;}
-      if((b.note!==undefined&&b.note!==null&&typeof b.note!=='string')||(b.location!==undefined&&b.location!==null&&typeof b.location!=='string')) throw fail(400,'invalid_help');
-      const helpId=randomToken();run('INSERT INTO help_requests (id,eventId,bandShortCode,note,location,createdAt,status,ackBy,resolvedAt,resolution) VALUES (?,?,?,?,?,?,?,?,?,?)',helpId,b.eventId,bandShortCode,b.note?.slice(0,500)||null,b.location?.slice(0,120)||null,current(),'open',null,null,null);
-      emit(b.eventId,'help',{helpRequest:publicHelp(q('SELECT * FROM help_requests WHERE id=?',helpId))});return send(res,201,{id:helpId});
-    }
-    if(method==='POST'&&p==='/api/holds') {
-      const id=device(req),b=await parse(req);if(!field(b.eventId,200)||!q('SELECT token FROM bands WHERE deviceId=? AND eventId=?',id,b.eventId)) throw fail(403,'guest_required');
-      const until=iso(now().getTime()+30*86400000);run('INSERT INTO incident_holds (deviceId,eventId,until) VALUES (?,?,?) ON CONFLICT(deviceId,eventId) DO UPDATE SET until=excluded.until',id,b.eventId,until);return send(res,200,{until});
-    }
-    if(method==='GET'&&p==='/api/me/export') {
-      const id=device(req),bands=all('SELECT token,eventId,shortCode,displayName FROM bands WHERE deviceId=?',id),deps=all('SELECT * FROM departures WHERE deviceId=?',id).map(d=>({eventId:d.eventId,bandToken:d.bandToken,...publicDeparture(d)})),circles=all('SELECT token,eventId,label,createdAt FROM circles WHERE deviceId=?',id),presence=all('SELECT p.* FROM presence p JOIN bands b ON p.bandToken=b.token WHERE b.deviceId=?',id);
-      return send(res,200,{bands,departures:deps,circles,presence});
-    }
-    if((m=p.match(/^\/api\/circles\/([^/]+)\/join$/))&&method==='POST') {
-      const c=q('SELECT * FROM circles WHERE token=?',m[1]);if(!c) throw fail(404,'circle_not_found');const b=await parse(req);if(b.nickname!==undefined&&b.nickname!==null&&typeof b.nickname!=='string') throw fail(400,'invalid_nickname');
-      const id=randomToken();run('INSERT INTO circle_members (id,circleToken,nickname,pushSubscription,joinedAt) VALUES (?,?,?,?,?)',id,c.token,b.nickname?.slice(0,80)||null,b.subscription?JSON.stringify(b.subscription):null,current());return send(res,201,{id});
-    }
-    if((m=p.match(/^\/api\/circles\/([^/]+)$/))&&method==='GET') {
-      const c=q('SELECT * FROM circles WHERE token=?',m[1]);if(!c) throw fail(404,'circle_not_found');const event=getEvent(c.eventId);
-      const dep=all('SELECT d.*,b.displayName FROM departures d JOIN bands b ON d.bandToken=b.token WHERE d.eventId=? ORDER BY d.leftAt DESC',c.eventId).filter(d=>shared(d).includes(c.token));
-      return send(res,200,{label:c.label,...(dep[0]?.displayName?{guestName:dep[0].displayName}:{}),event:{name:event.name},departures:dep.map(publicDeparture)});
-    }
-    throw fail(404,'not_found');
-  }
-
-  async function staticFile(req,res,url) {
-    if(req.method!=='GET'&&req.method!=='HEAD') throw fail(405,'method_not_allowed');
-    const p=decodeURIComponent(url.pathname);
-    let relative;
-    if(p==='/') relative='admin/index.html';
-    else if(/^\/b\/[^/]+$/.test(p)) relative='guest/index.html';
-    else if(/^\/c\/[^/]+$/.test(p)) relative='circle/index.html';
-    else if(['/door','/monitor','/admin'].includes(p)) relative=p.slice(1)+'/index.html';
-    else relative=p.slice(1);
-    const full=path.resolve(webRoot,relative);
-    if(!full.startsWith(webRoot+path.sep)) throw fail(403,'forbidden');
-    let info;try{info=await stat(full);}catch{throw fail(404,'not_found');}
-    if(info.isDirectory()) return staticFile(req,res,new URL(p.replace(/\/$/,'')+'/index.html',url));
-    if(!info.isFile()) throw fail(404,'not_found');
-    res.writeHead(200,{'Content-Type':types[path.extname(full)]||'application/octet-stream','Cache-Control':'no-store'});
-    if(req.method==='HEAD') return res.end();res.end(await readFile(full));
-  }
-
-  const server=http.createServer(async(req,res)=>{
-    res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'");
-    res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Frame-Options','DENY');
-    try {const url=new URL(req.url,'http://localhost');if(url.pathname.startsWith('/api/')) await api(req,res,url);else await staticFile(req,res,url);}
-    catch(err){if(res.headersSent){res.destroy();return;}send(res,err.status||500,{error:err.error||'internal_error',message:err.status?err.message:'Internal server error'});if(!err.status) console.error(err);}
+  const lastScan = token => one('SELECT direction,at FROM scans WHERE bandToken=? ORDER BY at DESC,id DESC LIMIT 1', token);
+  const inside = token => lastScan(token)?.direction === 'in';
+  const insideCount = id => one(`SELECT COUNT(*) n FROM bands b WHERE b.eventId=? AND
+    (SELECT direction FROM scans s WHERE s.bandToken=b.token ORDER BY at DESC,id DESC LIMIT 1)='in'`, id).n;
+  const counts = id => ({
+    guests: one('SELECT COUNT(*) n FROM guests WHERE eventId=?', id).n,
+    bands: one('SELECT COUNT(*) n FROM bands WHERE eventId=?', id).n,
+    inside: insideCount(id),
+    checkedIn: one("SELECT COUNT(DISTINCT guestId) n FROM scans WHERE eventId=? AND direction='in' AND guestId IS NOT NULL", id).n,
+    left: one('SELECT COUNT(DISTINCT guestId) n FROM departures WHERE eventId=? AND guestId IS NOT NULL', id).n,
+    groups: one('SELECT COUNT(DISTINCT groupId) n FROM departures WHERE eventId=?', id).n,
   });
-  if(startJobs){server.on('listening',()=>jobs.start());server.on('close',()=>jobs.stop());}
+  const audit = (id, actor, action, detail = {}) => run('INSERT INTO audit (id,eventId,actor,action,at,detail) VALUES (?,?,?,?,?,?)', randomToken(), id, actor, action, at(), JSON.stringify(detail));
+  const emit = (id, type, data) => { for (const res of streams.get(id) ?? []) res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`); };
+  const emitStats = id => { const s = counts(id); emit(id, 'stats', { inside: s.inside, checkedIn: s.checkedIn, left: s.left }); };
+  const baseUrl = req => `${req.socket.encrypted || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http'}://${req.headers.host}`;
+  const rate = (key, max, ms) => { const t = new Date(now()).getTime(), recent = (rates.get(key) ?? []).filter(x => t - x < ms); if (recent.length >= max) throw fail(429, 'rate_limited'); recent.push(t); rates.set(key, recent); };
+  const publicEvent = e => ({ id: e.id, name: e.name, startsAt: e.startsAt, endsAt: e.endsAt, retentionDays: e.retentionDays, createdAt: e.createdAt });
+  const guestPublic = g => ({ id: g.id, name: g.name });
+  const addGuest = (id, g, source, externalId = null) => {
+    const guestId = randomToken();
+    run('INSERT INTO guests (id,eventId,name,email,phone,source,externalId,createdAt) VALUES (?,?,?,?,?,?,?,?)', guestId, id, g.name.trim(), g.email?.trim() || null, g.phone?.trim() || null, source, externalId, at());
+    return guestId;
+  };
+
+  async function api(req, res, url) {
+    const p = url.pathname, method = req.method; let m;
+    if (method === 'POST' && p === '/api/events') {
+      const b = await body(req);
+      if (!text(b.name, 120) || !Number.isFinite(Date.parse(b.startsAt)) || !Number.isFinite(Date.parse(b.endsAt)) || Date.parse(b.endsAt) <= Date.parse(b.startsAt)) throw fail(400, 'invalid_event');
+      const id = randomToken(), pin = String(randomInt(100_000_000)).padStart(8, '0'), code = code6();
+      run('INSERT INTO events (id,name,startsAt,endsAt,adminPinHash,monitorCode,createdAt) VALUES (?,?,?,?,?,?,?)', id, b.name.trim(), iso(b.startsAt), iso(b.endsAt), hashPin(pin), code, at());
+      audit(id, 'organizer', 'event_created');
+      return json(res, 201, { eventId: id, adminPin: pin, monitorCode: code });
+    }
+    if ((m = p.match(/^\/api\/events\/([^/]+)\/monitor-session$/)) && method === 'POST') {
+      const e = event(m[1]), b = await body(req);
+      if (!text(b.name, 80) || !text(b.monitorCode, 6) || !secureEqual(b.monitorCode, e.monitorCode)) throw fail(403, 'invalid_monitor_code');
+      const token = randomToken();
+      run('INSERT INTO monitor_sessions (token,eventId,name,createdAt) VALUES (?,?,?,?)', token, e.id, b.name.trim(), at());
+      res.setHeader('Set-Cookie', `hb_monitor=${token}; Path=/; HttpOnly; SameSite=Lax${req.socket.encrypted || req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : ''}`);
+      return json(res, 200, { monitorToken: token, event: { id: e.id, name: e.name } });
+    }
+    if ((m = p.match(/^\/api\/events\/([^/]+)\/import\/luma$/)) && method === 'POST') {
+      admin(req, m[1]); const b = await body(req);
+      if (!text(b.apiKey, 500) || !text(b.lumaEventId, 200)) throw fail(400, 'invalid_luma_import');
+      let rows;
+      try { rows = await fetchLumaGuests({ apiKey: b.apiKey, lumaEventId: b.lumaEventId, fetcher }); }
+      catch (error) { throw fail(502, 'luma_import_failed', error.message); }
+      let imported = 0, updated = 0;
+      db.exec('BEGIN IMMEDIATE');
+      try {
+        for (const g of rows) {
+          const existing = g.externalId ? one("SELECT id FROM guests WHERE eventId=? AND source='luma' AND externalId=?", m[1], g.externalId) : g.email ? one('SELECT id FROM guests WHERE eventId=? AND lower(email)=lower(?)', m[1], g.email) : null;
+          if (existing) { run('UPDATE guests SET name=?,email=?,phone=? WHERE id=?', g.name, g.email, g.phone, existing.id); updated++; }
+          else { addGuest(m[1], g, 'luma', g.externalId); imported++; }
+        }
+        run('UPDATE events SET lumaEventId=?,lumaApiKeyEnc=? WHERE id=?', b.lumaEventId, encryptApiKey(b.apiKey), m[1]);
+        audit(m[1], 'organizer', 'luma_import', { imported, updated });
+        db.exec('COMMIT');
+      } catch (error) { db.exec('ROLLBACK'); throw error; }
+      return json(res, 200, { imported, updated });
+    }
+    if ((m = p.match(/^\/api\/events\/([^/]+)\/import\/csv$/)) && method === 'POST') {
+      admin(req, m[1]);
+      if (!req.headers['content-type']?.startsWith('text/csv')) throw fail(415, 'csv_required');
+      let rows; try { rows = csvGuests(await readBody(req)); } catch (error) { throw fail(400, 'invalid_csv', error.message); }
+      let imported = 0, skipped = 0; db.exec('BEGIN IMMEDIATE');
+      try {
+        const seen = new Set();
+        for (const g of rows) {
+          if (!text(g.name, 200)) { skipped++; continue; }
+          const key = g.email?.toLowerCase() || `${g.name.toLowerCase()}|${g.phone || ''}`;
+          if (seen.has(key) || (g.email && one('SELECT id FROM guests WHERE eventId=? AND lower(email)=lower(?)', m[1], g.email))) { skipped++; continue; }
+          seen.add(key); addGuest(m[1], g, 'partiful'); imported++;
+        }
+        audit(m[1], 'organizer', 'csv_import', { imported, skipped }); db.exec('COMMIT');
+      } catch (error) { db.exec('ROLLBACK'); throw error; }
+      return json(res, 200, { imported, skipped });
+    }
+    if ((m = p.match(/^\/api\/events\/([^/]+)\/guests$/)) && method === 'POST') {
+      const e = event(m[1]); let actor;
+      if (req.headers['x-admin-pin']) { admin(req, e.id); actor = 'organizer'; }
+      else { const session = monitor(req, url); if (session.eventId !== e.id) throw fail(403, 'wrong_event'); actor = session.name; }
+      const b = await body(req);
+      if (!text(b.name, 200) || (b.email != null && typeof b.email !== 'string') || (b.phone != null && typeof b.phone !== 'string')) throw fail(400, 'invalid_guest');
+      const id = addGuest(e.id, b, 'manual'); audit(e.id, actor, 'guest_created', { guestId: id });
+      return json(res, 201, { guest: { id, name: b.name.trim() } });
+    }
+    if ((m = p.match(/^\/api\/events\/([^/]+)\/bands\.csv$/)) && method === 'GET') {
+      admin(req, m[1]); audit(m[1], 'organizer', 'bands_export');
+      return csv(res, 'shortCode,url\r\n' + many('SELECT token,shortCode FROM bands WHERE eventId=? ORDER BY createdAt,shortCode', m[1]).map(b => `${b.shortCode},${baseUrl(req)}/t/${b.token}\r\n`).join(''));
+    }
+    if ((m = p.match(/^\/api\/events\/([^/]+)\/bands$/)) && method === 'POST') {
+      admin(req, m[1]); const b = await body(req); if (!Number.isInteger(b.count) || b.count < 1 || b.count > 2000) throw fail(400, 'invalid_count');
+      const insert = db.prepare('INSERT INTO bands (token,eventId,shortCode,createdAt) VALUES (?,?,?,?)'), bands = [];
+      db.exec('BEGIN IMMEDIATE'); try {
+        for (let i = 0; i < b.count; i++) { let code; do { code = shortCode(); } while (one('SELECT 1 FROM bands WHERE eventId=? AND shortCode=?', m[1], code)); const token = randomToken(); insert.run(token, m[1], code, at()); bands.push({ token, shortCode: code, url: `${baseUrl(req)}/t/${token}` }); }
+        audit(m[1], 'organizer', 'bands_created', { count: b.count }); db.exec('COMMIT');
+      } catch (error) { db.exec('ROLLBACK'); throw error; }
+      return json(res, 200, { bands });
+    }
+    if ((m = p.match(/^\/api\/events\/([^/]+)\/export\.csv$/)) && method === 'GET') {
+      admin(req, m[1]); audit(m[1], 'organizer', 'roster_export');
+      const guests = many('SELECT * FROM guests WHERE eventId=? ORDER BY name,id', m[1]);
+      const bands = many('SELECT * FROM bands WHERE eventId=?', m[1]);
+      const scans = many('SELECT * FROM scans WHERE eventId=? ORDER BY at,id', m[1]);
+      const deps = many('SELECT * FROM departures WHERE eventId=? ORDER BY at,id', m[1]);
+      const byGroup = new Map(); for (const d of deps) { if (!byGroup.has(d.groupId)) byGroup.set(d.groupId, []); byGroup.get(d.groupId).push(d); }
+      const byId = new Map(guests.map(g => [g.id, g]));
+      const lines = ['name,email,phone,band,first in,last out,left with'];
+      for (const g of guests) {
+        const gb = bands.filter(b => b.guestId === g.id), tokens = new Set(gb.map(b => b.token));
+        const gs = scans.filter(s => s.guestId === g.id), gd = deps.filter(d => d.guestId === g.id);
+        const first = gs.find(s => s.direction === 'in')?.at || '', last = gs.filter(s => s.direction === 'out').at(-1)?.at || '';
+        const latest = gd.at(-1), mates = latest ? byGroup.get(latest.groupId).filter(d => d.guestId !== g.id).map(d => byId.get(d.guestId)?.name).filter(Boolean) : [];
+        lines.push([g.name, g.email, g.phone, gb.map(b => b.shortCode).join('; '), first, last, mates.join('; ')].map(csvEscape).join(','));
+      }
+      return csv(res, lines.join('\r\n') + '\r\n');
+    }
+    if ((m = p.match(/^\/api\/events\/([^/]+)\/end$/)) && method === 'POST') {
+      admin(req, m[1]); const ended = at(); run('UPDATE events SET endsAt=? WHERE id=?', ended, m[1]); audit(m[1], 'organizer', 'event_ended'); return json(res, 200, { endsAt: ended });
+    }
+    if ((m = p.match(/^\/api\/events\/([^/]+)$/)) && method === 'GET') {
+      const e = admin(req, m[1]); audit(e.id, 'organizer', 'event_lookup'); return json(res, 200, { event: publicEvent(e), stats: counts(e.id) });
+    }
+    if (method === 'GET' && p === '/api/guests') {
+      const session = monitor(req, url), q = url.searchParams.get('q')?.trim() || '';
+      if (q.length > 100) throw fail(400, 'invalid_query');
+      const guests = many('SELECT id,name FROM guests WHERE eventId=? AND name LIKE ? COLLATE NOCASE ORDER BY name LIMIT 100', session.eventId, `%${q}%`);
+      const result = guests.map(g => { const b = one('SELECT token,shortCode FROM bands WHERE eventId=? AND guestId=?', session.eventId, g.id); return { id: g.id, name: g.name, ...(b ? { band: b.shortCode } : {}), inside: b ? inside(b.token) : false }; });
+      audit(session.eventId, session.name, 'guest_lookup', { query: q }); return json(res, 200, result);
+    }
+    if (method === 'POST' && p === '/api/scan') {
+      const session = monitor(req, url), b = await body(req); rate(`scan:${session.token}`, 3000, 60_000);
+      if (!['in', 'out'].includes(b.direction) || (!text(b.bandToken, 200) && !text(b.shortCode, 4))) throw fail(400, 'invalid_scan');
+      const band = bandFor(session, b.bandToken || b.shortCode, !b.bandToken), previous = lastScan(band.token);
+      if (b.direction === 'in' && !band.guestId && !b.guestId) return json(res, 200, { needsGuest: true, band: { shortCode: band.shortCode } });
+      if (!band.guestId && b.direction === 'out') throw fail(409, 'unlinked_band');
+      if (band.guestId && b.guestId && !secureEqual(band.guestId, b.guestId)) throw fail(409, 'band_already_linked');
+      if (!band.guestId) {
+        const g = one('SELECT id FROM guests WHERE id=? AND eventId=?', b.guestId, session.eventId);
+        if (!g) throw fail(404, 'guest_not_found');
+        if (one('SELECT token FROM bands WHERE eventId=? AND guestId=?', session.eventId, g.id)) throw fail(409, 'guest_already_linked');
+        run('UPDATE bands SET guestId=? WHERE token=? AND guestId IS NULL', g.id, band.token); band.guestId = g.id;
+      }
+      const guest = one('SELECT id,name FROM guests WHERE id=?', band.guestId);
+      const warning = (b.direction === 'in' && previous?.direction === 'in') ? 'already_inside' : (b.direction === 'out' && previous?.direction !== 'in') ? 'not_inside' : undefined;
+      const timestamp = at();
+      if (!warning) { run('INSERT INTO scans (id,eventId,bandToken,guestId,direction,at,monitorName) VALUES (?,?,?,?,?,?,?)', randomToken(), session.eventId, band.token, guest.id, b.direction, timestamp, session.name); emit(session.eventId, 'scan', { guest: guestPublic(guest), band: band.shortCode, direction: b.direction, at: timestamp }); emitStats(session.eventId); }
+      return json(res, 200, { guest: guestPublic(guest), inside: warning ? previous?.direction === 'in' : b.direction === 'in', at: timestamp, ...(warning ? { warning } : {}) });
+    }
+    if (method === 'POST' && p === '/api/departures') {
+      const session = monitor(req, url), b = await body(req);
+      const values = Array.isArray(b.bandTokens) ? b.bandTokens : b.shortCodes, byCode = !Array.isArray(b.bandTokens);
+      if (!Array.isArray(values) || !values.length || values.length > 30 || values.some(v => !text(v, 200))) throw fail(400, 'invalid_departure');
+      const bands = values.map(v => bandFor(session, v, byCode));
+      if (new Set(bands.map(x => x.token)).size !== bands.length) throw fail(400, 'duplicate_band');
+      if (bands.some(x => !x.guestId)) throw fail(409, 'unlinked_band');
+      const people = bands.map(x => guestPublic(one('SELECT id,name FROM guests WHERE id=?', x.guestId)));
+      const groupId = randomToken(), timestamp = at();
+      db.exec('BEGIN IMMEDIATE'); try {
+        for (const band of bands) {
+          if (inside(band.token)) run('INSERT INTO scans (id,eventId,bandToken,guestId,direction,at,monitorName) VALUES (?,?,?,?,?,?,?)', randomToken(), session.eventId, band.token, band.guestId, 'out', timestamp, session.name);
+          run('INSERT INTO departures (id,eventId,groupId,guestId,bandToken,at) VALUES (?,?,?,?,?,?)', randomToken(), session.eventId, groupId, band.guestId, band.token, timestamp);
+        }
+        db.exec('COMMIT');
+      } catch (error) { db.exec('ROLLBACK'); throw error; }
+      emit(session.eventId, 'departure', { groupId, at: timestamp, people }); emitStats(session.eventId);
+      return json(res, 200, { groupId, people: people.map(p => ({ name: p.name })) });
+    }
+    if (method === 'GET' && p === '/api/dashboard') {
+      const session = monitor(req, url), e = event(session.eventId);
+      const guests = many('SELECT id,name FROM guests WHERE eventId=? ORDER BY name,id', e.id), bands = many('SELECT token,shortCode,guestId FROM bands WHERE eventId=?', e.id);
+      const scans = many('SELECT bandToken,guestId,direction,at FROM scans WHERE eventId=? ORDER BY at,id', e.id), deps = many('SELECT groupId,guestId,at FROM departures WHERE eventId=? ORDER BY at,id', e.id);
+      const bandByGuest = new Map(bands.filter(b => b.guestId).map(b => [b.guestId, b]));
+      const groupPeople = new Map(); for (const d of deps) { if (!groupPeople.has(d.groupId)) groupPeople.set(d.groupId, []); groupPeople.get(d.groupId).push(d.guestId); }
+      const names = new Map(guests.map(g => [g.id, g.name]));
+      const roster = guests.map(g => {
+        const band = bandByGuest.get(g.id), gs = scans.filter(s => s.guestId === g.id), last = gs.at(-1), dep = deps.filter(d => d.guestId === g.id).at(-1);
+        const status = last?.direction === 'in' ? 'inside' : last ? 'left' : 'not_arrived';
+        const mates = dep ? groupPeople.get(dep.groupId).filter(id => id !== g.id).map(id => names.get(id)).filter(Boolean) : [];
+        return { name: g.name, band: band?.shortCode || null, status, ...(gs.find(s => s.direction === 'in') ? { inAt: gs.find(s => s.direction === 'in').at } : {}), ...(last?.direction === 'out' ? { outAt: last.at } : {}), ...(dep ? { leftWith: mates } : {}) };
+      });
+      const recentDepartures = [...groupPeople].map(([groupId, ids]) => ({ at: deps.find(d => d.groupId === groupId).at, people: ids.map(id => names.get(id)).filter(Boolean) })).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 20);
+      audit(e.id, session.name, 'dashboard_lookup');
+      const s = counts(e.id); return json(res, 200, { event: { id: e.id, name: e.name }, inside: s.inside, checkedIn: s.checkedIn, left: s.left, roster, recentDepartures });
+    }
+    if (method === 'GET' && p === '/api/dashboard/stream') {
+      const session = monitor(req, url, true);
+      res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' }); res.write(': connected\n\n');
+      if (!streams.has(session.eventId)) streams.set(session.eventId, new Set()); streams.get(session.eventId).add(res);
+      const heartbeat = setInterval(() => res.write(': heartbeat\n\n'), 20_000); heartbeat.unref?.();
+      req.on('close', () => { clearInterval(heartbeat); streams.get(session.eventId)?.delete(res); }); return;
+    }
+    throw fail(404, 'not_found');
+  }
+
+  async function staticFile(req, res, url) {
+    if (req.method !== 'GET' && req.method !== 'HEAD') throw fail(405, 'method_not_allowed');
+    const p = decodeURIComponent(url.pathname);
+    const tap = p.match(/^\/t\/([^/]+)$/);
+    if (tap) {
+      const band = one('SELECT eventId FROM bands WHERE token=?', tap[1]);
+      const cookie = req.headers.cookie?.match(/(?:^|;\s*)hb_monitor=([0-9a-f]{32})/)?.[1];
+      const session = cookie && one('SELECT eventId FROM monitor_sessions WHERE token=?', cookie);
+      if (band && session?.eventId === band.eventId) { res.writeHead(302, { Location: `/door?bandToken=${encodeURIComponent(tap[1])}`, 'Cache-Control': 'no-store' }); return res.end(); }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      return res.end(req.method === 'HEAD' ? '' : '<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Homebound band</title><h1>This is a Homebound safety band</h1></html>');
+    }
+    let relative = p === '/' ? 'admin/index.html' : ['/door', '/dashboard', '/admin'].includes(p) ? `${p.slice(1)}/index.html` : p.slice(1);
+    const full = path.resolve(webRoot, relative);
+    if (!full.startsWith(webRoot + path.sep)) throw fail(403, 'forbidden');
+    let info; try { info = await stat(full); } catch { throw fail(404, 'not_found'); }
+    if (info.isDirectory()) return staticFile(req, res, new URL(`${p.replace(/\/$/, '')}/index.html`, url));
+    if (!info.isFile()) throw fail(404, 'not_found');
+    res.writeHead(200, { 'Content-Type': mime[path.extname(full)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
+    res.end(req.method === 'HEAD' ? undefined : await readFile(full));
+  }
+  const server = http.createServer(async (req, res) => {
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'");
+    res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Referrer-Policy', 'no-referrer'); res.setHeader('X-Frame-Options', 'DENY');
+    try { const url = new URL(req.url, 'http://localhost'); if (url.pathname.startsWith('/api/')) await api(req, res, url); else await staticFile(req, res, url); }
+    catch (error) { if (res.headersSent) return res.destroy(); if (!error.status) console.error(error); json(res, error.status || 500, { error: error.error || 'internal_error', message: error.status ? error.message : 'Internal server error' }); }
+  });
+  if (startJobs) { server.on('listening', jobs.start); server.on('close', jobs.stop); }
   return server;
 }
 
-if(process.argv[1] && path.resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
-  const server=createServer();server.listen(Number(process.env.PORT)||4400,()=>console.log(`Homebound listening on ${server.address().port}`));
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const server = createServer(); server.listen(Number(process.env.PORT) || 4400, () => console.log(`Homebound listening on ${server.address().port}`));
 }

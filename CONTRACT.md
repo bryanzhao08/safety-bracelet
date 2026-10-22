@@ -14,7 +14,9 @@ Homebound safety band".
 ```
 events(id PK, name, startsAt, endsAt, adminPinHash, monitorCode, retentionDays INT DEFAULT 30,
        lumaEventId NULL, lumaApiKeyEnc NULL, createdAt)
-guests(id PK, eventId, name, email NULL, phone NULL, source 'luma'|'partiful'|'manual', externalId NULL, createdAt)
+guests(id PK, eventId, name, email NULL, phone NULL, source 'luma'|'partiful'|'manual'|'id', externalId NULL, createdAt,
+       dob NULL (YYYY-MM-DD), over21 INT NULL, idState NULL, idExpires NULL, idHash NULL, idScannedAt NULL)
+       -- idHash = HMAC-SHA256(serverSecret, eventId + state + licenseNumber); never store the raw number, address or photo
 bands(token PK, eventId, shortCode (4 chars, unique per event), guestId NULL, createdAt)
 scans(id PK, eventId, bandToken, guestId NULL, direction 'in'|'out', at, monitorName)
 departures(id PK, eventId, groupId, guestId NULL, bandToken, at)   -- one row per person; same groupId = left together
@@ -37,8 +39,16 @@ audit(id PK, eventId, actor, action, at, detail JSON)
   with (names in the same group). Audited.
 - `POST /api/events/:id/end` (admin)
 
+**ID scan at check-in** (the door phone decodes the barcode and parses AAMVA fields on the device, then sends only these fields)
+- `POST /api/id-checkin {firstName, lastName, dob, idState, idExpires, licenseNumber}` (monitor) → the server computes `idHash`
+  (the license number is used only for the hash and then discarded), `over21` and `expired`, and finds a match among the event's guests
+  (case-insensitive full-name match, then fuzzy first+last match; returns candidates if ambiguous).
+  → `{guest?:{id,name}, candidates?:[{id,name}], created?:true, over21, expired, duplicate?:{guestId, at}}`
+  (`created` = walk-in guest made from the ID when there's no match and the event allows walk-ins; `duplicate` = same idHash
+  already checked in tonight). The door then links a band with `POST /api/scan {…, direction:'in', guestId}`.
+
 **Monitor (door + dashboard)**
-- `GET /api/guests?q=` → name search `[{id, name, band?, inside}]` (no email or phone)
+- `GET /api/guests?q=` → name search `[{id, name, band?, inside, over21?}]` (no email or phone)
 - `POST /api/scan {bandToken|shortCode, direction:'in'|'out', guestId?}`:
   - `in`, band unlinked, no guestId → `{needsGuest:true, band:{shortCode}}` (the door UI then searches or picks a guest
     and re-posts with guestId, which links the band)
@@ -54,7 +64,7 @@ audit(id PK, eventId, actor, action, at, detail JSON)
 (counts only) in audit, `retentionDays` after `endsAt`.
 
 ## Invariants (tests)
-1. Monitor endpoints never return email or phone.
+1. Monitor endpoints never return email or phone; nothing ever returns or stores a raw license number or address.
 2. Two or more bands in one departure share a groupId; the export lists each person's group-mates.
 3. A band links to exactly one guest per event; relinking needs admin.
 4. Retention deletes all personal rows.
