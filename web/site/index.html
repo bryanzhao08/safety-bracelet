@@ -1,0 +1,1041 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Homebound — Campus Event Safety & Departure Tracking</title>
+  <meta name="description" content="Know who's inside, and who left together. NFC wristbands + ID check at the door, live headcount, and a record of who left with whom, deleted after 30 days.">
+  <link rel="stylesheet" href="/shared/base.css">
+  <link rel="stylesheet" href="/site/site.css">
+  <link rel="stylesheet" href="site.css">
+</head>
+<body class="site-body">
+  <!-- Accessibility skip link -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- Navigation -->
+  <header class="site-header">
+    <div class="site-container">
+      <nav class="site-nav" aria-label="Main Navigation">
+        <a href="#top" class="site-brand">
+          <span class="brand-icon">H</span>
+          <span>Homebound</span>
+          <span class="site-brand-pill">Pilot</span>
+        </a>
+
+        <ul class="nav-links">
+          <li><a href="#how-it-works" class="nav-link">How It Works</a></li>
+          <li><a href="#organizer-view" class="nav-link">Dashboard</a></li>
+          <li><a href="#privacy" class="nav-link">Privacy</a></li>
+          <li><a href="#hardware" class="nav-link">Hardware</a></li>
+          <li><a href="#pricing" class="nav-link">Pricing</a></li>
+          <li><a href="#faq" class="nav-link">FAQ</a></li>
+        </ul>
+
+        <div class="nav-actions">
+          <a href="/door" class="btn btn-secondary nav-cta-btn">Door Scanner</a>
+          <a href="#pilot-form" class="btn btn-primary nav-cta-btn">Join Free Pilot</a>
+        </div>
+
+        <button type="button" class="mobile-nav-toggle" aria-label="Open navigation menu" aria-expanded="false">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <!-- Hero Section -->
+    <section class="hero-section" id="top">
+      <div class="hero-glow" aria-hidden="true"></div>
+      <div class="site-container">
+        <div class="hero-grid">
+          <div class="hero-content">
+            <div class="hero-badge-pill">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+              </svg>
+              <span>Free Campus Pilot Program Available</span>
+            </div>
+
+            <h1 class="hero-title">
+              Know who's inside, and <span class="text-amber">who left together.</span>
+            </h1>
+
+            <p class="hero-sub">
+              NFC wristbands + ID check at the door, a live headcount, and a record of who left with whom, deleted after 30 days.
+            </p>
+
+            <div class="hero-ctas">
+              <a href="#pilot-form" class="btn btn-primary hero-cta-primary">
+                Request Free Pilot Kit →
+              </a>
+              <a href="#how-it-works" class="btn btn-secondary hero-cta-secondary">
+                See How It Works
+              </a>
+            </div>
+
+            <div class="hero-trust-row">
+              <div class="hero-trust-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>Zero apps for guests</span>
+              </div>
+              <div class="hero-trust-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>&lt; 50 ms door tap</span>
+              </div>
+              <div class="hero-trust-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>30-day auto-purge</span>
+              </div>
+              <div class="hero-trust-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>No IDs or addresses stored</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Hero Preview Window -->
+          <div class="hero-preview" aria-hidden="true">
+            <div class="preview-window">
+              <div class="preview-bar">
+                <div class="preview-dots">
+                  <span class="preview-dot"></span>
+                  <span class="preview-dot"></span>
+                  <span class="preview-dot"></span>
+                </div>
+                <div class="preview-title">
+                  <span class="live-indicator"></span>
+                  <span>LIVE DASHBOARD · PHI DELTA FORMAL</span>
+                </div>
+                <div class="badge badge-green" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">MONITOR ACTIVE</div>
+              </div>
+
+              <div class="preview-body">
+                <!-- Live Stats -->
+                <div class="preview-stats-row">
+                  <div class="preview-stat">
+                    <div class="preview-stat-val accent-green">142</div>
+                    <div class="preview-stat-lbl">Inside Venue</div>
+                  </div>
+                  <div class="preview-stat">
+                    <div class="preview-stat-val">218</div>
+                    <div class="preview-stat-lbl">Checked In</div>
+                  </div>
+                  <div class="preview-stat">
+                    <div class="preview-stat-val accent-amber">76</div>
+                    <div class="preview-stat-lbl">Departed</div>
+                  </div>
+                </div>
+
+                <!-- Recent Departures Feed -->
+                <div class="preview-feed">
+                  <div class="preview-feed-head">
+                    <span>Recent Departures (Who Left With Whom)</span>
+                    <span class="text-amber">LIVE SSE</span>
+                  </div>
+                  <div class="preview-feed-list">
+                    <div class="preview-feed-item">
+                      <div>
+                        <div class="feed-names">Maya S. + Jordan T.</div>
+                        <div class="feed-meta">Bands #A491, #B204 · Door 1</div>
+                      </div>
+                      <div style="text-align: right;">
+                        <span class="feed-badge feed-badge-group">LEFT TOGETHER</span>
+                        <div class="feed-meta" style="justify-content: flex-end; margin-top: 2px;">
+                          <span class="feed-time">1:18 AM</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="preview-feed-item">
+                      <div>
+                        <div class="feed-names">Liam K. + Sam R. + Tyler M.</div>
+                        <div class="feed-meta">Bands #C108, #C109, #D312 · Door 2</div>
+                      </div>
+                      <div style="text-align: right;">
+                        <span class="feed-badge feed-badge-group">GROUP OF 3</span>
+                        <div class="feed-meta" style="justify-content: flex-end; margin-top: 2px;">
+                          <span class="feed-time">1:14 AM</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="preview-feed-item">
+                      <div>
+                        <div class="feed-names">Elena V.</div>
+                        <div class="feed-meta">Band #E042 · Door 1</div>
+                      </div>
+                      <div style="text-align: right;">
+                        <span class="feed-badge feed-badge-solo">LEFT ALONE</span>
+                        <div class="feed-meta" style="justify-content: flex-end; margin-top: 2px;">
+                          <span class="feed-time">1:09 AM</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Door Check-in Callout -->
+                <div class="preview-door-callout">
+                  <div class="door-icon">ID</div>
+                  <div>
+                    <div style="font-weight: 700; color: #fff;">Door ID Check · Instant 21+ Verification</div>
+                    <div style="color: var(--text-muted); font-size: 0.78rem;">
+                      AAMVA PDF417 scanned · Under 21 flagged · Zero driver's license numbers stored
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How It Works Section (3 Steps) -->
+    <section class="site-section site-section-alt" id="how-it-works">
+      <div class="site-container">
+        <div class="section-head">
+          <span class="section-tag">Dead Simple Operations</span>
+          <h2 class="section-title">How Homebound Works in 3 Steps</h2>
+          <p class="section-desc">
+            No downloads for guests, no expensive scanner hardware, and no clipboard chaos. Run your door smoothly in minutes.
+          </p>
+        </div>
+
+        <div class="steps-grid">
+          <!-- Step 1 -->
+          <article class="step-card">
+            <div class="step-header">
+              <span class="step-number">1</span>
+              <div class="step-icon-badge" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+              </div>
+            </div>
+            <h3 class="step-title">Import your Luma or Partiful list</h3>
+            <p class="step-body">
+              Sync directly with the Luma API or drag-and-drop your Partiful guest export CSV. Names, emails, and phone numbers are loaded into your event in under five seconds. Walk-ins can be added at the door with two taps.
+            </p>
+            <div class="step-callout">
+              <strong>Zero manual typing:</strong> Auto-detects columns and formats approved guest lists.
+            </div>
+          </article>
+
+          <!-- Step 2 -->
+          <article class="step-card">
+            <div class="step-header">
+              <span class="step-number">2</span>
+              <div class="step-icon-badge" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                  <line x1="7" y1="8" x2="17" y2="8"></line>
+                  <line x1="7" y1="12" x2="17" y2="12"></line>
+                  <line x1="7" y1="16" x2="11" y2="16"></line>
+                </svg>
+              </div>
+            </div>
+            <h3 class="step-title">Scan ID and tap a band at the door</h3>
+            <p class="step-body">
+              Monitors point their phone camera at the PDF417 barcode on the back of any US driver's license. The system verifies 21+ status, matches the guest list, and links an NFC wristband on tap in under 2 seconds.
+            </p>
+            <div class="step-callout">
+              <strong>Instant age check:</strong> Giant 21+ / Under 21 badge. License numbers are never saved.
+            </div>
+          </article>
+
+          <!-- Step 3 -->
+          <article class="step-card">
+            <div class="step-header">
+              <span class="step-number">3</span>
+              <div class="step-icon-badge" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+              </div>
+            </div>
+            <h3 class="step-title">Tap out together when leaving</h3>
+            <p class="step-body">
+              As guests leave, monitors tap their wristbands in OUT mode. Two or more wristbands tapped within 30 seconds are automatically linked as <em>leaving together</em>. Single taps are recorded as <em>leaving alone</em>.
+            </p>
+            <div class="step-callout">
+              <strong>Accountability made easy:</strong> Instantly know who walked home with whom.
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- What the Organizer Sees Section -->
+    <section class="site-section" id="organizer-view">
+      <div class="site-container">
+        <div class="section-head">
+          <span class="section-tag">Total Visibility &amp; Safety</span>
+          <h2 class="section-title">What the Organizer Sees</h2>
+          <p class="section-desc">
+            Chapter presidents, risk managers, and campus staff get real-time situational awareness during the event, and verified incident timelines when safety questions arise.
+          </p>
+        </div>
+
+        <div class="organizer-grid">
+          <!-- Feature 1: Live Headcount -->
+          <div class="feature-box">
+            <div class="feature-box-icon" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 20V10"></path>
+                <path d="M12 20V4"></path>
+                <path d="M6 20v-6"></path>
+              </svg>
+            </div>
+            <h3 class="feature-box-title">Live Real-Time Headcount</h3>
+            <p class="feature-box-desc">
+              Know your exact house capacity second-by-second via Server-Sent Events (SSE). See inside counts, total arrivals, and exits across all doors without refreshing.
+            </p>
+            <div class="feature-demo-mock">
+              <span class="mock-green">● LIVE SSE</span> · Inside: <strong>142</strong> / Capacity: <strong>250</strong> · Arrived: 218 · Exited: 76
+            </div>
+          </div>
+
+          <!-- Feature 2: Grouped Departures Feed -->
+          <div class="feature-box">
+            <div class="feature-box-icon" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <h3 class="feature-box-title">Live Grouped Departures Feed</h3>
+            <p class="feature-box-desc">
+              Every exit is logged with timestamps and group groupings. Risk monitors can instantly spot guests leaving alone late at night and ensure safe transport.
+            </p>
+            <div class="feature-demo-mock">
+              <span class="mock-highlight">1:12 AM</span>: Maya Stone + Jordan Tyler (<span class="mock-green">Left together</span>)
+            </div>
+          </div>
+
+          <!-- Feature 3: Incident Timeline Query -->
+          <div class="feature-box">
+            <div class="feature-box-icon" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </div>
+            <h3 class="feature-box-title">Incident Response Timeline ("Who was Maya with?")</h3>
+            <p class="feature-box-desc">
+              If an incident happens or a guest is unaccounted for the next morning, chapter leadership can query the attendee's full audit trail: check-in time, ID verification, exit time, and the names &amp; phone numbers of the friends they left with.
+            </p>
+            <div class="feature-demo-mock">
+              Maya Stone · Check-in: 10:42 PM · Left: 1:12 AM · <span class="mock-highlight">With: Jordan Tyler (555-0192)</span>
+            </div>
+          </div>
+
+          <!-- Feature 4: 2:00 AM House Clearance -->
+          <div class="feature-box">
+            <div class="feature-box-icon" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
+            </div>
+            <h3 class="feature-box-title">Closing-Time "Still Inside" Roster</h3>
+            <p class="feature-box-desc">
+              At the end of the night, tap the "Still Inside" filter on the dashboard to immediately see anyone who hasn't tapped out, making end-of-night walkthroughs fast and foolproof.
+            </p>
+            <div class="feature-demo-mock">
+              Filter: <span class="mock-highlight">Still Inside (4 remaining)</span> · Alex C., Devon W., Sam T., Ryan K.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Privacy Section -->
+    <section class="site-section site-section-alt" id="privacy">
+      <div class="site-container">
+        <div class="section-head">
+          <span class="section-tag">Privacy by Architecture</span>
+          <h2 class="section-title">Built for Trust: What's Stored vs. Never Stored</h2>
+          <p class="section-desc">
+            Campus safety requires trust. Homebound is architected with strict data minimization invariants, role-based redactions, and an automatic 30-day purge.
+          </p>
+        </div>
+
+        <div class="privacy-wrapper">
+          <!-- What is stored -->
+          <div class="privacy-card privacy-card-stored">
+            <div class="privacy-card-head">
+              <span class="privacy-card-badge badge-stored">What Is Stored</span>
+              <h3 class="privacy-card-title">Event Safety Records</h3>
+            </div>
+            <ul class="privacy-list">
+              <li class="privacy-list-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <div>
+                  <strong>Guest Name &amp; Contact Info</strong>
+                  <span class="privacy-subtext">Imported directly from your approved Luma or Partiful invitation list.</span>
+                </div>
+              </li>
+              <li class="privacy-list-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <div>
+                  <strong>Wristband 4-Character Short Code</strong>
+                  <span class="privacy-subtext">Randomly generated code linking the wristband to that guest for the night.</span>
+                </div>
+              </li>
+              <li class="privacy-list-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <div>
+                  <strong>Door Scan Timestamps</strong>
+                  <span class="privacy-subtext">First check-in time and departure tap times.</span>
+                </div>
+              </li>
+              <li class="privacy-list-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <div>
+                  <strong>Departure Group Linkages</strong>
+                  <span class="privacy-subtext">Record of wristbands that tapped out together within a 30-second window.</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <!-- What is NEVER stored -->
+          <div class="privacy-card privacy-card-never">
+            <div class="privacy-card-head">
+              <span class="privacy-card-badge badge-never">What Is Never Stored</span>
+              <h3 class="privacy-card-title">Zero Sensitive Identity Data</h3>
+            </div>
+            <ul class="privacy-list">
+              <li class="privacy-list-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                <div>
+                  <strong>No Driver's License Numbers</strong>
+                  <span class="privacy-subtext">License numbers are converted to a one-way event HMAC hash to detect duplicate passes, then instantly wiped from RAM.</span>
+                </div>
+              </li>
+              <li class="privacy-list-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                <div>
+                  <strong>No Home Addresses or License Photos</strong>
+                  <span class="privacy-subtext">Device barcode decoders strip street addresses and biometric data before sending anything to the server.</span>
+                </div>
+              </li>
+              <li class="privacy-list-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                <div>
+                  <strong>No Contact Info Shown to Door Monitors</strong>
+                  <span class="privacy-subtext">Student monitors at the door only see names and age badges—never guest phone numbers or emails.</span>
+                </div>
+              </li>
+              <li class="privacy-list-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                <div>
+                  <strong>No GPS or Continuous Location Tracking</strong>
+                  <span class="privacy-subtext">Homebound only logs door taps. Guests have no app, no background telemetry, and no tracking off-premise.</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Privacy Pillars -->
+        <div class="privacy-pillars-grid">
+          <div class="pillar-item">
+            <div class="pillar-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </div>
+            <h4 class="pillar-title">Automated 30-Day Purge</h4>
+            <p class="pillar-desc">
+              All guest rosters, wristbands, scan records, and departure groups are permanently hard-deleted from the database 30 days after the event closes.
+            </p>
+          </div>
+
+          <div class="pillar-item">
+            <div class="pillar-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+              </svg>
+            </div>
+            <h4 class="pillar-title">Tamper-Evident Audit Log</h4>
+            <p class="pillar-desc">
+              Every data export and incident timeline search is permanently written to an immutable audit log with timestamps, preventing unauthorized snooping.
+            </p>
+          </div>
+
+          <div class="pillar-item">
+            <div class="pillar-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+            </div>
+            <h4 class="pillar-title">Doorstep Guest Consent</h4>
+            <p class="pillar-desc">
+              Monitors are prompted with a clear one-line verbal consent notice at the door: <em>"We log check-in/out and who you leave with for safety; deleted after 30 days."</em>
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Hardware Section -->
+    <section class="site-section" id="hardware">
+      <div class="site-container">
+        <div class="section-head">
+          <span class="section-tag">Low-Cost, High-Speed Hardware</span>
+          <h2 class="section-title">Wristbands, Clips &amp; Phone Compatibility</h2>
+          <p class="section-desc">
+            No proprietary gate hardware or expensive handheld scanners. Homebound uses standard $0.20 NFC stickers, 3D-printable clips, and the phones already in your monitors' pockets.
+          </p>
+        </div>
+
+        <div class="hardware-grid">
+          <!-- Card 1: $0.20 NFC Stickers -->
+          <div class="hardware-card">
+            <span class="hardware-cost-badge">~$0.20 / sticker</span>
+            <h3 class="hardware-title">Standard NTAG213 / NTAG215 Tags</h3>
+            <p class="hardware-desc">
+              Off-the-shelf 25mm NFC adhesive tags or pre-assembled Tyvek and silicone wristbands. Tags are programmed in bulk directly from our web admin generator.
+            </p>
+            <div class="hardware-specs">
+              <div class="hardware-spec-row">
+                <span class="spec-label">Tag Frequency</span>
+                <span class="spec-value">13.56 MHz ISO 14443A</span>
+              </div>
+              <div class="hardware-spec-row">
+                <span class="spec-label">Read Time</span>
+                <span class="spec-value">&lt; 30 ms</span>
+              </div>
+              <div class="hardware-spec-row">
+                <span class="spec-label">Water Resistance</span>
+                <span class="spec-value">IP67 Waterproof</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: 3D-Printable Reusable Clips -->
+          <div class="hardware-card">
+            <span class="hardware-cost-badge">Reusable CAD Model</span>
+            <h3 class="hardware-title">3D-Printable Wristband Clips</h3>
+            <p class="hardware-desc">
+              Open-source CadQuery models for 19mm and 25mm wristbands. Holds standard NFC tags securely and slides onto fabric or Tyvek bands for effortless end-of-night collection and reuse.
+            </p>
+            <div class="hardware-specs">
+              <div class="hardware-spec-row">
+                <span class="spec-label">Print Time</span>
+                <span class="spec-value">~12 min / clip</span>
+              </div>
+              <div class="hardware-spec-row">
+                <span class="spec-label">Recommended Material</span>
+                <span class="spec-value">PETG or PLA+</span>
+              </div>
+              <div class="hardware-spec-row">
+                <span class="spec-label">Format</span>
+                <span class="spec-value">STEP / STL included</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Any Smartphone Works -->
+          <div class="hardware-card">
+            <span class="hardware-cost-badge">Zero Hardware Purchases</span>
+            <h3 class="hardware-title">Android NFC + iPhone Camera QR</h3>
+            <p class="hardware-desc">
+              Android monitors use native Chrome Web NFC to scan bands with a physical tap. iPhone monitors scan the printed QR code with their camera or type the 4-character short code.
+            </p>
+            <div class="hardware-specs">
+              <div class="hardware-spec-row">
+                <span class="spec-label">Android Chrome</span>
+                <span class="spec-value">Web NFC (Physical Tap)</span>
+              </div>
+              <div class="hardware-spec-row">
+                <span class="spec-label">iPhone Safari</span>
+                <span class="spec-value">Camera QR + 4-Char Code</span>
+              </div>
+              <div class="hardware-spec-row">
+                <span class="spec-label">App Store Install</span>
+                <span class="spec-value">None (Pure Web)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing Section (Marked Draft) -->
+    <section class="site-section site-section-alt" id="pricing">
+      <div class="site-container">
+        <div class="section-head">
+          <span class="section-tag">Transparent Pricing</span>
+          <h2 class="section-title">Free for Pilots. Predictable for Chapters.</h2>
+          <p class="section-desc">
+            We are actively enrolling fraternities, sororities, and campus risk teams in our free pilot program for the upcoming semester.
+          </p>
+        </div>
+
+        <div class="pricing-notice-banner" role="status">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span><strong>Pilot Program Active:</strong> All features are 100% free for approved pilot chapters. Commercial pricing below is draft.</span>
+        </div>
+
+        <div class="pricing-grid">
+          <!-- Tier 1: Free Pilot -->
+          <div class="pricing-card pricing-card-featured">
+            <div class="pricing-ribbon">Most Popular</div>
+            <div class="pricing-header">
+              <div class="pricing-tier-name">Campus Pilot</div>
+              <span class="pricing-draft-badge" style="background-color: rgba(46, 204, 113, 0.2); color: #4ade80; border-color: rgba(46, 204, 113, 0.4);">
+                ACTIVE PROGRAM
+              </span>
+              <div class="pricing-price-wrap">
+                <span class="pricing-amount">$0</span>
+                <span class="pricing-period">/ semester pilot</span>
+              </div>
+              <p class="pricing-tier-desc">
+                For Greek chapters and student risk teams seeking better door safety and real accountability.
+              </p>
+            </div>
+
+            <ul class="pricing-features-list">
+              <li class="pricing-feature-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Full access to Admin, Door Scanner &amp; Dashboard</span>
+              </li>
+              <li class="pricing-feature-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Unlimited guest check-ins per event</span>
+              </li>
+              <li class="pricing-feature-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Luma API &amp; Partiful CSV guest list sync</span>
+              </li>
+              <li class="pricing-feature-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Instant 21+ ID barcode verification</span>
+              </li>
+              <li class="pricing-feature-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Grouped departure tracking ("Left together")</span>
+              </li>
+              <li class="pricing-feature-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Starter sample pack of NFC stickers &amp; clips</span>
+              </li>
+            </ul>
+
+            <a href="#pilot-form" class="btn btn-primary pricing-btn">Apply for Free Pilot</a>
+          </div>
+
+          <!-- Tier 2: Per-Event (Draft) -->
+          <div class="pricing-card">
+            <div class="pricing-header">
+              <div class="pricing-tier-name">Per-Event</div>
+              <span class="pricing-draft-badge">DRAFT PRICING</span>
+              <div class="pricing-price-wrap">
+                <span class="pricing-amount">$49</span>
+                <span class="pricing-period">/ single event</span>
+              </div>
+              <p class="pricing-tier-desc">
+                Ideal for one-off formals, date parties, and philanthropy invitationals.
+              </p>
+            </div>
+
+            <ul class="pricing-features-list">
+              <li class="pricing-feature-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Single event license (up to 1,000 guests)</span>
+              </li>
+              <li class="pricing-feature-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Up to 6 simultaneous door monitors</span>
+              </li>
+              <li class="pricing-feature-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Real-time SSE dashboard &amp; headcount</span>
+              </li>
+              <li class="pricing-feature-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>30-day automated retention &amp; CSV export</span>
+              </li>
+              <li class="pricing-feature-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Email support</span>
+              </li>
+            </ul>
+
+            <a href="#pilot-form" class="btn btn-secondary pricing-btn">Request Quote</a>
+          </div>
+
+          <!-- Tier 3: Per-Semester (Draft) -->
+          <div class="pricing-card">
+            <div class="pricing-header">
+              <div class="pricing-tier-name">Semester Pass</div>
+              <span class="pricing-draft-badge">DRAFT PRICING</span>
+              <div class="pricing-price-wrap">
+                <span class="pricing-amount">$199</span>
+                <span class="pricing-period">/ semester</span>
+              </div>
+              <p class="pricing-tier-desc">
+                Comprehensive risk management for active houses with regular social calendars.
+              </p>
+            </div>
+
+            <ul class="pricing-features-list">
+              <li class="pricing-feature-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Unlimited events for the entire semester</span>
+              </li>
+              <li class="pricing-feature-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Unlimited concurrent door monitors &amp; gates</span>
+              </li>
+              <li class="pricing-feature-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Incident timeline query tool with audit log</span>
+              </li>
+              <li class="pricing-feature-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Bulk wristband generator (up to 2,000 tags)</span>
+              </li>
+              <li class="pricing-feature-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Priority 24/7 weekend phone/text hotline</span>
+              </li>
+            </ul>
+
+            <a href="#pilot-form" class="btn btn-secondary pricing-btn">Request Chapter Pass</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="site-section" id="faq">
+      <div class="site-container">
+        <div class="section-head">
+          <span class="section-tag">Frequently Asked Questions</span>
+          <h2 class="section-title">Everything You Need to Know</h2>
+          <p class="section-desc">
+            Answers for risk chairs, chapter officers, and campus administrators.
+          </p>
+        </div>
+
+        <div class="faq-grid">
+          <!-- Q1: App download -->
+          <div class="faq-item">
+            <button type="button" class="faq-question">
+              <span>Do guests have to download an app or make an account?</span>
+              <span class="faq-arrow" aria-hidden="true">▼</span>
+            </button>
+            <div class="faq-answer">
+              <strong>Absolutely not.</strong> Guests never download anything, install an app, or create an account. They simply wear a lightweight wristband with an NFC sticker and tap it at the door. Door monitors and chapter officers access Homebound directly through standard mobile web browsers.
+            </div>
+          </div>
+
+          <!-- Q2: Phone support -->
+          <div class="faq-item">
+            <button type="button" class="faq-question">
+              <span>Does Homebound work on any smartphone?</span>
+              <span class="faq-arrow" aria-hidden="true">▼</span>
+            </button>
+            <div class="faq-answer">
+              Yes. Any smartphone with a modern web browser (Chrome, Safari, Firefox, Edge) can run Homebound. No special hardware or barcode scanners are required.
+            </div>
+          </div>
+
+          <!-- Q3: Android vs iPhone -->
+          <div class="faq-item">
+            <button type="button" class="faq-question">
+              <span>What is the difference between Android NFC and iPhone QR scanning?</span>
+              <span class="faq-arrow" aria-hidden="true">▼</span>
+            </button>
+            <div class="faq-answer">
+              Android Chrome includes native Web NFC, allowing monitors to tap the wristband against the back of the phone for instant check-in. Because Apple restricts Web NFC inside iOS Safari, iPhone monitors scan the high-contrast QR code printed on the wristband or enter the 4-character short code. Both methods operate with sub-50 millisecond database lookups.
+            </div>
+          </div>
+
+          <!-- Q4: ID Privacy -->
+          <div class="faq-item">
+            <button type="button" class="faq-question">
+              <span>How does ID check-in work without storing driver's license numbers?</span>
+              <span class="faq-arrow" aria-hidden="true">▼</span>
+            </button>
+            <div class="faq-answer">
+              When a monitor scans the AAMVA PDF417 barcode on the back of a state driver's license, the phone parses the birthdate and name on the device. To prevent a guest from passing their ID back to someone else, the server computes a one-way HMAC hash of the license number scoped only to tonight's event. The raw license number, street address, and photo are <strong>never saved to disk or transmitted to our database</strong>.
+            </div>
+          </div>
+
+          <!-- Q5: 30-Day Retention -->
+          <div class="faq-item">
+            <button type="button" class="faq-question">
+              <span>What happens to event data after 30 days?</span>
+              <span class="faq-arrow" aria-hidden="true">▼</span>
+            </button>
+            <div class="faq-answer">
+              An automated background retention worker runs hourly to purge all personal attendee records, guest rosters, scan times, and departure pairings exactly 30 days after the event closes. Only anonymous aggregated stats (e.g., total headcount) are retained for risk compliance reports.
+            </div>
+          </div>
+
+          <!-- Q6: Luma / Partiful -->
+          <div class="faq-item">
+            <button type="button" class="faq-question">
+              <span>Can we import guest lists from Luma or Partiful?</span>
+              <span class="faq-arrow" aria-hidden="true">▼</span>
+            </button>
+            <div class="faq-answer">
+              Yes! For Luma, simply enter your read-only API key and event ID in the admin panel to synchronize approved RSVPs. For Partiful (or any other spreadsheet tool), export your guest CSV and upload it directly. Homebound automatically recognizes standard name, email, and phone column headers.
+            </div>
+          </div>
+
+          <!-- Q7: Walk-ins -->
+          <div class="faq-item">
+            <button type="button" class="faq-question">
+              <span>What if someone arrives as an uninvited guest or walk-in?</span>
+              <span class="faq-arrow" aria-hidden="true">▼</span>
+            </button>
+            <div class="faq-answer">
+              Monitors can tap "Add Walk-in" at the door to quickly type a name, or simply scan their ID. If the ID is valid and 21+, the door screen offers a one-tap option to register them as a walk-in guest and link their wristband immediately.
+            </div>
+          </div>
+
+          <!-- Q8: Wristband procurement -->
+          <div class="faq-item">
+            <button type="button" class="faq-question">
+              <span>Where do we get the wristbands and how much do they cost?</span>
+              <span class="faq-arrow" aria-hidden="true">▼</span>
+            </button>
+            <div class="faq-answer">
+              You can purchase standard NTAG213 adhesive stickers from Amazon or RFID distributors for approximately $0.15 to $0.25 each, or buy pre-assembled NFC Tyvek wristbands. For pilot chapters, we mail a complimentary starter hardware pack with tags and reusable 3D-printed clips.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pilot Sign-Up Form Section -->
+    <section class="site-section site-section-alt" id="pilot-form">
+      <div class="site-container">
+        <div class="signup-card">
+          <div class="signup-card-head">
+            <span class="section-tag">Campus Pilot Registration</span>
+            <h2 class="section-title">Apply for Free Pilot Access</h2>
+            <p class="section-desc">
+              Get Homebound for your chapter's upcoming events. We will set up your organization, send starter hardware, and walk your risk team through door setup.
+            </p>
+          </div>
+
+          <!-- Form Status Feedback -->
+          <div id="form-status-success" class="form-status form-status-success" role="alert">
+            <div style="font-weight: 800; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>Application Received!</span>
+            </div>
+            <p style="font-size: 0.95rem; margin: 0;">
+              Thank you for applying. A member of our engineering team will reach out within 24 hours to verify your chapter and schedule your onboarding call.
+            </p>
+          </div>
+
+          <div id="form-status-fallback" class="form-status form-status-fallback" role="alert">
+            <div style="font-weight: 800; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              <span>Request Saved Locally</span>
+            </div>
+            <p style="font-size: 0.95rem; margin: 0;">
+              Your application details are safely stored on your device. Please click below to send your request directly via email to our team, or copy your details:
+            </p>
+            <div class="fallback-actions">
+              <a id="fallback-mailto-btn" href="mailto:pilot@homebound.party" class="btn btn-primary" style="min-height: 48px; font-size: 0.95rem;">
+                ✉️ Send Application via Email
+              </a>
+              <button id="fallback-copy-btn" type="button" class="btn btn-secondary" style="min-height: 48px; font-size: 0.95rem;">
+                📋 Copy Application Details
+              </button>
+            </div>
+          </div>
+
+          <!-- Pilot Form -->
+          <form id="pilot-form" novalidate>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="form-chapter">Organization or Chapter Name *</label>
+                <input type="text" id="form-chapter" name="chapter" class="input" placeholder="e.g. Sigma Phi Epsilon - Alpha Chapter" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="form-school">University or College *</label>
+                <input type="text" id="form-school" name="school" class="input" placeholder="e.g. University of Wisconsin - Madison" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="form-name">Your Full Name *</label>
+                <input type="text" id="form-name" name="name" class="input" placeholder="e.g. Alex Miller" required autocomplete="name">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="form-email">Contact Email *</label>
+                <input type="email" id="form-email" name="email" class="input" placeholder="e.g. risk@chapter.org" required autocomplete="email">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="form-role">Your Role *</label>
+                <select id="form-role" name="role" class="select" required>
+                  <option value="" disabled selected>Select your role...</option>
+                  <option value="Risk Manager / Chair">Risk Manager / Risk Chair</option>
+                  <option value="Social Chair">Social Chair</option>
+                  <option value="Chapter President">Chapter President</option>
+                  <option value="House Manager">House Manager / Operations</option>
+                  <option value="Greek Life / Campus Staff">Greek Life Director / Campus Staff</option>
+                  <option value="Other">Other Officer / Event Organizer</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="form-event-size">Typical Event Size *</label>
+                <select id="form-event-size" name="eventSize" class="select" required>
+                  <option value="" disabled selected>Select expected attendance...</option>
+                  <option value="75">Under 100 guests</option>
+                  <option value="200">100 to 250 guests</option>
+                  <option value="400">250 to 500 guests</option>
+                  <option value="750">500+ guests</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="form-event-date">Target Date of Next Event (Optional)</label>
+              <input type="date" id="form-event-date" name="eventDate" class="input">
+              <span class="form-help">Helps us coordinate shipping for starter wristbands.</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="form-notes">Door Setup &amp; Safety Goals (Optional)</label>
+              <textarea id="form-notes" name="notes" class="textarea" rows="3" placeholder="Tell us about your current door procedures, ticketing tools, or what you want to improve..."></textarea>
+            </div>
+
+            <button type="submit" id="pilot-submit-btn" class="btn btn-primary btn-block" style="min-height: 60px; font-size: 1.2rem; margin-top: 1rem;">
+              Submit Pilot Application →
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="site-container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <div class="site-brand" style="margin-bottom: 0.5rem;">
+            <span class="brand-icon">H</span>
+            <span>Homebound</span>
+          </div>
+          <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;">
+            Know who's inside, and who left together. NFC wristbands and ID verification built for fraternity and sorority event safety.
+          </p>
+          <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.5rem;">
+            Privacy by Design: 30-day automated purge · No driver's license numbers stored.
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <h4 class="footer-heading">Platform</h4>
+          <ul class="footer-links">
+            <li><a href="#how-it-works" class="footer-link">How It Works</a></li>
+            <li><a href="#organizer-view" class="footer-link">Organizer Dashboard</a></li>
+            <li><a href="#privacy" class="footer-link">Privacy Architecture</a></li>
+            <li><a href="#hardware" class="footer-link">Hardware &amp; Clips</a></li>
+            <li><a href="#pricing" class="footer-link">Pricing (Draft)</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4 class="footer-heading">Live App</h4>
+          <ul class="footer-links">
+            <li><a href="/door" class="footer-link">Door Scanner</a></li>
+            <li><a href="/dashboard" class="footer-link">Live Dashboard</a></li>
+            <li><a href="/admin" class="footer-link">Admin Console</a></li>
+            <li><a href="#faq" class="footer-link">Frequently Asked Questions</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4 class="footer-heading">Contact &amp; Pilot</h4>
+          <ul class="footer-links">
+            <li><a href="#pilot-form" class="footer-link">Join Free Pilot</a></li>
+            <li><a href="mailto:pilot@homebound.party" class="footer-link">pilot@homebound.party</a></li>
+            <li><a href="mailto:safety@homebound.party" class="footer-link">safety@homebound.party</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>
+          © 2026 Homebound Campus Safety Initiative. Built for Greek Life &amp; Student Events.
+        </div>
+        <div style="display: flex; gap: 1.5rem;">
+          <a href="#privacy" class="footer-link" style="font-size: 0.82rem;">Privacy Policy</a>
+          <a href="#faq" class="footer-link" style="font-size: 0.82rem;">Terms &amp; Retention</a>
+          <a href="#top" class="footer-link" style="font-size: 0.82rem;">Back to Top ↑</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/site/site.js"></script>
+  <script src="site.js"></script>
+</body>
+</html>

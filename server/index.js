@@ -1,6 +1,6 @@
 import './warnings.js';
 import http from 'node:http';
-import { randomInt } from 'node:crypto';
+import { createHash, randomInt } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -66,7 +66,24 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
   const httpsRequest = req => req.socket.encrypted || req.headers['x-forwarded-proto']?.split(',')[0]?.trim().toLowerCase() === 'https';
   const baseUrl = req => `${httpsRequest(req) ? 'https' : 'http'}://${req.headers.host}`;
   const rate = (key, max, ms) => { const t = new Date(now()).getTime(), recent = (rates.get(key) ?? []).filter(x => t - x < ms); if (recent.length >= max) throw fail(429, 'rate_limited'); recent.push(t); rates.set(key, recent); };
-  const publicEvent = e => ({ id: e.id, name: e.name, startsAt: e.startsAt, endsAt: e.endsAt, retentionDays: e.retentionDays, createdAt: e.createdAt });
+  const idempotency = (req, res, eventId) => {
+    const key = req.headers['idempotency-key'];
+    if (key === undefined) return { respond: (status, value) => json(res, status, value) };
+    if (typeof key !== 'string' || key.length < 1 || key.length > 64 || /[\x00-\x1f\x7f]/.test(key)) throw fail(400, 'invalid_idempotency_key');
+    const route = req.url.split('?')[0], keyHash = createHash('sha256').update(key).digest('hex');
+    const saved = one('SELECT status,response,createdAt FROM idempotency WHERE eventId=? AND route=? AND key=?', eventId, route, keyHash);
+    if (saved && Date.parse(saved.createdAt) > Date.parse(at()) - 48 * 3_600_000) {
+      const value = JSON.parse(saved.response);
+      if (route.endsWith('/monitor-session')) res.setHeader('Set-Cookie', `hb_monitor=${value.monitorToken}; Path=/; HttpOnly; SameSite=Lax${httpsRequest(req) ? '; Secure' : ''}`);
+      json(res, saved.status, value);
+      return { replayed: true };
+    }
+    return { respond: (status, value) => {
+      run('INSERT OR REPLACE INTO idempotency (eventId,route,key,status,response,createdAt) VALUES (?,?,?,?,?,?)', eventId, route, keyHash, status, JSON.stringify(value), at());
+      json(res, status, value);
+    } };
+  };
+  const publicEvent = e => ({ id: e.id, name: e.name, startsAt: e.startsAt, endsAt: e.endsAt, retentionDays: e.retentionDays, capacity: e.capacity, createdAt: e.createdAt });
   const guestPublic = g => ({ id: g.id, name: g.name });
   const addGuest = (id, g, source, externalId = null) => {
     const guestId = randomToken();
@@ -76,6 +93,22 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
 
   async function api(req, res, url) {
     const p = url.pathname, method = req.method; let m;
+    if (method === 'POST' && p === '/api/pilot') {
+      const b = await body(req);
+      if (!text(b.chapter, 120) || !text(b.school, 120) || !text(b.email, 254) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email) ||
+          (b.eventSize !== undefined && (!Number.isInteger(b.eventSize) || b.eventSize < 1)) ||
+          (b.note !== undefined && (typeof b.note !== 'string' || b.note.length > 2000))) throw fail(400, 'invalid_pilot');
+      rate(`pilot:${req.headers['fly-client-ip'] || req.socket.remoteAddress}`, 5, 3_600_000);
+      const id = randomToken();
+      run('INSERT INTO pilot_signups (id,chapter,school,email,eventSize,note,createdAt) VALUES (?,?,?,?,?,?,?)',
+        id, b.chapter.trim(), b.school.trim(), b.email.trim(), b.eventSize ?? null, b.note?.trim() || null, at());
+      return json(res, 201, { id });
+    }
+    if (method === 'GET' && p === '/api/pilot') {
+      const owner = process.env.HB_OWNER_TOKEN;
+      if (!owner || !secureEqual(req.headers['x-owner-token'], owner)) throw fail(403, 'owner_required');
+      return json(res, 200, many('SELECT id,chapter,school,email,eventSize,note,createdAt FROM pilot_signups ORDER BY createdAt DESC,id DESC'));
+    }
     if (method === 'POST' && p === '/api/events') {
       const b = await body(req);
       if (!text(b.name, 120) || !Number.isFinite(Date.parse(b.startsAt)) || !Number.isFinite(Date.parse(b.endsAt)) || Date.parse(b.endsAt) <= Date.parse(b.startsAt)) throw fail(400, 'invalid_event');
@@ -87,10 +120,11 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
     if ((m = p.match(/^\/api\/events\/([^/]+)\/monitor-session$/)) && method === 'POST') {
       const e = event(m[1]), b = await body(req);
       if (!text(b.name, 80) || !text(b.monitorCode, 6) || !secureEqual(b.monitorCode, e.monitorCode)) throw fail(403, 'invalid_monitor_code');
+      const idem = idempotency(req, res, e.id); if (idem.replayed) return;
       const token = randomToken();
       run('INSERT INTO monitor_sessions (token,eventId,name,createdAt) VALUES (?,?,?,?)', token, e.id, b.name.trim(), at());
       res.setHeader('Set-Cookie', `hb_monitor=${token}; Path=/; HttpOnly; SameSite=Lax${httpsRequest(req) ? '; Secure' : ''}`);
-      return json(res, 200, { monitorToken: token, event: { id: e.id, name: e.name } });
+      return idem.respond(200, { monitorToken: token, event: { id: e.id, name: e.name } });
     }
     if ((m = p.match(/^\/api\/events\/([^/]+)\/import\/luma$/)) && method === 'POST') {
       admin(req, m[1]); const b = await body(req);
@@ -133,10 +167,11 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
       const e = event(m[1]); let actor;
       if (req.headers['x-admin-pin']) { admin(req, e.id); actor = 'organizer'; }
       else { const session = monitor(req, url); if (session.eventId !== e.id) throw fail(403, 'wrong_event'); actor = session.name; }
+      const idem = actor === 'organizer' ? null : idempotency(req, res, e.id); if (idem?.replayed) return;
       const b = await body(req);
       if (!text(b.name, 200) || (b.email != null && typeof b.email !== 'string') || (b.phone != null && typeof b.phone !== 'string')) throw fail(400, 'invalid_guest');
       const id = addGuest(e.id, b, 'manual'); audit(e.id, actor, 'guest_created', { guestId: id });
-      return json(res, 201, { guest: { id, name: b.name.trim() } });
+      return idem ? idem.respond(201, { guest: { id, name: b.name.trim() } }) : json(res, 201, { guest: { id, name: b.name.trim() } });
     }
     if ((m = p.match(/^\/api\/events\/([^/]+)\/bands\.csv$/)) && method === 'GET') {
       admin(req, m[1]); audit(m[1], 'organizer', 'bands_export');
@@ -209,8 +244,18 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
     if ((m = p.match(/^\/api\/events\/([^/]+)$/)) && method === 'GET') {
       const e = admin(req, m[1]); audit(e.id, 'organizer', 'event_lookup'); return json(res, 200, { event: publicEvent(e), stats: counts(e.id) });
     }
+    if ((m = p.match(/^\/api\/events\/([^/]+)$/)) && method === 'PATCH') {
+      const e = admin(req, m[1]), b = await body(req);
+      if ((!Object.hasOwn(b, 'capacity') && !Object.hasOwn(b, 'name')) ||
+          (Object.hasOwn(b, 'capacity') && (!Number.isInteger(b.capacity) || b.capacity < 1)) ||
+          (Object.hasOwn(b, 'name') && !text(b.name, 120))) throw fail(400, 'invalid_event');
+      run('UPDATE events SET name=?,capacity=? WHERE id=?', b.name?.trim() ?? e.name, b.capacity ?? e.capacity, e.id);
+      audit(e.id, 'organizer', 'event_updated', { name: b.name?.trim(), capacity: b.capacity });
+      return json(res, 200, { event: publicEvent(event(e.id)) });
+    }
     if (method === 'POST' && p === '/api/id-checkin') {
-      const session = monitor(req, url), b = await body(req), e = event(session.eventId);
+      const session = monitor(req, url), idem = idempotency(req, res, session.eventId); if (idem.replayed) return;
+      const b = await body(req), e = event(session.eventId);
       if (!text(b.firstName, 100) || !text(b.lastName, 100) ||
           !validDate(b.dob) || !validDate(b.idExpires) ||
           typeof b.idState !== 'string' || !/^[A-Za-z]{2}$/.test(b.idState.trim()) ||
@@ -222,12 +267,12 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
       const previous = one('SELECT id,name,idScannedAt FROM guests WHERE eventId=? AND idHash=?', e.id, idHash);
       if (previous) {
         audit(e.id, session.name, 'id_duplicate', { guestId: previous.id });
-        return json(res, 200, { guest: guestPublic(previous), over21, expired, duplicate: { guestId: previous.id, at: previous.idScannedAt } });
+        return idem.respond(200, { guest: guestPublic(previous), over21, expired, duplicate: { guestId: previous.id, at: previous.idScannedAt } });
       }
       const matches = matchGuests(many('SELECT id,name FROM guests WHERE eventId=?', e.id), b.firstName, b.lastName);
       if (matches.length > 1) {
         audit(e.id, session.name, 'id_ambiguous', { candidates: matches.length });
-        return json(res, 200, { candidates: matches.map(guestPublic), over21, expired });
+        return idem.respond(200, { candidates: matches.map(guestPublic), over21, expired });
       }
       let guest, created = false;
       if (matches.length) {
@@ -240,7 +285,7 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
       run('UPDATE guests SET dob=?,over21=?,idState=?,idExpires=?,idHash=?,idScannedAt=? WHERE id=?',
         b.dob, Number(over21), b.idState.trim().toUpperCase(), b.idExpires, idHash, at(), guest.id);
       audit(e.id, session.name, 'id_checkin', { guestId: guest.id, created });
-      return json(res, 200, { guest: guestPublic(guest), ...(created ? { created: true } : {}), over21, expired });
+      return idem.respond(200, { guest: guestPublic(guest), ...(created ? { created: true } : {}), over21, expired });
     }
     if (method === 'GET' && p === '/api/guests') {
       const session = monitor(req, url), q = url.searchParams.get('q')?.trim() || '';
@@ -250,10 +295,17 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
       audit(session.eventId, session.name, 'guest_lookup', { query: q }); return json(res, 200, result);
     }
     if (method === 'POST' && p === '/api/scan') {
-      const session = monitor(req, url), b = await body(req); rate(`scan:${session.token}`, 3000, 60_000);
+      const session = monitor(req, url), idem = idempotency(req, res, session.eventId); if (idem.replayed) return;
+      const b = await body(req); rate(`scan:${session.token}`, 3000, 60_000);
       if (!['in', 'out'].includes(b.direction) || (!text(b.bandToken, 200) && !text(b.shortCode, 4))) throw fail(400, 'invalid_scan');
+      let timestamp = at();
+      if (b.at !== undefined) {
+        const clientTime = Date.parse(b.at);
+        if (typeof b.at !== 'string' || !Number.isFinite(clientTime) || Math.abs(clientTime - Date.parse(timestamp)) > 12 * 3_600_000) throw fail(400, 'invalid_scan_time');
+        timestamp = new Date(clientTime).toISOString();
+      }
       const band = bandFor(session, b.bandToken || b.shortCode, !b.bandToken), previous = lastScan(band.token);
-      if (b.direction === 'in' && !band.guestId && !b.guestId) return json(res, 200, { needsGuest: true, band: { shortCode: band.shortCode } });
+      if (b.direction === 'in' && !band.guestId && !b.guestId) return idem.respond(200, { needsGuest: true, band: { shortCode: band.shortCode } });
       if (!band.guestId && b.direction === 'out') throw fail(409, 'unlinked_band');
       if (band.guestId && b.guestId && !secureEqual(band.guestId, b.guestId)) throw fail(409, 'band_already_linked');
       if (!band.guestId) {
@@ -264,12 +316,12 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
       }
       const guest = one('SELECT id,name FROM guests WHERE id=?', band.guestId);
       const warning = (b.direction === 'in' && previous?.direction === 'in') ? 'already_inside' : (b.direction === 'out' && previous?.direction !== 'in') ? 'not_inside' : undefined;
-      const timestamp = at();
       if (!warning) { run('INSERT INTO scans (id,eventId,bandToken,guestId,direction,at,monitorName) VALUES (?,?,?,?,?,?,?)', randomToken(), session.eventId, band.token, guest.id, b.direction, timestamp, session.name); emit(session.eventId, 'scan', { guest: guestPublic(guest), band: band.shortCode, direction: b.direction, at: timestamp }); emitStats(session.eventId); }
-      return json(res, 200, { guest: guestPublic(guest), inside: warning ? previous?.direction === 'in' : b.direction === 'in', at: timestamp, ...(warning ? { warning } : {}) });
+      return idem.respond(200, { guest: guestPublic(guest), inside: warning ? previous?.direction === 'in' : b.direction === 'in', at: timestamp, ...(warning ? { warning } : {}) });
     }
     if (method === 'POST' && p === '/api/departures') {
-      const session = monitor(req, url), b = await body(req);
+      const session = monitor(req, url), idem = idempotency(req, res, session.eventId); if (idem.replayed) return;
+      const b = await body(req);
       const values = Array.isArray(b.bandTokens) ? b.bandTokens : b.shortCodes, byCode = !Array.isArray(b.bandTokens);
       if (!Array.isArray(values) || !values.length || values.length > 30 || values.some(v => !text(v, 200))) throw fail(400, 'invalid_departure');
       const bands = values.map(v => bandFor(session, v, byCode));
@@ -285,7 +337,7 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
         db.exec('COMMIT');
       } catch (error) { db.exec('ROLLBACK'); throw error; }
       emit(session.eventId, 'departure', { groupId, at: timestamp, people }); emitStats(session.eventId);
-      return json(res, 200, { groupId, people: people.map(p => ({ name: p.name })) });
+      return idem.respond(200, { groupId, people: people.map(p => ({ name: p.name })) });
     }
     if (method === 'GET' && p === '/api/dashboard') {
       const session = monitor(req, url), e = event(session.eventId);
@@ -302,7 +354,7 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
       });
       const recentDepartures = [...groupPeople].map(([groupId, ids]) => ({ at: deps.find(d => d.groupId === groupId).at, people: ids.map(id => names.get(id)).filter(Boolean) })).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 20);
       audit(e.id, session.name, 'dashboard_lookup');
-      const s = counts(e.id); return json(res, 200, { event: { id: e.id, name: e.name }, inside: s.inside, checkedIn: s.checkedIn, left: s.left, roster, recentDepartures });
+      const s = counts(e.id); return json(res, 200, { event: { id: e.id, name: e.name, capacity: e.capacity }, inside: s.inside, checkedIn: s.checkedIn, left: s.left, roster, recentDepartures });
     }
     if (method === 'GET' && p === '/api/dashboard/stream') {
       const session = monitor(req, url, true);

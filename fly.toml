@@ -1,0 +1,22 @@
+app = "homebound-bryan-pilot"
+primary_region = "sjc"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "4400"
+  HB_DB = "/data/homebound.sqlite"
+  HB_DATA_DIR = "/data"
+
+[http_service]
+  internal_port = 4400
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = false
+  min_machines_running = 1
+
+[[mounts]]
+  source = "homebound_data"
+  destination = "/data"
+  initial_size = "1gb"

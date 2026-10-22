@@ -11,7 +11,7 @@ export function openDb(file = process.env.HB_DB || 'data/homebound-v2.sqlite') {
     CREATE TABLE IF NOT EXISTS events (
       id TEXT PRIMARY KEY, name TEXT NOT NULL, startsAt TEXT NOT NULL, endsAt TEXT NOT NULL,
       adminPinHash TEXT NOT NULL, monitorCode TEXT NOT NULL, retentionDays INTEGER NOT NULL DEFAULT 30,
-      lumaEventId TEXT, lumaApiKeyEnc TEXT, createdAt TEXT NOT NULL
+      lumaEventId TEXT, lumaApiKeyEnc TEXT, createdAt TEXT NOT NULL, capacity INTEGER
     );
     CREATE TABLE IF NOT EXISTS guests (
       id TEXT PRIMARY KEY, eventId TEXT NOT NULL, name TEXT NOT NULL, email TEXT, phone TEXT,
@@ -49,7 +49,19 @@ export function openDb(file = process.env.HB_DB || 'data/homebound-v2.sqlite') {
       token TEXT PRIMARY KEY, eventId TEXT NOT NULL, name TEXT NOT NULL, createdAt TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS monitor_sessions_event ON monitor_sessions(eventId);
+    CREATE TABLE IF NOT EXISTS idempotency (
+      eventId TEXT NOT NULL, route TEXT NOT NULL, key TEXT NOT NULL,
+      status INTEGER NOT NULL, response TEXT NOT NULL, createdAt TEXT NOT NULL,
+      PRIMARY KEY(eventId, route, key)
+    );
+    CREATE INDEX IF NOT EXISTS idempotency_created ON idempotency(createdAt);
+    CREATE TABLE IF NOT EXISTS pilot_signups (
+      id TEXT PRIMARY KEY, chapter TEXT NOT NULL, school TEXT NOT NULL, email TEXT NOT NULL,
+      eventSize INTEGER, note TEXT, createdAt TEXT NOT NULL
+    );
   `);
+  const eventColumns = new Set(db.prepare('PRAGMA table_info(events)').all().map(row => row.name));
+  if (!eventColumns.has('capacity')) db.exec('ALTER TABLE events ADD COLUMN capacity INTEGER');
   const columns = new Set(db.prepare('PRAGMA table_info(guests)').all().map(row => row.name));
   const guestSchema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='guests'").get().sql;
   if (!columns.has('idHash') || !guestSchema.includes("'id'")) {

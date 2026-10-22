@@ -4,6 +4,7 @@ export function createJobs({ db, now = () => new Date() }) {
   let timer;
   function runRetention() {
     const at = new Date(now()).toISOString();
+    db.prepare('DELETE FROM idempotency WHERE createdAt <= ?').run(new Date(Date.parse(at) - 48 * 3_600_000).toISOString());
     for (const event of db.prepare('SELECT id, endsAt, retentionDays FROM events').all()) {
       const deadline = Date.parse(event.endsAt) + event.retentionDays * 86_400_000;
       if (Date.parse(at) <= deadline) continue;
@@ -11,7 +12,7 @@ export function createJobs({ db, now = () => new Date() }) {
       try {
         const count = table => db.prepare(`SELECT COUNT(*) n FROM ${table} WHERE eventId = ?`).get(event.id).n;
         const summary = { guests: count('guests'), bands: count('bands'), scans: count('scans'), departures: count('departures') };
-        for (const table of ['guests', 'bands', 'scans', 'departures', 'monitor_sessions', 'audit']) {
+        for (const table of ['guests', 'bands', 'scans', 'departures', 'monitor_sessions', 'idempotency', 'audit']) {
           db.prepare(`DELETE FROM ${table} WHERE eventId = ?`).run(event.id);
         }
         db.prepare('DELETE FROM events WHERE id = ?').run(event.id);
