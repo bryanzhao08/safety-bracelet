@@ -240,6 +240,10 @@ async function handleBandScanned({ bandToken, shortCode }) {
 async function handleCheckInBand({ bandToken, shortCode }) {
   // Case A: ID was scanned first, guest is pending link
   if (pendingIdGuest) {
+    if (!pendingIdGuest.id) {
+      showFlash('Please select a matching guest from the list first', 'amber');
+      return;
+    }
     try {
       const res = await api.scanBand({
         bandToken,
@@ -250,7 +254,11 @@ async function handleCheckInBand({ bandToken, shortCode }) {
       showFlash(`✓ ${pendingIdGuest.name} in`, 'green');
       clearPendingId();
     } catch (err) {
-      showFlash(err.message || 'Failed to link band', 'red');
+      if (err.status === 409 && err.error === 'band_already_linked') {
+        showFlash('Band already linked to another guest', 'amber');
+      } else {
+        showFlash(err.message || 'Failed to link band', 'red');
+      }
     }
     return;
   }
@@ -287,6 +295,20 @@ btnOpenIdScanner.addEventListener('click', () => {
   openCameraScanner('id');
 });
 
+function calculateAge(dobStr) {
+  if (!dobStr) return null;
+  const parts = dobStr.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return null;
+  const [y, m, d] = parts;
+  const today = new Date();
+  let age = today.getFullYear() - y;
+  const mDiff = (today.getMonth() + 1) - m;
+  if (mDiff < 0 || (mDiff === 0 && today.getDate() < d)) {
+    age--;
+  }
+  return age >= 0 ? age : null;
+}
+
 function handleIdBarcodeDecoded(rawText) {
   closeCameraModal();
 
@@ -305,20 +327,13 @@ async function sendIdCheckin(parsed) {
     const res = await api.idCheckin(parsed);
     renderIdResult(parsed, res);
   } catch (err) {
-    // If backend doesn't implement id-checkin yet, calculate client-side fallback
-    const dobDate = parsed.dob ? new Date(parsed.dob) : null;
-    let over21 = false;
-    if (dobDate) {
-      const now = new Date();
-      const age = (now - dobDate) / (365.25 * 24 * 3600 * 1000);
-      over21 = age >= 21;
+    if (err.status === 409) {
+      showFlash('⚠️ ID already verified for this guest', 'amber', 4000);
+    } else if (err.status === 400) {
+      showFlash(err.message || 'Invalid ID barcode fields', 'amber', 4000);
+    } else {
+      showFlash(err.message || 'ID check-in failed', 'red', 4000);
     }
-    const fullName = [parsed.firstName, parsed.lastName].filter(Boolean).join(' ');
-    renderIdResult(parsed, {
-      guest: { id: null, name: fullName },
-      over21,
-      expired: parsed.idExpires ? new Date(parsed.idExpires) < new Date() : false,
-    });
   }
 }
 
@@ -343,20 +358,26 @@ function renderIdResult(parsed, res) {
   const displayName = res.guest?.name || [parsed.firstName, parsed.lastName].filter(Boolean).join(' ') || 'Guest';
   idGuestName.textContent = displayName;
 
+  const age = calculateAge(parsed.dob);
   const metaParts = [];
+  if (age !== null) metaParts.push(`Age: ${age}`);
   if (parsed.dob) metaParts.push(`DOB: ${parsed.dob}`);
   if (parsed.idState) metaParts.push(`State: ${parsed.idState}`);
   idMetaLine.textContent = metaParts.join(' · ');
 
   if (res.duplicate) {
+    const timeStr = res.duplicate.at ? ` at ${api.formatTime(res.duplicate.at)}` : '';
+    idDuplicateWarning.textContent = `⚠️ Duplicate: ID already scanned tonight${timeStr}`;
     idDuplicateWarning.classList.remove('hidden');
   } else {
     idDuplicateWarning.classList.add('hidden');
   }
 
   if (res.candidates && res.candidates.length > 0) {
+    pendingIdGuest = null; // require explicit candidate selection
     idCandidatesContainer.classList.remove('hidden');
     idCandidatesList.innerHTML = '';
+
     res.candidates.forEach(cand => {
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -366,14 +387,34 @@ function renderIdResult(parsed, res) {
         pendingIdGuest = cand;
         idGuestName.textContent = cand.name;
         idCandidatesContainer.classList.add('hidden');
+        showFlash(`Selected: ${cand.name}. Tap band now.`, 'green');
       });
       idCandidatesList.appendChild(btn);
     });
+
+    const walkinBtn = document.createElement('button');
+    walkinBtn.type = 'button';
+    walkinBtn.className = 'btn btn-secondary';
+    walkinBtn.style.borderColor = 'var(--accent-amber)';
+    walkinBtn.textContent = `＋ Not listed? Add as walk-in ("${displayName}")`;
+    walkinBtn.addEventListener('click', async () => {
+      const session = api.getMonitorSession();
+      if (!session?.eventId) return;
+      try {
+        const added = await api.addWalkInGuest(session.eventId, { name: displayName });
+        pendingIdGuest = added.guest;
+        idGuestName.textContent = added.guest.name;
+        idCandidatesContainer.classList.add('hidden');
+        showFlash(`Created walk-in: ${added.guest.name}. Tap band now.`, 'green');
+      } catch (err) {
+        showFlash(err.message || 'Failed to create walk-in', 'red');
+      }
+    });
+    idCandidatesList.appendChild(walkinBtn);
   } else {
     idCandidatesContainer.classList.add('hidden');
+    pendingIdGuest = res.guest || { name: displayName };
   }
-
-  pendingIdGuest = res.guest || { name: displayName };
 }
 
 function clearPendingId() {
@@ -547,6 +588,11 @@ async function openCameraScanner(mode = 'id') {
   cameraModal.classList.add('open');
   scannerGuideText.textContent = mode === 'id' ? 'Back of license, barcode in the box' : 'Point camera at band QR';
 
+  const reticle = document.getElementById('scanner-reticle');
+  if (reticle) {
+    reticle.className = mode === 'id' ? 'scanner-reticle-box reticle-id' : 'scanner-reticle-box reticle-qr';
+  }
+
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({
       video: {
@@ -597,6 +643,14 @@ function closeCameraModal() {
     cancelAnimationFrame(animFrameId);
     animFrameId = null;
   }
+  if (zxingReader) {
+    try {
+      zxingReader.reset();
+    } catch (e) {
+      // Ignore
+    }
+    zxingReader = null;
+  }
   if (cameraStream) {
     cameraStream.getTracks().forEach(t => t.stop());
     cameraStream = null;
@@ -622,19 +676,25 @@ async function startBarcodeDetectionLoop() {
     }
   }
 
-  // If PDF417 and native detector not available, initialize ZXing fallback
-  if (!nativeDetector && cameraMode === 'id' && window.ZXing) {
+  // If native detector not available, initialize ZXing fallback
+  if (!nativeDetector && window.ZXing) {
     try {
-      zxingReader = new window.ZXing.BrowserPDF417Reader();
+      if (cameraMode === 'id') {
+        zxingReader = new window.ZXing.BrowserPDF417Reader();
+      } else {
+        zxingReader = new window.ZXing.BrowserQRCodeReader();
+      }
     } catch (e) {
       console.warn('ZXing fallback failed to initialize', e);
     }
   }
 
+  let lastZxingAttempt = 0;
+
   const checkFrame = async () => {
     if (!cameraActive) return;
 
-    if (scannerVideo.readyState === scannerVideo.HAVE_ENOUGH_DATA) {
+    if (scannerVideo.readyState >= 2 && scannerVideo.videoWidth > 0) {
       if (nativeDetector) {
         try {
           const codes = await nativeDetector.detect(scannerVideo);
@@ -654,6 +714,32 @@ async function startBarcodeDetectionLoop() {
           }
         } catch (e) {
           // Ignore detection errors per frame
+        }
+      } else if (zxingReader) {
+        const now = performance.now();
+        if (now - lastZxingAttempt >= 120) {
+          lastZxingAttempt = now;
+          try {
+            const result = zxingReader.decode(scannerVideo);
+            if (result) {
+              const raw = result.getText ? result.getText() : result.text;
+              if (raw) {
+                if (cameraMode === 'id') {
+                  handleIdBarcodeDecoded(raw);
+                  return;
+                } else {
+                  const parsed = parseScannedValue(raw);
+                  if (parsed) {
+                    closeCameraModal();
+                    handleBandScanned(parsed);
+                    return;
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            // Barcode not found in this frame; continue
+          }
         }
       }
     }

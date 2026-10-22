@@ -54,21 +54,21 @@ const SAMPLES = [
 
 const container = document.getElementById('results');
 
-SAMPLES.forEach((sample, i) => {
+SAMPLES.forEach((sample) => {
   const result = parseAamva(sample.raw);
   const passed = JSON.stringify(result) === JSON.stringify(sample.expected);
 
   const card = document.createElement('div');
   card.className = 'sample-card';
   card.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+    <div class="sample-header">
       <h3>${sample.title}</h3>
       <span class="badge ${passed ? 'badge-green' : 'badge-amber'}">
         ${passed ? '✓ PASSED' : '✕ FAILED'}
       </span>
     </div>
-    <div style="font-size: 0.85rem; color: var(--text-muted);">Parsed output:</div>
-    <pre><code>${JSON.stringify(result, null, 2)}</code></pre>
+    <div class="sample-meta">Parsed output:</div>
+    <pre class="sample-code"><code>${JSON.stringify(result, null, 2)}</code></pre>
   `;
   container.appendChild(card);
 });

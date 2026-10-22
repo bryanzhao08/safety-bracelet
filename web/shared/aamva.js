@@ -100,9 +100,9 @@ export function parseAamva(raw) {
     }
   }
 
-  // Clean trailing spaces or commas
-  lastName = lastName.replace(/[,;]+$/, '').trim();
-  firstName = firstName.replace(/[,;]+$/, '').trim();
+  // Clean trailing spaces or commas, and any non-printable control characters
+  lastName = lastName.replace(/[\x00-\x1f\x7f]/g, '').replace(/[,;]+$/, '').trim();
+  firstName = firstName.replace(/[\x00-\x1f\x7f]/g, '').replace(/[,;]+$/, '').trim();
 
   // Date of Birth: DBB
   const dob = normalizeDate(fields.DBB);
@@ -111,10 +111,10 @@ export function parseAamva(raw) {
   const idExpires = normalizeDate(fields.DBA);
 
   // Jurisdiction / State: DAJ
-  const idState = (fields.DAJ || '').trim().toUpperCase().slice(0, 2);
+  const idState = (fields.DAJ || '').replace(/[\x00-\x1f\x7f]/g, '').trim().toUpperCase().slice(0, 2);
 
   // License Number: DAQ
-  const licenseNumber = (fields.DAQ || '').trim();
+  const licenseNumber = (fields.DAQ || '').replace(/[\x00-\x1f\x7f]/g, '').trim();
 
   if (!firstName && !lastName && !dob && !licenseNumber) {
     return null;

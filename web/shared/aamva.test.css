@@ -1,0 +1,30 @@
+/* web/shared/aamva.test.css - Styling for AAMVA verification suite */
+.sample-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.sample-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.sample-meta {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+pre.sample-code {
+  background: var(--bg);
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  margin-top: 0.5rem;
+}

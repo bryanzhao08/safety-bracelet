@@ -209,6 +209,18 @@
   border: 3px dashed var(--accent-amber);
   border-radius: var(--radius-md);
   box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.55);
+  transition: width 0.2s ease, height 0.2s ease;
+}
+
+.scanner-reticle-box.reticle-id {
+  width: 90%;
+  height: 38%;
+}
+
+.scanner-reticle-box.reticle-qr {
+  width: 70%;
+  height: auto;
+  aspect-ratio: 1;
 }
 
 .scanner-guide-text {
