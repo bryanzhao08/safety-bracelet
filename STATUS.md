@@ -25,3 +25,7 @@
     - Privacy: Strict data minimization enforced; raw barcode text, address, and license numbers are never logged, stored in localStorage, or displayed in the UI.
   • Run: `npm start` → test at http://localhost:4400/door; verify parser at http://localhost:4400/shared/aamva.test.html; `npm test` passes all 11 suites.
   • Left: None; ID scanning flow complete.
+- 2026-10-22 (Codex batch 2, item 1 — config): `HB_DB` now selects the SQLite file and `HB_DATA_DIR` selects `secret.json` for both ID HMAC and Luma key encryption; defaults preserve the existing paths. Startup hides only Node's SQLite ExperimentalWarning and prints other warnings. `npm test` passed 13/13 after this item. Run with `HB_DB=/path/to/homebound.sqlite HB_DATA_DIR=/path/to/data npm start`.
+  • Commit attempt for item 1 failed: sandbox cannot create `.git/index.lock` (Operation not permitted). Changes remain in the working tree.
+- 2026-10-22 (Codex batch 2, item 2 — end-to-end): Added `test/e2e.test.js`, which boots a random-port HTTP server with a temporary SQLite file, runs CSV import, five bands, monitor session, ID match/under-21 walk-in/duplicate, guest linking, grouped departure, dashboard, export, and monitor authorization. It checks every monitor response for private contact and license data and scans the closed DB file for the raw license number. `node --test test/e2e.test.js` passed; the full `npm test` passed 14/14 after this item.
+  • Commit attempt for item 2 failed: sandbox cannot create `.git/index.lock` (Operation not permitted). Changes remain in the working tree.

@@ -1,3 +1,4 @@
+import './warnings.js';
 import http from 'node:http';
 import { randomInt } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
@@ -17,7 +18,7 @@ const iso = value => new Date(value).toISOString();
 const alphabet = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 const code6 = () => Array.from({ length: 6 }, () => alphabet[randomInt(alphabet.length)]).join('');
 
-export function createServer({ db = openDb(), now = () => new Date(), fetcher = fetch, startJobs = true, idSecretPath = 'data/secret.json' } = {}) {
+export function createServer({ db = openDb(), now = () => new Date(), fetcher = fetch, startJobs = true, idSecretPath } = {}) {
   const jobs = createJobs({ db, now });
   const streams = new Map(), rates = new Map();
   const one = (sql, ...args) => db.prepare(sql).get(...args);
@@ -104,7 +105,7 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
           if (existing) { run('UPDATE guests SET name=?,email=?,phone=? WHERE id=?', g.name, g.email, g.phone, existing.id); updated++; }
           else { addGuest(m[1], g, 'luma', g.externalId); imported++; }
         }
-        run('UPDATE events SET lumaEventId=?,lumaApiKeyEnc=? WHERE id=?', b.lumaEventId, encryptApiKey(b.apiKey), m[1]);
+        run('UPDATE events SET lumaEventId=?,lumaApiKeyEnc=? WHERE id=?', b.lumaEventId, encryptApiKey(b.apiKey, idSecretPath), m[1]);
         audit(m[1], 'organizer', 'luma_import', { imported, updated });
         db.exec('COMMIT');
       } catch (error) { db.exec('ROLLBACK'); throw error; }

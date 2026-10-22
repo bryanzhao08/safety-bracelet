@@ -1,8 +1,9 @@
 import { createHmac, randomBytes } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { join } from 'node:path';
 
-export function serverSecret(file = 'data/secret.json') {
+export function serverSecret(file = join(process.env.HB_DATA_DIR || 'data', 'secret.json')) {
   let saved;
   try { saved = JSON.parse(readFileSync(file, 'utf8')); }
   catch (error) {

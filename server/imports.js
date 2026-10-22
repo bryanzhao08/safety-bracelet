@@ -1,5 +1,5 @@
-import { createCipheriv, createHash, randomBytes } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createCipheriv, randomBytes } from 'node:crypto';
+import { serverSecret } from './id-checkin.js';
 
 const LUMA_URL = 'https://public-api.lu.ma/public/v1/event/get-guests';
 
@@ -52,23 +52,9 @@ export function csvEscape(value) {
   return /[",\r\n]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
 }
 
-function secret() {
-  const configured = process.env.HOMEBOUND_SECRET;
-  if (configured) return createHash('sha256').update(configured).digest();
-  const file = 'data/server-secret';
-  try { return Buffer.from(readFileSync(file, 'utf8').trim(), 'hex'); }
-  catch (error) {
-    if (error.code !== 'ENOENT') throw error;
-    mkdirSync('data', { recursive: true });
-    const generated = randomBytes(32);
-    try { writeFileSync(file, generated.toString('hex'), { mode: 0o600, flag: 'wx' }); return generated; }
-    catch (writeError) { if (writeError.code !== 'EEXIST') throw writeError; return Buffer.from(readFileSync(file, 'utf8').trim(), 'hex'); }
-  }
-}
-
-export function encryptApiKey(apiKey) {
+export function encryptApiKey(apiKey, secretFile) {
   const nonce = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', secret(), nonce);
+  const cipher = createCipheriv('aes-256-gcm', serverSecret(secretFile), nonce);
   const body = Buffer.concat([cipher.update(apiKey, 'utf8'), cipher.final()]);
   return [nonce, cipher.getAuthTag(), body].map(x => x.toString('base64url')).join('.');
 }

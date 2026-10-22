@@ -2,7 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-export function openDb(file = 'data/homebound-v2.sqlite') {
+export function openDb(file = process.env.HB_DB || 'data/homebound-v2.sqlite') {
   if (file !== ':memory:') mkdirSync(dirname(file), { recursive: true });
   const db = new DatabaseSync(file);
   db.exec(`
