@@ -65,3 +65,6 @@
     - Resilient SSE Auto-Reconnect: Live status pill (`Live` green dot vs `Reconnecting...` amber pulsing dot) with exponential backoff and automatic snapshot re-fetch to ensure zero missed departures across network interruptions.
   • Run: `npm start` → Admin at http://localhost:4400/admin, Dashboard at http://localhost:4400/dashboard. All 18 backend tests pass via `npm test`.
 
+- 2026-10-22 (Codex CSV status filter): CSV imports now recognize Luma `approval_status`, Partiful `Status`, and `RSVP`; only attending values are imported when a status column exists. The response includes `skippedReasons` for declined, waitlist, pending approval, invited, maybe, unknown status, duplicate, and missing name rows. Luma/Partiful/RSVP tests pass; run with `npm test` (19/19). No remaining CSV work.
+  • Commit attempt failed: this sandbox cannot create `.git/index.lock` (Operation not permitted). Changes remain in the working tree; no push was attempted.
+- 2026-10-22 (Antigravity CSV-first import): In `web/admin/`, placed CSV upload first with Luma/Partiful export how-tos, formatted import response to display `skippedReasons` breakdown (e.g. `Imported 84 · skipped 12 (declined 5, waitlist 4, maybe 3)`), and collapsed Luma API form under "Luma API (Luma Plus only)". All 19 tests pass via `npm test`. Run with `npm start`.

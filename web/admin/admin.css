@@ -106,6 +106,100 @@
   background-color: rgba(255, 180, 76, 0.05);
 }
 
+/* CSV How-Tos & Results */
+.csv-howtos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1.15rem;
+}
+
+.csv-howto-item {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.csv-howto-bullet {
+  color: var(--accent-amber);
+  font-weight: 800;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.csv-result-box {
+  padding: 0.85rem 1.15rem;
+  border-radius: var(--radius-md);
+  background-color: rgba(46, 204, 113, 0.12);
+  border: 1px solid rgba(46, 204, 113, 0.35);
+  color: #4ade80;
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+/* Collapsible Luma Section */
+details.luma-collapse {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  transition: border-color 0.15s ease;
+}
+
+details.luma-collapse[open] {
+  border-color: rgba(255, 180, 76, 0.4);
+}
+
+details.luma-collapse summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  user-select: none;
+  list-style: none;
+}
+
+details.luma-collapse summary::-webkit-details-marker {
+  display: none;
+}
+
+details.luma-collapse summary::after {
+  content: '▶';
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+  margin-left: auto;
+}
+
+details.luma-collapse[open] summary::after {
+  transform: rotate(90deg);
+}
+
+.luma-summary-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.luma-summary-icon {
+  font-size: 1.2rem;
+}
+
+.luma-collapse-content {
+  cursor: default;
+}
+
 /* Printable Band Sheet */
 .printable-sheet-container {
   display: none;

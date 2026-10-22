@@ -160,49 +160,27 @@
 
       <!-- TAB 1: Guest Import -->
       <section id="tab-guests" class="admin-section active">
-        <!-- Luma API Connect -->
+        <!-- Upload guest list (CSV) -->
         <div class="card">
-          <h2>Connect Luma API</h2>
-          <p class="text-muted mt-sm">Sync guest list directly from your Luma event</p>
+          <h2>Upload guest list (CSV)</h2>
+          <p class="text-muted mt-sm">Upload exported guest list from Luma or Partiful (CSV columns auto-detected)</p>
 
-          <!-- Help Guide -->
-          <div class="luma-guide-box mt-md">
-            <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-amber); display: flex; align-items: center; gap: 0.4rem;">
-              <span>ℹ️</span> Where to find your Luma API Key &amp; Event ID
-            </h3>
-            <ol style="margin: 0.5rem 0 0 1.25rem; padding: 0; line-height: 1.6; font-size: 0.88rem; color: var(--text-muted);">
-              <li>Log into your host account on <a href="https://lu.ma" target="_blank" rel="noopener" style="color: var(--accent-amber); text-decoration: underline;">lu.ma</a>.</li>
-              <li>Go to <strong>Settings</strong> (click your avatar at top-right) &rarr; <strong>API</strong> (or visit <a href="https://lu.ma/settings/api" target="_blank" rel="noopener" style="color: var(--accent-amber); text-decoration: underline;">lu.ma/settings/api</a>).</li>
-              <li>Click <strong>Create API Key</strong>, choose a label (e.g. <em>Homebound</em>), and copy the key (begins with <code>luma_api_...</code>).</li>
-              <li>Open your event's management page: the <strong>Event API ID</strong> is in the URL or under <strong>Event Settings &rarr; API</strong> (format: <code>evt-...</code>).</li>
-            </ol>
-            <p class="text-dim mt-sm" style="font-size: 0.8rem; margin-bottom: 0;">
-              🔒 Encrypted: Your API key is encrypted with AES-256 on the server and is never stored in plaintext.
-            </p>
+          <!-- Short how-tos -->
+          <div class="csv-howtos mt-md">
+            <div class="csv-howto-item">
+              <span class="csv-howto-bullet">•</span>
+              <span><strong>Luma (free):</strong> your event &rarr; Manage &rarr; Guests &rarr; Download / Export CSV.</span>
+            </div>
+            <div class="csv-howto-item">
+              <span class="csv-howto-bullet">•</span>
+              <span><strong>Partiful:</strong> your event &rarr; Guest list &rarr; Export (CSV).</span>
+            </div>
           </div>
 
-          <form id="luma-form" class="mt-md">
-            <div class="form-group">
-              <label class="form-label" for="luma-api-key">Luma API Key</label>
-              <input type="password" id="luma-api-key" class="input" placeholder="luma_api_..." required>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="luma-event-id">Luma Event API ID</label>
-              <input type="text" id="luma-event-id" class="input" placeholder="evt-..." required>
-            </div>
-            <button type="submit" class="btn btn-primary">
-              Sync Guests from Luma
-            </button>
-          </form>
-        </div>
-
-        <!-- Partiful / Luma CSV Upload -->
-        <div class="card">
-          <h2>Upload Partiful or Luma CSV</h2>
-          <p class="text-muted mt-sm">Upload exported guest roster (CSV columns auto-detected)</p>
           <div id="csv-dropzone" class="dropzone mt-md">
             <span style="font-size: 2rem;">📄</span>
-            <p style="font-weight: 600;">Drag &amp; drop Partiful / Luma CSV here, or click to browse</p>
+            <p style="font-weight: 600;">Drag &amp; drop guest list CSV here, or click to browse</p>
+            <p class="text-dim text-sm" style="margin: 0;">Auto-detects name, email, phone, and RSVP status columns</p>
             <input type="file" id="csv-file-input" accept=".csv,text/csv" style="display: none;">
           </div>
           <div id="csv-preview" class="hidden mt-md">
@@ -211,7 +189,53 @@
               Upload &amp; Import CSV
             </button>
           </div>
+          <div id="csv-result" class="hidden mt-md"></div>
         </div>
+
+        <!-- Luma API (Luma Plus only) -->
+        <details class="card luma-collapse">
+          <summary class="luma-summary">
+            <div class="luma-summary-title">
+              <span class="luma-summary-icon">⚡</span>
+              <span>Luma API (Luma Plus only)</span>
+            </div>
+            <span class="badge badge-muted" style="font-size: 0.75rem;">Luma Plus Required</span>
+          </summary>
+
+          <div class="luma-collapse-content mt-md">
+            <p class="text-muted">Sync guest list directly via Luma's public API (requires a paid Luma Plus subscription with API access).</p>
+
+            <!-- Help Guide -->
+            <div class="luma-guide-box mt-md">
+              <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-amber); display: flex; align-items: center; gap: 0.4rem;">
+                <span>ℹ️</span> Where to find your Luma API Key &amp; Event ID
+              </h3>
+              <ol style="margin: 0.5rem 0 0 1.25rem; padding: 0; line-height: 1.6; font-size: 0.88rem; color: var(--text-muted);">
+                <li>Log into your host account on <a href="https://lu.ma" target="_blank" rel="noopener" style="color: var(--accent-amber); text-decoration: underline;">lu.ma</a>.</li>
+                <li>Go to <strong>Settings</strong> (click your avatar at top-right) &rarr; <strong>API</strong> (or visit <a href="https://lu.ma/settings/api" target="_blank" rel="noopener" style="color: var(--accent-amber); text-decoration: underline;">lu.ma/settings/api</a>).</li>
+                <li>Click <strong>Create API Key</strong>, choose a label (e.g. <em>Homebound</em>), and copy the key (begins with <code>luma_api_...</code>).</li>
+                <li>Open your event's management page: the <strong>Event API ID</strong> is in the URL or under <strong>Event Settings &rarr; API</strong> (format: <code>evt-...</code>).</li>
+              </ol>
+              <p class="text-dim mt-sm" style="font-size: 0.8rem; margin-bottom: 0;">
+                🔒 Encrypted: Your API key is encrypted with AES-256 on the server and is never stored in plaintext.
+              </p>
+            </div>
+
+            <form id="luma-form" class="mt-md">
+              <div class="form-group">
+                <label class="form-label" for="luma-api-key">Luma API Key</label>
+                <input type="password" id="luma-api-key" class="input" placeholder="luma_api_..." required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="luma-event-id">Luma Event API ID</label>
+                <input type="text" id="luma-event-id" class="input" placeholder="evt-..." required>
+              </div>
+              <button type="submit" class="btn btn-primary">
+                Sync Guests from Luma
+              </button>
+            </form>
+          </div>
+        </details>
 
         <!-- Walk-in Guest Addition -->
         <div class="card">

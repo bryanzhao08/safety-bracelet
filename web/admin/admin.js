@@ -51,6 +51,7 @@ const csvFileInput = document.getElementById('csv-file-input');
 const csvPreview = document.getElementById('csv-preview');
 const csvStatus = document.getElementById('csv-status');
 const btnUploadCsv = document.getElementById('btn-upload-csv');
+const csvResult = document.getElementById('csv-result');
 
 const adminGuestForm = document.getElementById('admin-guest-form');
 const guestName = document.getElementById('guest-name');
@@ -432,7 +433,26 @@ csvFileInput.addEventListener('change', () => {
   }
 });
 
+function formatCsvResult(res) {
+  const imported = Number(res?.imported) || 0;
+  const skipped = Number(res?.skipped) || 0;
+  let breakdown = '';
+  if (res?.skippedReasons && typeof res.skippedReasons === 'object') {
+    const parts = Object.entries(res.skippedReasons)
+      .filter(([, count]) => typeof count === 'number' && count > 0)
+      .map(([reason, count]) => `${reason.replace(/_/g, ' ')} ${count}`);
+    if (parts.length > 0) {
+      breakdown = ` (${parts.join(', ')})`;
+    }
+  }
+  return `Imported ${imported} · skipped ${skipped}${breakdown}`;
+}
+
 function handleCsvFile(file) {
+  if (csvResult) {
+    csvResult.classList.add('hidden');
+    csvResult.textContent = '';
+  }
   const reader = new FileReader();
   reader.onload = (e) => {
     selectedCsvText = e.target.result;
@@ -447,14 +467,27 @@ btnUploadCsv.addEventListener('click', async () => {
   const session = api.getAdminSession();
   if (!session?.eventId || !selectedCsvText) return;
 
+  btnUploadCsv.disabled = true;
+  btnUploadCsv.textContent = 'Importing...';
+
   try {
     const res = await api.importCsv(session.eventId, selectedCsvText);
-    showFlash(`CSV imported: ${res.imported} guests added, ${res.skipped} skipped`, 'green');
+    const resultMsg = formatCsvResult(res);
+    showFlash(resultMsg, 'green');
+    if (csvResult) {
+      csvResult.textContent = resultMsg;
+      csvResult.className = 'csv-result-box mt-md';
+      csvResult.classList.remove('hidden');
+    }
     csvPreview.classList.add('hidden');
     selectedCsvText = null;
+    csvFileInput.value = '';
     await loadEvent(session.eventId);
   } catch (err) {
     showFlash(err.message || 'CSV upload failed', 'red');
+  } finally {
+    btnUploadCsv.disabled = false;
+    btnUploadCsv.textContent = 'Upload & Import CSV';
   }
 });
 
