@@ -87,6 +87,17 @@
       <div id="nfc-dot" class="nfc-status-dot"></div>
     </div>
 
+    <!-- Offline Queue Status Bar -->
+    <div id="offline-bar" class="offline-status-bar hidden" role="status" aria-live="polite">
+      <div class="offline-status-info">
+        <div id="offline-dot" class="offline-status-dot"></div>
+        <span id="offline-text">Saved offline (0 waiting)</span>
+      </div>
+      <button id="btn-sync-now" class="btn-sync-now" type="button" title="Retry queued scans">
+        ↻ Retry
+      </button>
+    </div>
+
     <!-- MAIN BODY: IN MODE -->
     <main id="in-mode-container" class="door-actions-grid">
       <!-- ID Scanning action -->

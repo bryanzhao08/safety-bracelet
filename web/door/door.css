@@ -131,6 +131,71 @@
   100% { transform: scale(0.95); opacity: 0.8; }
 }
 
+/* Offline Queue Status Bar */
+.offline-status-bar {
+  margin: 0 1rem 0.75rem 1rem;
+  padding: 0.65rem 1rem;
+  background-color: rgba(255, 180, 76, 0.15);
+  border: 1.5px solid var(--accent-amber);
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #ffdda1;
+  box-shadow: 0 2px 10px rgba(255, 180, 76, 0.2);
+}
+
+.offline-status-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.offline-status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: var(--accent-amber);
+  box-shadow: 0 0 10px var(--accent-amber);
+  animation: pulse 1.5s infinite;
+  flex-shrink: 0;
+}
+
+.offline-status-dot.syncing {
+  background-color: #38bdf8;
+  box-shadow: 0 0 10px #38bdf8;
+  animation: spin 1s linear infinite;
+  border-radius: 50%;
+  border: 2px dashed #38bdf8;
+  background: transparent;
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
+.btn-sync-now {
+  background: var(--accent-amber);
+  color: #1a0f00;
+  border: none;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease;
+}
+
+.btn-sync-now:active {
+  transform: scale(0.96);
+}
+
 /* Primary Action Buttons */
 .door-actions-grid {
   display: flex;

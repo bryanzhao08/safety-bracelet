@@ -1,5 +1,6 @@
 // web/door/door.js - Door Scanner Controller for Homebound v2
 import * as api from '/shared/api.js';
+import * as offline from '/door/offline.js';
 import { parseAamva } from '/shared/aamva.js';
 import { parseScannedValue } from '/shared/qr-scanner.js';
 
@@ -25,6 +26,11 @@ const outModeContainer = document.getElementById('out-mode-container');
 const nfcBar = document.getElementById('nfc-bar');
 const nfcLabel = document.getElementById('nfc-label');
 const nfcDot = document.getElementById('nfc-dot');
+
+const offlineBar = document.getElementById('offline-bar');
+const offlineDot = document.getElementById('offline-dot');
+const offlineText = document.getElementById('offline-text');
+const btnSyncNow = document.getElementById('btn-sync-now');
 
 const btnOpenIdScanner = document.getElementById('btn-open-id-scanner');
 const idResultContainer = document.getElementById('id-result-container');
@@ -85,6 +91,39 @@ let leavingTray = []; // [{ bandToken?, shortCode, name }]
 let trayTimer = null;
 let trayTimeLeft = 30;
 
+// Local offline state tracking
+const localInsideBands = new Set();
+const localGuestMap = new Map();
+
+// Register Service Worker for offline door page availability
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/door/sw.js')
+    .catch(err => console.warn('SW registration failed', err));
+}
+
+// Initialize offline queue & subscribe to queue changes
+offline.initOfflineQueue();
+offline.onQueueChange(({ count, isSyncing }) => {
+  if (!offlineBar) return;
+  if (count > 0) {
+    offlineBar.classList.remove('hidden');
+    if (isSyncing) {
+      offlineText.textContent = `Syncing offline scans (${count} waiting)...`;
+      offlineDot.classList.add('syncing');
+    } else {
+      offlineText.textContent = `Saved offline (${count} waiting)`;
+      offlineDot.classList.remove('syncing');
+    }
+  } else {
+    offlineBar.classList.add('hidden');
+    offlineDot.classList.remove('syncing');
+  }
+});
+
+btnSyncNow?.addEventListener('click', () => {
+  offline.flushQueue();
+});
+
 // Camera state
 let cameraActive = false;
 let cameraStream = null;
@@ -131,6 +170,11 @@ btnModeOut.addEventListener('click', () => setMode('out'));
 // --- Shift Join & Session Management ---
 
 async function initSession() {
+  // Normalize /door to /door/ so service worker scope covers it
+  if (window.location.pathname === '/door') {
+    window.history.replaceState({}, '', '/door/' + window.location.search);
+  }
+
   const urlParams = new URLSearchParams(window.location.search);
   const prefillToken = urlParams.get('bandToken');
   const urlEventId = urlParams.get('event') || urlParams.get('eventId');
@@ -150,7 +194,7 @@ async function initSession() {
 
     if (prefillToken) {
       handleBandScanned({ bandToken: prefillToken });
-      window.history.replaceState({}, '', '/door');
+      window.history.replaceState({}, '', '/door/');
     }
   } else {
     joinView.classList.remove('hidden');
@@ -238,54 +282,93 @@ async function handleBandScanned({ bandToken, shortCode }) {
 // --- Check-in Handler (IN Mode) ---
 
 async function handleCheckInBand({ bandToken, shortCode }) {
+  const session = api.getMonitorSession();
+  const token = session?.token;
+  const key = shortCode || bandToken;
+
   // Case A: ID was scanned first, guest is pending link
   if (pendingIdGuest) {
     if (!pendingIdGuest.id) {
       showFlash('Please select a matching guest from the list first', 'amber');
       return;
     }
-    try {
-      const res = await api.scanBand({
-        bandToken,
-        shortCode,
-        direction: 'in',
-        guestId: pendingIdGuest.id,
-      });
-      showFlash(`✓ ${pendingIdGuest.name} in`, 'green');
-      clearPendingId();
-    } catch (err) {
-      if (err.status === 409 && err.error === 'band_already_linked') {
+    const guest = pendingIdGuest;
+    // Instant local UI feedback
+    showFlash(`✓ ${guest.name} in`, 'green');
+    clearPendingId();
+    if (key) {
+      localInsideBands.add(key);
+      localGuestMap.set(key, guest.name);
+    }
+
+    const res = await offline.executeOrQueueScan({
+      bandToken,
+      shortCode,
+      direction: 'in',
+      guestId: guest.id,
+    }, token);
+
+    if (!res.queued && res.error) {
+      if (res.status === 409 && res.error === 'band_already_linked') {
         showFlash('Band already linked to another guest', 'amber');
       } else {
-        showFlash(err.message || 'Failed to link band', 'red');
+        showFlash(res.message || 'Failed to link band', 'red');
       }
     }
     return;
   }
 
   // Case B: Direct band scan without prior ID
-  try {
-    const res = await api.scanBand({ bandToken, shortCode, direction: 'in' });
+  const knownName = localGuestMap.get(key);
+  const alreadyInsideLocally = key && localInsideBands.has(key);
 
-    if (res.needsGuest) {
-      // Unlinked band! Open guest list to link.
-      unlinkedBand = { bandToken, shortCode: res.band?.shortCode || shortCode };
-      openGuestSearch(`Link Band ${unlinkedBand.shortCode || ''}`);
-      return;
-    }
+  if (alreadyInsideLocally) {
+    showFlash(`⚠️ Already inside: ${knownName || key}`, 'amber');
+  } else {
+    showFlash(`✓ ${knownName || key || 'Guest'} in`, 'green');
+  }
 
-    if (res.warning === 'already_inside') {
-      showFlash(`⚠️ Already inside: ${res.guest?.name || 'Guest'}`, 'amber');
-      return;
-    }
+  const res = await offline.executeOrQueueScan({
+    bandToken,
+    shortCode,
+    direction: 'in',
+  }, token);
 
-    showFlash(`✓ ${res.guest?.name || 'Guest'} in`, 'green');
-  } catch (err) {
-    if (err.status === 409 && err.error === 'band_already_linked') {
+  if (res.queued) {
+    if (key) localInsideBands.add(key);
+    return;
+  }
+
+  if (res.data?.needsGuest) {
+    // Unlinked band! Open guest list to link.
+    if (key) localInsideBands.delete(key);
+    unlinkedBand = { bandToken, shortCode: res.data.band?.shortCode || shortCode };
+    openGuestSearch(`Link Band ${unlinkedBand.shortCode || ''}`);
+    return;
+  }
+
+  if (res.data?.warning === 'already_inside') {
+    if (key) localInsideBands.add(key);
+    showFlash(`⚠️ Already inside: ${res.data.guest?.name || 'Guest'}`, 'amber');
+    return;
+  }
+
+  if (res.error) {
+    if (key && !alreadyInsideLocally) localInsideBands.delete(key);
+    if (res.status === 409 && res.error === 'band_already_linked') {
       showFlash('Band already linked to another guest', 'amber');
     } else {
-      showFlash(err.message || 'Check-in failed', 'red');
+      showFlash(res.message || 'Check-in failed', 'red');
     }
+    return;
+  }
+
+  if (res.data?.guest?.name) {
+    if (key) {
+      localInsideBands.add(key);
+      localGuestMap.set(key, res.data.guest.name);
+    }
+    showFlash(`✓ ${res.data.guest.name} in`, 'green');
   }
 }
 
@@ -529,29 +612,42 @@ async function submitDepartures(together = true) {
   leavingTray = [];
   renderLeavingTray();
 
-  try {
-    if (together || items.length === 1) {
-      // Single group departure
-      const bandTokens = items.map(i => i.bandToken).filter(Boolean);
-      const shortCodes = items.map(i => i.shortCode).filter(Boolean);
-      await api.recordDepartures({ bandTokens, shortCodes });
+  const session = api.getMonitorSession();
+  const token = session?.token;
 
-      const names = items.map(i => i.name).join(' + ');
-      const suffix = items.length > 1 ? 'left together' : 'left';
-      showFlash(`${names} ${suffix}`, 'amber', 3000);
-    } else {
-      // Each person leaves alone separately
-      for (const item of items) {
-        await api.recordDepartures({
-          bandTokens: item.bandToken ? [item.bandToken] : undefined,
-          shortCodes: item.shortCode ? [item.shortCode] : undefined,
-        });
-      }
-      const names = items.map(i => i.name).join(', ');
-      showFlash(`${names} left alone`, 'amber', 3000);
+  // Mark departing bands locally
+  for (const item of items) {
+    const key = item.shortCode || item.bandToken;
+    if (key) localInsideBands.delete(key);
+  }
+
+  if (together || items.length === 1) {
+    // Single group departure
+    const bandTokens = items.map(i => i.bandToken).filter(Boolean);
+    const shortCodes = items.map(i => i.shortCode).filter(Boolean);
+
+    const names = items.map(i => i.name).join(' + ');
+    const suffix = items.length > 1 ? 'left together' : 'left';
+    showFlash(`${names} ${suffix}`, 'amber', 3000);
+
+    const res = await offline.executeOrQueueDeparture({ bandTokens, shortCodes }, token);
+    if (!res.queued && res.error) {
+      showFlash(res.message || 'Failed to record departures', 'red');
     }
-  } catch (err) {
-    showFlash(err.message || 'Failed to record departures', 'red');
+  } else {
+    // Each person leaves alone separately
+    const names = items.map(i => i.name).join(', ');
+    showFlash(`${names} left alone`, 'amber', 3000);
+
+    for (const item of items) {
+      const res = await offline.executeOrQueueDeparture({
+        bandTokens: item.bandToken ? [item.bandToken] : undefined,
+        shortCodes: item.shortCode ? [item.shortCode] : undefined,
+      }, token);
+      if (!res.queued && res.error) {
+        showFlash(res.message || 'Failed to record departure', 'red');
+      }
+    }
   }
 }
 
@@ -789,6 +885,11 @@ function renderGuestSearchResults(guests) {
   }
 
   guests.forEach(guest => {
+    if (guest.band) {
+      localGuestMap.set(guest.band, guest.name);
+      if (guest.inside) localInsideBands.add(guest.band);
+    }
+
     const item = document.createElement('div');
     item.className = 'guest-search-item';
     item.innerHTML = `
@@ -802,20 +903,30 @@ function renderGuestSearchResults(guests) {
     `;
 
     item.addEventListener('click', async () => {
+      const session = api.getMonitorSession();
+      const token = session?.token;
+
       if (unlinkedBand) {
         // Link this guest to the unlinked band
-        try {
-          await api.scanBand({
-            bandToken: unlinkedBand.bandToken,
-            shortCode: unlinkedBand.shortCode,
-            direction: 'in',
-            guestId: guest.id,
-          });
-          showFlash(`✓ ${guest.name} in`, 'green');
-          guestSearchModal.classList.remove('open');
-          unlinkedBand = null;
-        } catch (err) {
-          showFlash(err.message || 'Failed to link guest', 'red');
+        const band = unlinkedBand;
+        const key = band.shortCode || band.bandToken;
+        showFlash(`✓ ${guest.name} in`, 'green');
+        guestSearchModal.classList.remove('open');
+        unlinkedBand = null;
+        if (key) {
+          localInsideBands.add(key);
+          localGuestMap.set(key, guest.name);
+        }
+
+        const res = await offline.executeOrQueueScan({
+          bandToken: band.bandToken,
+          shortCode: band.shortCode,
+          direction: 'in',
+          guestId: guest.id,
+        }, token);
+
+        if (!res.queued && res.error) {
+          showFlash(res.message || 'Failed to link guest', 'red');
         }
       } else {
         // ID check pending link
@@ -870,14 +981,25 @@ walkinForm.addEventListener('submit', async (e) => {
     closeWalkinModal();
 
     if (unlinkedBand) {
-      await api.scanBand({
-        bandToken: unlinkedBand.bandToken,
-        shortCode: unlinkedBand.shortCode,
-        direction: 'in',
-        guestId: res.guest.id,
-      });
+      const band = unlinkedBand;
+      const key = band.shortCode || band.bandToken;
       showFlash(`✓ ${res.guest.name} in`, 'green');
       unlinkedBand = null;
+      if (key) {
+        localInsideBands.add(key);
+        localGuestMap.set(key, res.guest.name);
+      }
+
+      const scanRes = await offline.executeOrQueueScan({
+        bandToken: band.bandToken,
+        shortCode: band.shortCode,
+        direction: 'in',
+        guestId: res.guest.id,
+      }, session.token);
+
+      if (!scanRes.queued && scanRes.error) {
+        showFlash(scanRes.message || 'Failed to link walk-in band', 'red');
+      }
     } else {
       showFlash(`Created walk-in: ${res.guest.name}. Tap band now.`, 'green');
       pendingIdGuest = res.guest;
