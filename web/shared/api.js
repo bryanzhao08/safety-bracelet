@@ -154,6 +154,26 @@ export async function searchGuests(q = '') {
 }
 
 /**
+ * ID check-in: POST /api/id-checkin
+ * Sends minimal AAMVA fields for age check and guest match.
+ * { firstName, lastName, dob, idState, idExpires, licenseNumber }
+ */
+export async function idCheckin({ firstName, lastName, dob, idState, idExpires, licenseNumber }) {
+  return request('/api/id-checkin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      firstName: firstName || null,
+      lastName: lastName || null,
+      dob: dob || null,
+      idState: idState || null,
+      idExpires: idExpires || null,
+      licenseNumber: licenseNumber || null,
+    }),
+  });
+}
+
+/**
  * Scan band at door: POST /api/scan
  * { bandToken?, shortCode?, direction: 'in' | 'out', guestId? }
  */

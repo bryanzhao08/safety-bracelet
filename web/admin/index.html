@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Homebound Admin</title>
+  <link rel="stylesheet" href="/shared/base.css">
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body class="admin-app">
+  <!-- Flash Banner -->
+  <div id="flash-banner" class="flash-banner" role="alert"></div>
+
+  <!-- Header -->
+  <header class="app-header no-print">
+    <div class="app-brand">
+      <span class="brand-icon">H</span>
+      <span>Homebound Admin</span>
+    </div>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <a href="/door" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: 0.9rem;">
+        🚪 Door Scanner
+      </a>
+      <a href="/dashboard" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: 0.9rem;">
+        📊 Dashboard
+      </a>
+      <button id="btn-switch-event" class="btn btn-secondary hidden" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: 0.9rem;" type="button">
+        Switch Event
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="container" style="flex: 1; padding-top: 1.5rem; padding-bottom: 3rem;">
+    <!-- Welcome & Create/Login View (shown when no event is loaded) -->
+    <div id="auth-view" class="card" style="max-width: 580px; margin: 2rem auto;">
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <h1>Organizer Portal</h1>
+        <p class="text-muted mt-sm">Create a new safety event or log in with your Admin PIN</p>
+      </div>
+
+      <!-- Create New Event -->
+      <section style="margin-bottom: 2rem;">
+        <h2>Create New Event</h2>
+        <form id="create-event-form" class="mt-md">
+          <div class="form-group">
+            <label class="form-label" for="create-name">Event Name *</label>
+            <input type="text" id="create-name" class="input" placeholder="e.g. Neon Nights Warehouse Party" required>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label" for="create-starts">Starts At *</label>
+              <input type="datetime-local" id="create-starts" class="input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="create-ends">Ends At *</label>
+              <input type="datetime-local" id="create-ends" class="input" required>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block mt-sm">
+            Create Event &amp; Generate PIN
+          </button>
+        </form>
+      </section>
+
+      <div style="border-top: 1px solid var(--border); margin: 2rem 0;"></div>
+
+      <!-- Manage Existing Event -->
+      <section>
+        <h2>Log Into Existing Event</h2>
+        <form id="login-event-form" class="mt-md">
+          <div class="form-group">
+            <label class="form-label" for="admin-event-id">Event ID</label>
+            <input type="text" id="admin-event-id" class="input" placeholder="e.g. 8f2a1b9c..." required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="admin-pin">8-digit Admin PIN</label>
+            <input type="password" id="admin-pin" class="input input-code" maxlength="8" placeholder="••••••••" required>
+          </div>
+          <button type="submit" class="btn btn-secondary btn-block mt-sm">
+            Access Event Admin
+          </button>
+        </form>
+      </section>
+    </div>
+
+    <!-- Active Event Admin View -->
+    <div id="event-admin-view" class="hidden">
+      <!-- Event Header & Stats -->
+      <div class="card mb-lg" style="margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <h1 id="event-name-display">Event Name</h1>
+            <p id="event-dates-display" class="text-muted mt-sm">Starts ... · Ends ...</p>
+            <p class="text-dim" style="font-size: 0.85rem; margin-top: 0.25rem;">
+              Retention: data auto-deleted 30 days after event ends
+            </p>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;">
+            <span id="event-status-badge" class="badge badge-green">Active</span>
+            <span id="display-monitor-code" class="badge badge-muted" style="font-size: 0.85rem;">
+              Door Code: —
+            </span>
+          </div>
+        </div>
+
+        <div class="admin-stats-grid mt-lg">
+          <div class="stat-card">
+            <span class="stat-label">Total Guests</span>
+            <span id="admin-stat-guests" class="stat-value">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Bands Ready</span>
+            <span id="admin-stat-bands" class="stat-value">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Currently Inside</span>
+            <span id="admin-stat-inside" class="stat-value inside-highlight">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Checked In</span>
+            <span id="admin-stat-checked" class="stat-value">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Departed</span>
+            <span id="admin-stat-left" class="stat-value">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Leaving Groups</span>
+            <span id="admin-stat-groups" class="stat-value">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="admin-tabs no-print">
+        <button class="admin-tab active" data-tab="guests" type="button">👥 Guest Import</button>
+        <button class="admin-tab" data-tab="bands" type="button">🏷️ Wristbands</button>
+        <button class="admin-tab" data-tab="export" type="button">📥 Data &amp; Close</button>
+      </nav>
+
+      <!-- TAB 1: Guest Import -->
+      <section id="tab-guests" class="admin-section active">
+        <!-- Luma API Connect -->
+        <div class="card">
+          <h2>Connect Luma API</h2>
+          <p class="text-muted mt-sm">Sync guest list directly from your Luma event</p>
+          <form id="luma-form" class="mt-md">
+            <div class="form-group">
+              <label class="form-label" for="luma-api-key">Luma API Key</label>
+              <input type="password" id="luma-api-key" class="input" placeholder="luma_api_..." required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="luma-event-id">Luma Event API ID</label>
+              <input type="text" id="luma-event-id" class="input" placeholder="evt-..." required>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              Sync Guests from Luma
+            </button>
+          </form>
+        </div>
+
+        <!-- Partiful / Luma CSV Upload -->
+        <div class="card">
+          <h2>Upload Partiful or Luma CSV</h2>
+          <p class="text-muted mt-sm">Upload exported guest roster (CSV columns auto-detected)</p>
+          <div id="csv-dropzone" class="dropzone mt-md">
+            <span style="font-size: 2rem;">📄</span>
+            <p style="font-weight: 600;">Drag &amp; drop Partiful / Luma CSV here, or click to browse</p>
+            <input type="file" id="csv-file-input" accept=".csv,text/csv" style="display: none;">
+          </div>
+          <div id="csv-preview" class="hidden mt-md">
+            <div class="badge badge-green" id="csv-status"></div>
+            <button id="btn-upload-csv" class="btn btn-primary mt-sm" type="button">
+              Upload &amp; Import CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Walk-in Guest Addition -->
+        <div class="card">
+          <h2>Add Walk-in Guest</h2>
+          <form id="admin-guest-form" class="mt-md">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+              <div class="form-group">
+                <label class="form-label" for="guest-name">Full Name *</label>
+                <input type="text" id="guest-name" class="input" placeholder="Maya Angelou" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="guest-email">Email (optional)</label>
+                <input type="email" id="guest-email" class="input" placeholder="maya@example.com">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="guest-phone">Phone (optional)</label>
+                <input type="tel" id="guest-phone" class="input" placeholder="+1 ...">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-secondary mt-sm">
+              Add Guest to Roster
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- TAB 2: Wristbands -->
+      <section id="tab-bands" class="admin-section">
+        <!-- Generate Bands -->
+        <div class="card">
+          <h2>Generate Wristbands</h2>
+          <p class="text-muted mt-sm">Creates unique tokens and 4-character codes for NFC and QR bands (up to 2,000)</p>
+          <form id="generate-bands-form" class="mt-md" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+            <div class="form-group" style="margin-bottom: 0; min-width: 160px;">
+              <label class="form-label" for="band-count">Number of Bands</label>
+              <input type="number" id="band-count" class="input" min="1" max="2000" value="50" required>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              Generate Bands
+            </button>
+          </form>
+        </div>
+
+        <!-- Printable Band Sheet View -->
+        <div class="card">
+          <h2>Printable Band Sheets</h2>
+          <p class="text-muted mt-sm">Generate printable sheets with QR codes and 4-letter short codes</p>
+          <div style="display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap;">
+            <button id="btn-view-sheet" class="btn btn-secondary" type="button">
+              🖨️ View &amp; Print Band Sheet
+            </button>
+            <a id="btn-download-nfc-csv" class="btn btn-secondary" href="#" download="bands.csv">
+              🏷️ Download NFC Tag CSV
+            </a>
+          </div>
+        </div>
+
+        <!-- Rendered Printable Grid Area -->
+        <div id="print-sheet-area" class="printable-sheet-container card">
+          <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2>Print Preview</h2>
+            <div style="display: flex; gap: 0.5rem;">
+              <button id="btn-trigger-print" class="btn btn-primary" type="button">Print Sheet</button>
+              <button id="btn-close-print-sheet" class="btn btn-secondary" type="button">Close</button>
+            </div>
+          </div>
+          <div id="bands-grid" class="band-grid"></div>
+        </div>
+      </section>
+
+      <!-- TAB 3: Data Export & End Event -->
+      <section id="tab-export" class="admin-section">
+        <!-- CSV Export -->
+        <div class="card">
+          <h2>Safety Roster Export</h2>
+          <p class="text-muted mt-sm">
+            Download full audit-trailed CSV with: name, email, phone, band, first in, last out, and companions left with.
+          </p>
+          <div class="mt-md">
+            <button id="btn-download-export-csv" class="btn btn-primary" type="button">
+              📥 Download export.csv
+            </button>
+          </div>
+        </div>
+
+        <!-- End Event Danger Zone -->
+        <div class="card" style="border-color: rgba(231, 76, 60, 0.4);">
+          <h2 style="color: var(--accent-red);">Danger Zone: End Event</h2>
+          <p class="text-muted mt-sm">
+            Closing the event stops new check-ins and schedules permanent deletion of all guest and scan records in 30 days.
+          </p>
+          <div class="mt-md">
+            <button id="btn-end-event" class="btn btn-danger" type="button">
+              End Event Now
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Show Secrets Once Modal -->
+  <div id="secrets-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2 style="color: var(--accent-amber);">Event Created Successfully!</h2>
+      </div>
+      <div class="modal-body">
+        <div class="badge badge-amber" style="width: 100%; justify-content: center; font-size: 0.95rem; padding: 0.6rem;">
+          ⚠️ Save this Admin PIN now. For privacy, it is hashed on the server and will NEVER be shown again!
+        </div>
+
+        <div class="secret-box mt-md">
+          <div>
+            <span class="form-label">8-Digit Admin PIN (Keep Safe)</span>
+            <div class="secret-row">
+              <span id="secret-pin" class="secret-value"></span>
+              <button class="btn btn-secondary btn-copy" data-target="secret-pin" type="button" style="min-height: 40px; padding: 0.3rem 0.8rem;">Copy</button>
+            </div>
+          </div>
+
+          <div>
+            <span class="form-label">Monitor Code (Give to Door Volunteers)</span>
+            <div class="secret-row">
+              <span id="secret-monitor-code" class="secret-value"></span>
+              <button class="btn btn-secondary btn-copy" data-target="secret-monitor-code" type="button" style="min-height: 40px; padding: 0.3rem 0.8rem;">Copy</button>
+            </div>
+          </div>
+
+          <div>
+            <span class="form-label">Event ID</span>
+            <div class="secret-row">
+              <span id="secret-event-id" style="font-family: var(--font-mono); font-size: 1rem; word-break: break-all;"></span>
+              <button class="btn btn-secondary btn-copy" data-target="secret-event-id" type="button" style="min-height: 40px; padding: 0.3rem 0.8rem;">Copy</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-md" style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.95rem;">
+          <p><strong>Quick Door Link:</strong> <a id="door-link" href="#" target="_blank"></a></p>
+          <p><strong>Quick Dashboard Link:</strong> <a id="dashboard-link" href="#" target="_blank"></a></p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-dismiss-secrets" class="btn btn-primary" type="button">
+          I Have Saved the PIN → Continue
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/admin/admin.js"></script>
+</body>
+</html>
