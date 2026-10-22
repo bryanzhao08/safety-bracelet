@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Homebound ID Scanner Test Barcodes (NOT AN ID)</title>
+  <style>
+    /* Plain white printable sheet styles - anti-counterfeiting compliant: NO card styling, NO photos */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #ffffff;
+      color: #000000;
+      line-height: 1.4;
+      padding: 24px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .sheet-header {
+      border-bottom: 3px solid #000000;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+    .sheet-title {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+    .disclaimer {
+      font-size: 14px;
+      color: #333333;
+      margin-bottom: 8px;
+    }
+    .how-to {
+      background: #f7f7f7;
+      border: 1px solid #cccccc;
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    .how-to ol {
+      margin-left: 20px;
+      margin-top: 6px;
+    }
+    .how-to li {
+      margin-bottom: 4px;
+    }
+
+    /* Test Rows */
+    .test-row {
+      background: #ffffff;
+      border: 2px solid #000000;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      overflow: hidden;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .banner {
+      background: #000000;
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 800;
+      text-align: center;
+      padding: 8px 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .row-content {
+      display: flex;
+      flex-direction: row;
+      gap: 20px;
+      padding: 16px;
+      align-items: center;
+    }
+    .barcode-col {
+      flex: 0 0 380px;
+      text-align: center;
+    }
+    .barcode-img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border: 1px solid #e0e0e0;
+      background: #ffffff;
+    }
+    .barcode-caption {
+      font-size: 11px;
+      color: #666666;
+      margin-top: 6px;
+      font-family: monospace;
+    }
+    .info-col {
+      flex: 1;
+      min-width: 0;
+    }
+    .case-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .case-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #000000;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+    .result-box {
+      background: #f0f4f8;
+      border-left: 4px solid #0f1630;
+      padding: 8px 12px;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .case-desc {
+      font-size: 13px;
+      color: #444444;
+      margin-bottom: 10px;
+    }
+    .meta-table {
+      font-size: 12px;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    .meta-table td {
+      padding: 3px 6px 3px 0;
+      vertical-align: top;
+    }
+    .meta-table code {
+      font-family: monospace;
+      background: #f0f0f0;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+
+    @media print {
+      body {
+        padding: 0;
+        background: #ffffff;
+      }
+      .how-to {
+        display: none;
+      }
+      .test-row {
+        border: 2px solid #000000;
+        margin-bottom: 16px;
+      }
+      .banner {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .badge {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .result-box {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+    @media (max-width: 768px) {
+      .row-content {
+        flex-direction: column;
+      }
+      .barcode-col {
+        flex: 1 1 100%;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="sheet-header">
+      <h1 class="sheet-title">TEST DATA · NOT AN ID</h1>
+      <p class="disclaimer">
+        <strong>Strictly for testing the Homebound ID scanner.</strong> All records are synthetic.
+        Generated on 2026-10-22 relative to current date so age rules evaluate accurately.
+      </p>
+      <div class="how-to">
+        <strong>How to test with the Homebound door scanner:</strong>
+        <ol>
+          <li>Ensure server is running: <code>npm start</code> (on port 4400)</li>
+          <li>In admin (<code>/admin</code>), upload <code>samples/luma_guests.csv</code> to populate Maya Chen, Sam Park, and Lena Fischer</li>
+          <li>Open <code>http://localhost:4400/door</code> on a phone camera or laptop</li>
+          <li>Tap <strong>Scan ID</strong> and frame the barcode below in the camera guide</li>
+        </ol>
+      </div>
+    </header>
+
+    <main id="cases">
+
+    <div class="test-row">
+      <div class="banner">TEST DATA · NOT AN ID · for testing the Homebound ID scanner</div>
+      <div class="row-content">
+        <div class="barcode-col">
+          <img class="barcode-img" src="test_id_case1_maya_chen.png" alt="Test Barcode 1">
+          <div class="barcode-caption">PDF417 Barcode · TEST00001</div>
+        </div>
+        <div class="info-col">
+          <div class="case-header">
+            <h2 class="case-title">Case 1: Maya Chen · 21+ on Guest List</h2>
+            <span class="badge" style="background: #27ae60; color: #ffffff;">21+</span>
+          </div>
+          <div class="result-box">
+            <strong>Expected Result:</strong> 21+ · Matches approved Luma guest list
+          </div>
+          <p class="case-desc">Matches gst-001 on samples/luma_guests.csv. Age 25 (>=21). Prompts door attendant to tap wristband to link guest.</p>
+          <table class="meta-table">
+            <tr><td><strong>Name:</strong></td><td>MAYA CHEN (Maya Chen)</td></tr>
+            <tr><td><strong>DOB:</strong></td><td>2001-10-22 (Age 25) · Raw DBB: 10222001</td></tr>
+            <tr><td><strong>Expires:</strong></td><td>2029-10-22 · Raw DBA: 10222029</td></tr>
+            <tr><td><strong>State:</strong></td><td>CA · License: TEST00001</td></tr>
+            <tr><td><strong>Special Field:</strong></td><td><code>DCF=HOMEBOUND-TEST-NOT-AN-ID</code></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="test-row">
+      <div class="banner">TEST DATA · NOT AN ID · for testing the Homebound ID scanner</div>
+      <div class="row-content">
+        <div class="barcode-col">
+          <img class="barcode-img" src="test_id_case2_sam_park.png" alt="Test Barcode 2">
+          <div class="barcode-caption">PDF417 Barcode · TEST00002</div>
+        </div>
+        <div class="info-col">
+          <div class="case-header">
+            <h2 class="case-title">Case 2: Sam Park · Under 21</h2>
+            <span class="badge" style="background: #e74c3c; color: #ffffff;">UNDER 21</span>
+          </div>
+          <div class="result-box">
+            <strong>Expected Result:</strong> UNDER 21 · Matches approved Luma guest list
+          </div>
+          <p class="case-desc">Matches gst-003 on samples/luma_guests.csv. Age 19 (<21). Displays giant red UNDER 21 alert banner.</p>
+          <table class="meta-table">
+            <tr><td><strong>Name:</strong></td><td>SAM PARK (Sam Park)</td></tr>
+            <tr><td><strong>DOB:</strong></td><td>2007-10-22 (Age 19) · Raw DBB: 10222007</td></tr>
+            <tr><td><strong>Expires:</strong></td><td>2029-10-22 · Raw DBA: 10222029</td></tr>
+            <tr><td><strong>State:</strong></td><td>CA · License: TEST00002</td></tr>
+            <tr><td><strong>Special Field:</strong></td><td><code>DCF=HOMEBOUND-TEST-NOT-AN-ID</code></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="test-row">
+      <div class="banner">TEST DATA · NOT AN ID · for testing the Homebound ID scanner</div>
+      <div class="row-content">
+        <div class="barcode-col">
+          <img class="barcode-img" src="test_id_case3_lena_fischer.png" alt="Test Barcode 3">
+          <div class="barcode-caption">PDF417 Barcode · TEST00003</div>
+        </div>
+        <div class="info-col">
+          <div class="case-header">
+            <h2 class="case-title">Case 3: Lena Fischer · Expired ID</h2>
+            <span class="badge" style="background: #f39c12; color: #000000;">EXPIRED</span>
+          </div>
+          <div class="result-box">
+            <strong>Expected Result:</strong> EXPIRED · Matches approved Luma guest list
+          </div>
+          <p class="case-desc">Matches gst-010 on samples/luma_guests.csv. Expired 1 year ago. Displays giant amber EXPIRED badge.</p>
+          <table class="meta-table">
+            <tr><td><strong>Name:</strong></td><td>LENA FISCHER (Lena Fischer)</td></tr>
+            <tr><td><strong>DOB:</strong></td><td>1996-10-22 (Age 30) · Raw DBB: 10221996</td></tr>
+            <tr><td><strong>Expires:</strong></td><td>2025-10-22 · Raw DBA: 10222025</td></tr>
+            <tr><td><strong>State:</strong></td><td>CA · License: TEST00003</td></tr>
+            <tr><td><strong>Special Field:</strong></td><td><code>DCF=HOMEBOUND-TEST-NOT-AN-ID</code></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="test-row">
+      <div class="banner">TEST DATA · NOT AN ID · for testing the Homebound ID scanner</div>
+      <div class="row-content">
+        <div class="barcode-col">
+          <img class="barcode-img" src="test_id_case4_maya_chen_duplicate.png" alt="Test Barcode 4">
+          <div class="barcode-caption">PDF417 Barcode · TEST00001</div>
+        </div>
+        <div class="info-col">
+          <div class="case-header">
+            <h2 class="case-title">Case 4: Maya Chen · Duplicate Scan Warning</h2>
+            <span class="badge" style="background: #f39c12; color: #000000;">DUPLICATE</span>
+          </div>
+          <div class="result-box">
+            <strong>Expected Result:</strong> DUPLICATE WARNING · Already verified
+          </div>
+          <p class="case-desc">Exact same barcode payload as Case 1. Once Case 1 has been scanned and linked, scanning this barcode immediately displays duplicate warning banner with previous timestamp.</p>
+          <table class="meta-table">
+            <tr><td><strong>Name:</strong></td><td>MAYA CHEN (Maya Chen)</td></tr>
+            <tr><td><strong>DOB:</strong></td><td>2001-10-22 (Age 25) · Raw DBB: 10222001</td></tr>
+            <tr><td><strong>Expires:</strong></td><td>2029-10-22 · Raw DBA: 10222029</td></tr>
+            <tr><td><strong>State:</strong></td><td>CA · License: TEST00001</td></tr>
+            <tr><td><strong>Special Field:</strong></td><td><code>DCF=HOMEBOUND-TEST-NOT-AN-ID</code></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="test-row">
+      <div class="banner">TEST DATA · NOT AN ID · for testing the Homebound ID scanner</div>
+      <div class="row-content">
+        <div class="barcode-col">
+          <img class="barcode-img" src="test_id_case5_riley_walkin.png" alt="Test Barcode 5">
+          <div class="barcode-caption">PDF417 Barcode · TEST00005</div>
+        </div>
+        <div class="info-col">
+          <div class="case-header">
+            <h2 class="case-title">Case 5: Riley Walkin · Walk-in (Not on list)</h2>
+            <span class="badge" style="background: #27ae60; color: #ffffff;">21+ (WALK-IN)</span>
+          </div>
+          <div class="result-box">
+            <strong>Expected Result:</strong> 21+ WALK-IN · Not on any imported list
+          </div>
+          <p class="case-desc">Not present in samples/luma_guests.csv. Age 23 (>=21). Automatically creates a walk-in guest record and prompts band tap.</p>
+          <table class="meta-table">
+            <tr><td><strong>Name:</strong></td><td>RILEY WALKIN (Riley Walkin)</td></tr>
+            <tr><td><strong>DOB:</strong></td><td>2003-10-22 (Age 23) · Raw DBB: 10222003</td></tr>
+            <tr><td><strong>Expires:</strong></td><td>2029-10-22 · Raw DBA: 10222029</td></tr>
+            <tr><td><strong>State:</strong></td><td>CA · License: TEST00005</td></tr>
+            <tr><td><strong>Special Field:</strong></td><td><code>DCF=HOMEBOUND-TEST-NOT-AN-ID</code></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    </main>
+  </div>
+</body>
+</html>
