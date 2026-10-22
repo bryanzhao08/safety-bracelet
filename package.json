@@ -1,0 +1,16 @@
+{
+  "name": "homebound",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node --test",
+    "demo": "node scripts/demo.js"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}
