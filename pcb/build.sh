@@ -10,17 +10,22 @@ GERBERS_DIR="$OUT_DIR/gerbers"
 mkdir -p "$OUT_DIR" "$GERBERS_DIR"
 
 echo "=== 1. Generating KiCad Files and Preview Renders ==="
+PYTHON_CMD="python3"
 if [ -f "$ROOT_DIR/cad/.venv/bin/python" ]; then
-    "$ROOT_DIR/cad/.venv/bin/python" "$SCRIPT_DIR/generate.py"
-elif command -v python3 >/dev/null 2>&1; then
-    python3 "$SCRIPT_DIR/generate.py"
-else
+    PYTHON_CMD="$ROOT_DIR/cad/.venv/bin/python"
+elif ! command -v python3 >/dev/null 2>&1; then
     echo "Error: Python 3 not found." >&2
     exit 1
 fi
 
+"$PYTHON_CMD" "$SCRIPT_DIR/generate.py"
+
 echo ""
-echo "=== 2. Checking for kicad-cli ==="
+echo "=== 2. Running Design Rule Geometry Check (check.py) ==="
+"$PYTHON_CMD" "$SCRIPT_DIR/check.py" "$SCRIPT_DIR/homebound_tag.kicad_pcb"
+
+echo ""
+echo "=== 3. Checking for kicad-cli ==="
 
 KICAD_CLI=""
 CANDIDATES=(
@@ -49,6 +54,9 @@ if [ -n "$KICAD_CLI" ]; then
 
     echo "Exporting Drill files to $GERBERS_DIR..."
     "$KICAD_CLI" pcb export drill -o "$GERBERS_DIR/" "$SCRIPT_DIR/homebound_tag.kicad_pcb"
+
+    echo "Creating Gerber zip archive at $OUT_DIR/homebound_tag_gerbers.zip..."
+    (cd "$GERBERS_DIR" && zip -r -q "$OUT_DIR/homebound_tag_gerbers.zip" .)
 
     echo "Rendering PCB with kicad-cli..."
     "$KICAD_CLI" pcb render --side top -o "$OUT_DIR/kicad_render_top.png" "$SCRIPT_DIR/homebound_tag.kicad_pcb" || true

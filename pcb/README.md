@@ -14,7 +14,8 @@ The PCB is an ultra-thin (0.2 mm) 2-layer circular board (Ø 22.4 mm) engineered
 | `homebound_tag.kicad_sch` | KiCad Schematic | S-expression schematic (NTAG216 + tuned 2.76 µH coil) |
 | `homebound_tag.kicad_pcb` | KiCad Board | Complete layout: spiral coil on F.Cu, return bridge on B.Cu, vias |
 | `generate.py` | Python Script | Generates reproducible KiCad files & computes antenna physics |
-| `build.sh` | Shell Script | Runs generator, runs KiCad DRC, and exports Gerbers via `kicad-cli` |
+| `check.py` | Python Script | Geometry Design Rule Check (DRC): edge clearance, width, gap, vias, net continuity |
+| `build.sh` | Shell Script | Runs generator, DRC checks, and exports Gerbers + drill via `kicad-cli` |
 | `out/tag_pcb_top.png` | PNG Preview | Top layer copper (F.Cu), IC pads, silkscreen, and board edge |
 | `out/tag_pcb_layers.png` | PNG Preview | Composite view showing front spiral, bottom return bridge, and vias |
 
@@ -27,7 +28,7 @@ Because the NXP NTAG series integrates the RF rectifier, digital logic, EEPROM, 
 | RefDes | Component | Manufacturer Part # | Package | Description | Est. Cost (100 qty) |
 |---|---|---|---|---|---|
 | **U1** | NFC Forum Type 2 Tag IC | **NXP NTAG216F0HN** (or **NTAG213F0HN**) | XQFN8 (SOT902-3), 1.6 × 1.6 mm, 0.4 mm pitch | 888 bytes user memory (NTAG216) or 144 bytes (NTAG213), internal 50 pF tuning capacitance | ~$0.38 – $0.55 |
-| **L1** | Printed Spiral Antenna | Integrated PCB trace | 2-layer planar spiral | 9 turns, $w=0.25\text{ mm}$, $s=0.20\text{ mm}$, $L \approx 2.76\ \mu\text{H}$ | Part of PCB substrate |
+| **L1** | Printed Spiral Antenna | Integrated PCB trace | 2-layer planar spiral | 9 turns, $w=0.25\text{ mm}$, $s=0.16\text{ mm}$, $L \approx 2.755\ \mu\text{H}$ | Part of PCB substrate |
 | **PCB** | 2-Layer Board | Custom | Ø 22.4 mm round, 0.2 mm FR4 or flex | ENIG finish, 1 oz Cu | ~$0.15 – $0.40 |
 
 > [!NOTE]
@@ -77,18 +78,41 @@ The generated coil has the following physical parameters:
 
 | Parameter | Value | Description |
 |---|---|---|
-| **Outer Diameter ($d_{\text{out}}$)** | 21.00 mm | Leaves 0.70 mm copper-to-edge clearance on Ø 22.4 mm board |
-| **Inner Diameter ($d_{\text{in}}$)** | 13.30 mm | Leaves open central region for IC U1 and vias |
-| **Number of Turns ($N$)** | 9 | Archimedean spiral |
+| **Outer Diameter ($d_{\text{out}}$)** | 20.35 mm | Leaves ≥ 0.60 mm copper-to-edge clearance on Ø 22.4 mm board |
+| **Inner Diameter ($d_{\text{in}}$)** | 13.29 mm | Leaves open central region for IC U1 and vias |
+| **Number of Turns ($N$)** | 9 | Archimedean spiral (36 steps/turn) |
 | **Trace Width ($w$)** | 0.25 mm (10 mil) | Low series resistance ($R_s < 2.5\ \Omega$) for high Q factor |
-| **Trace Spacing ($s$)** | 0.20 mm (8 mil) | Standard low-cost PCB fab capability |
-| **Fill Factor ($\rho$)** | 0.224 | Optimum coupling efficiency |
-| **Mohan Wheeler $L$** | **2.7564 µH** | **Within 0.02% of theoretical 2.7558 µH target** |
-| **Uncoupled Resonance** | **13.557 MHz** | Matches 13.56 MHz carrier frequency |
+| **Trace Spacing ($s$)** | 0.16 mm (6.3 mil) | Standard low-cost PCB fab capability (well above 0.1 mm JLCPCB min) |
+| **Fill Factor ($\rho$)** | 0.210 | Optimum coupling efficiency |
+| **Mohan Wheeler $L$** | **2.7546 µH** | **Within 0.05% of theoretical 2.7558 µH target** |
+| **Uncoupled Resonance** | **13.561 MHz** | Matches 13.56 MHz carrier frequency |
 
 ### 4. Human Body & Dielectric Detuning
 
 When the wristband is worn, the human wrist tissue ($\epsilon_r \approx 40\text{--}50$ at 13.56 MHz) and the 3D-printed clip plastic ($\epsilon_r \approx 2.8$) introduce a small parasitic parallel capacitance ($\Delta C \approx 1\text{--}2\text{ pF}$). The coil trace width of 0.25 mm provides a loaded Quality factor $Q \approx 25\text{--}35$, which provides sufficient RF bandwidth ($\sim 500\text{ kHz}$) so that reading is robust regardless of whether the band is worn tightly against the skin or held loosely.
+
+---
+
+## Design Rule Check (DRC) Verification
+
+Homebound includes an automated geometry design-rule validator (`pcb/check.py`) that parses the output `.kicad_pcb` S-expression and verifies all manufacturing constraints:
+
+```text
+=== Homebound Hardware: Design Rule Geometry Check ===
+[PASS] 1. Copper-to-Edge (>= 0.50 mm)
+       min clearance = 0.6000 mm (worst: Via at (110.30, 100.00))
+[PASS] 2. Track Width (>= 0.15 mm)
+       min track width = 0.2000 mm
+[PASS] 3. Track-to-Track Gap (>= 0.15 mm)
+       min track-to-track gap = 0.1571 mm
+[PASS] 4. Via Drill & Annular Ring (drill >= 0.3mm, ring >= 0.13mm)
+       min drill = 0.300 mm (>= 0.3), min annular ring = 0.150 mm (>= 0.13)
+[PASS] 5. Coil Net Continuity (pad-to-pad continuous)
+       Continuous net 'ANT' (ID 1) connects U1 pin 1 to pin 8 across 330 segments and 2 vias
+
+=======================================================
+OVERALL RESULT: ALL CHECKS PASSED
+```
 
 ---
 
@@ -99,19 +123,21 @@ Layer 1: F.Cu (Top)      ── [Spiral Coil: 9 turns, 0.25mm trace] ── IC U
                                                                                 │
 Dielectric Substrate     ── 0.2 mm FR4 or 0.1 mm Polyimide Flex ───────────────┼────
                                                                                 │
-Layer 2: B.Cu (Bottom)   ── [Via 1] ──────── [Return Bridge Trace (0.30mm)] ───┘
+Layer 2: B.Cu (Bottom)   ── [Via 1] ──────── [Return Bridge Trace (0.25mm)] ───┘
 ```
 
 1. **Top Layer (`F.Cu`):**
    - IC U1 centered at $(100.0, 100.0)$.
-   - Pad 8 (LB) connects directly on `F.Cu` to the inner start of the 9-turn Archimedean spiral.
-   - The spiral expands outward continuously to $r = 10.50\text{ mm}$ without crossing any other copper.
+   - Pad 8 (LB) connects directly on `F.Cu` to the inner start of the 9-turn Archimedean spiral ($r = 6.36\text{ mm}$).
+   - The spiral expands outward continuously to $r = 10.05\text{ mm}$ without crossing any other copper.
+   - Outer end connects to Outer Via 1 at $(110.30, 100.00)$.
+   - All segments and pads on the coil belong to a single continuous net `ANT`.
    - Ground test pad connected to Pad 4 (GND).
 2. **Through-Vias:**
-   - **Outer Via 1:** at $(110.50, 100.00)$ (0.60 mm pad / 0.30 mm drill), drops the outer coil turn to `B.Cu`.
+   - **Outer Via 1:** at $(110.30, 100.00)$ (0.60 mm pad / 0.30 mm drill), drops the outer coil turn to `B.Cu`. Has **0.60 mm clearance** to the Ø 22.4 mm board edge, safely exceeding the fab $\ge 0.50\text{ mm}$ minimum.
    - **Inner Via 2:** at $(98.00, 99.40)$ (0.60 mm pad / 0.30 mm drill), brings the return signal back up to `F.Cu` to connect to Pad 1 (LA).
 3. **Bottom Layer (`B.Cu`):**
-   - A single direct 0.30 mm bridge trace connecting Via 1 to Via 2.
+   - A single direct 0.25 mm bridge trace connecting Via 1 to Via 2.
    - Completely isolated by the substrate dielectric from the top coil turns.
 
 ---
@@ -162,16 +188,23 @@ The custom PCB files provided here ensure Homebound has a fully owned, open-hard
 
 ## Build & Export Commands
 
-To regenerate KiCad files and preview renders:
+To run the design generator and automated geometry DRC check:
 
 ```bash
 ./pcb/build.sh
+```
+
+To run only the geometry DRC checker:
+
+```bash
+./pcb/check.py
 ```
 
 Or run directly with the CadQuery virtual environment:
 
 ```bash
 cad/.venv/bin/python pcb/generate.py
+cad/.venv/bin/python pcb/check.py
 ```
 
-When `kicad-cli` is installed, `./pcb/build.sh` automatically executes design rule checks (`kicad-cli pcb drc`) and exports production Gerbers and drill files to `pcb/out/gerbers/`.
+When `kicad-cli` is installed, `./pcb/build.sh` automatically executes KiCad DRC (`kicad-cli pcb drc`), exports production Gerbers and drill files to `pcb/out/gerbers/`, and packages them into `pcb/out/homebound_tag_gerbers.zip`.

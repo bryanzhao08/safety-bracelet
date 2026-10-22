@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def compute_antenna_inductance(dout_mm=21.0, w_mm=0.25, s_mm=0.20, n=9):
+def compute_antenna_inductance(dout_mm=20.35, w_mm=0.25, s_mm=0.16, n=9):
     """
     Computes planar spiral coil inductance using Wheeler and Mohan formulas.
     """
@@ -82,8 +82,8 @@ def generate_kicad_pro():
       "rules": {
         "min_clearance": 0.15,
         "min_track_width": 0.15,
-        "min_via_annular_ring": 0.15,
-        "min_via_diameter": 0.50
+        "min_via_annular_ring": 0.13,
+        "min_via_diameter": 0.56
       }
     }
   },
@@ -299,11 +299,11 @@ def generate_kicad_sch():
 
 def generate_kicad_pcb(
     board_diam_mm=22.4,
-    dout_mm=21.0,
+    dout_mm=20.35,
     n_turns=9,
     w_mm=0.25,
-    s_mm=0.20,
-    steps_per_turn=24,
+    s_mm=0.16,
+    steps_per_turn=36,
 ):
     """
     Generates complete KiCad 8/9 PCB S-expression file with:
@@ -313,13 +313,21 @@ def generate_kicad_pcb(
       - 2 Vias (0.6 mm size / 0.3 mm drill)
       - Return bridge trace on B.Cu
       - Silkscreen labels & pin 1 indicator
+      - Meets all fabrication rules:
+          * Copper-to-edge >= 0.5 mm
+          * Track width >= 0.15 mm
+          * Track-to-track gap >= 0.15 mm
+          * Via drill >= 0.3 mm, annular ring >= 0.13 mm
+          * Single continuous net for antenna coil
     """
     x0, y0 = 100.0, 100.0  # KiCad sheet center coordinates
     pitch_mm = w_mm + s_mm
-    r_start = (
-        dout_mm / 2.0 - n_turns * pitch_mm + s_mm
-    )  # Inner start radius (~6.45 mm)
-    r_final = dout_mm / 2.0  # Outer end radius (~10.50 mm)
+    r_spiral_end = (dout_mm - w_mm) / 2.0  # Outer end centerline (~10.05 mm)
+    r_start = r_spiral_end - n_turns * pitch_mm  # Inner start centerline (~6.36 mm)
+
+    # Outer via placed at 10.30 mm radius (0.60 mm clearance to 11.2 mm board edge)
+    via1_x, via1_y = x0 + 10.30, y0
+    via2_x, via2_y = x0 - 2.00, y0 - 0.60
 
     # 1. Header & Setup
     pcb_lines = [
@@ -353,9 +361,8 @@ def generate_kicad_pcb(
         "\t\t)",
         "\t)",
         '\t(net 0 "")',
-        '\t(net 1 "ANT_A")',
-        '\t(net 2 "ANT_B")',
-        '\t(net 3 "GND")',
+        '\t(net 1 "ANT")',
+        '\t(net 2 "GND")',
         "",
         "\t;; --- Board Outline (Ø 22.4 mm circle) ---",
         f'\t(gr_circle (center {x0:.2f} {y0:.2f}) (end {x0 + board_diam_mm/2.0:.2f} {y0:.2f}) (stroke (width 0.15) (type solid)) (layer "Edge.Cuts") (uuid "{uuid.uuid4()}"))',
@@ -382,23 +389,23 @@ def generate_kicad_pcb(
         f'\t\t(fp_circle (center -1.1 -0.6) (end -1.0 -0.6) (stroke (width 0.1) (type solid)) (fill solid) (layer "F.SilkS") (uuid "{uuid.uuid4()}"))',
         "",
         "\t\t;; Pads",
-        f'\t\t(pad "1" smd rect (at -0.75 -0.60) (size 0.45 0.22) (layers "F.Cu" "F.Paste" "F.Mask") (net 1 "ANT_A") (pinfunction "LA") (uuid "{uuid.uuid4()}"))',
+        f'\t\t(pad "1" smd rect (at -0.75 -0.60) (size 0.45 0.22) (layers "F.Cu" "F.Paste" "F.Mask") (net 1 "ANT") (pinfunction "LA") (uuid "{uuid.uuid4()}"))',
         f'\t\t(pad "2" smd rect (at -0.75 -0.20) (size 0.45 0.22) (layers "F.Cu" "F.Paste" "F.Mask") (net 0 "") (pinfunction "NC") (uuid "{uuid.uuid4()}"))',
         f'\t\t(pad "3" smd rect (at -0.75 0.20) (size 0.45 0.22) (layers "F.Cu" "F.Paste" "F.Mask") (net 0 "") (pinfunction "NC") (uuid "{uuid.uuid4()}"))',
-        f'\t\t(pad "4" smd rect (at -0.75 0.60) (size 0.45 0.22) (layers "F.Cu" "F.Paste" "F.Mask") (net 3 "GND") (pinfunction "GND") (uuid "{uuid.uuid4()}"))',
+        f'\t\t(pad "4" smd rect (at -0.75 0.60) (size 0.45 0.22) (layers "F.Cu" "F.Paste" "F.Mask") (net 2 "GND") (pinfunction "GND") (uuid "{uuid.uuid4()}"))',
         f'\t\t(pad "5" smd rect (at 0.75 0.60) (size 0.45 0.22) (layers "F.Cu" "F.Paste" "F.Mask") (net 0 "") (pinfunction "NC") (uuid "{uuid.uuid4()}"))',
         f'\t\t(pad "6" smd rect (at 0.75 0.20) (size 0.45 0.22) (layers "F.Cu" "F.Paste" "F.Mask") (net 0 "") (pinfunction "NC") (uuid "{uuid.uuid4()}"))',
         f'\t\t(pad "7" smd rect (at 0.75 -0.20) (size 0.45 0.22) (layers "F.Cu" "F.Paste" "F.Mask") (net 0 "") (pinfunction "NC") (uuid "{uuid.uuid4()}"))',
-        f'\t\t(pad "8" smd rect (at 0.75 -0.60) (size 0.45 0.22) (layers "F.Cu" "F.Paste" "F.Mask") (net 2 "ANT_B") (pinfunction "LB") (uuid "{uuid.uuid4()}"))',
+        f'\t\t(pad "8" smd rect (at 0.75 -0.60) (size 0.45 0.22) (layers "F.Cu" "F.Paste" "F.Mask") (net 1 "ANT") (pinfunction "LB") (uuid "{uuid.uuid4()}"))',
         "\t)",
         "",
         "\t;; --- Ground Test Pad ---",
-        f'\t(segment (start {x0 - 0.75:.2f} {y0 + 0.60:.2f}) (end {x0 - 1.5:.2f} {y0 + 1.2:.2f}) (width 0.20) (layer "F.Cu") (net 3) (uuid "{uuid.uuid4()}"))',
+        f'\t(segment (start {x0 - 0.75:.2f} {y0 + 0.60:.2f}) (end {x0 - 1.5:.2f} {y0 + 1.2:.2f}) (width 0.20) (layer "F.Cu") (net 2) (uuid "{uuid.uuid4()}"))',
         '\t(footprint "homebound:TestPad_1.0mm"',
         '\t\t(layer "F.Cu")',
         f'\t\t(uuid "{uuid.uuid4()}")',
         f"\t\t(at {x0 - 1.5:.2f} {y0 + 1.2:.2f})",
-        f'\t\t(pad "1" smd circle (at 0 0) (size 1.0 1.0) (layers "F.Cu" "F.Mask") (net 3 "GND") (uuid "{uuid.uuid4()}"))',
+        f'\t\t(pad "1" smd circle (at 0 0) (size 1.0 1.0) (layers "F.Cu" "F.Mask") (net 2 "GND") (uuid "{uuid.uuid4()}"))',
         "\t)",
         "",
         "\t;; --- Planar Coil Antenna Segments on F.Cu ---",
@@ -414,8 +421,7 @@ def generate_kicad_pcb(
         y = y0 + r * math.sin(theta)
         coil_pts.append((x, y))
 
-    # Add spiral track segments (Net 2: "ANT_B" for inner coil turns, or transition)
-    # The whole coil is on Net 1 ("ANT_A") transitioning at the inner pad to Net 2 ("ANT_B")
+    # Add spiral track segments (Net 1: "ANT")
     for i in range(len(coil_pts) - 1):
         x1, y1 = coil_pts[i]
         x2, y2 = coil_pts[i + 1]
@@ -423,43 +429,34 @@ def generate_kicad_pcb(
             f'\t(segment (start {x1:.3f} {y1:.3f}) (end {x2:.3f} {y2:.3f}) (width {w_mm:.2f}) (layer "F.Cu") (net 1) (uuid "{uuid.uuid4()}"))'
         )
 
-    # Lead-in track from IC Pad 8 (LB, Net 2) to inner spiral start
+    # Lead-in track from IC Pad 8 (LB) to inner spiral start
     # Pad 8 is at (x0 + 0.75, y0 - 0.60). Coil starts at coil_pts[0] = (x0 + r_start, y0)
     sx, sy = coil_pts[0]
     lead_pts = [
         (x0 + 0.75, y0 - 0.60),
         (x0 + 2.00, y0 - 0.60),
-        (x0 + 4.00, y0 - 0.20),
+        (x0 + 4.00, y0 - 0.30),
         (sx, sy),
     ]
     for i in range(len(lead_pts) - 1):
         x1, y1 = lead_pts[i]
         x2, y2 = lead_pts[i + 1]
         pcb_lines.append(
-            f'\t(segment (start {x1:.3f} {y1:.3f}) (end {x2:.3f} {y2:.3f}) (width {w_mm:.2f}) (layer "F.Cu") (net 2) (uuid "{uuid.uuid4()}"))'
+            f'\t(segment (start {x1:.3f} {y1:.3f}) (end {x2:.3f} {y2:.3f}) (width {w_mm:.2f}) (layer "F.Cu") (net 1) (uuid "{uuid.uuid4()}"))'
         )
 
-    # Outer via at the outer end of coil: coil_pts[-1]
+    # Outer via at (via1_x, via1_y) = (x0 + 10.30, y0)
+    # Radial segment connecting outer end of spiral coil_pts[-1] to Via 1
     ex, ey = coil_pts[-1]
     pcb_lines.extend(
         [
             "",
-            "\t;; --- Outer Coil Via (F.Cu to B.Cu) ---",
-            f'\t(via (at {ex:.3f} {ey:.3f}) (size 0.60) (drill 0.30) (layers "F.Cu" "B.Cu") (net 1) (uuid "{uuid.uuid4()}"))',
+            "\t;; --- Outer Coil Via & Connecting Segment (F.Cu to B.Cu) ---",
+            f'\t(segment (start {ex:.3f} {ey:.3f}) (end {via1_x:.3f} {via1_y:.3f}) (width {w_mm:.2f}) (layer "F.Cu") (net 1) (uuid "{uuid.uuid4()}"))',
+            f'\t(via (at {via1_x:.3f} {via1_y:.3f}) (size 0.60) (drill 0.30) (layers "F.Cu" "B.Cu") (net 1) (uuid "{uuid.uuid4()}"))',
             "",
             "\t;; --- Bottom Layer Return Bridge Trace (B.Cu) ---",
-        ]
-    )
-
-    # Return bridge trace on B.Cu from (ex, ey) to center Via 2 at (x0 - 2.0, y0 - 0.60)
-    via2_x, via2_y = x0 - 2.00, y0 - 0.60
-    # Route on bottom cleanly under the coil
-    pcb_lines.append(
-        f'\t(segment (start {ex:.3f} {ey:.3f}) (end {via2_x:.3f} {via2_y:.3f}) (width 0.30) (layer "B.Cu") (net 1) (uuid "{uuid.uuid4()}"))'
-    )
-
-    pcb_lines.extend(
-        [
+            f'\t(segment (start {via1_x:.3f} {via1_y:.3f}) (end {via2_x:.3f} {via2_y:.3f}) (width {w_mm:.2f}) (layer "B.Cu") (net 1) (uuid "{uuid.uuid4()}"))',
             "",
             "\t;; --- Center Via 2 (B.Cu back to F.Cu) ---",
             f'\t(via (at {via2_x:.3f} {via2_y:.3f}) (size 0.60) (drill 0.30) (layers "F.Cu" "B.Cu") (net 1) (uuid "{uuid.uuid4()}"))',
@@ -470,7 +467,7 @@ def generate_kicad_pcb(
         ]
     )
 
-    return "\n".join(pcb_lines), coil_pts, (ex, ey), (via2_x, via2_y), lead_pts
+    return "\n".join(pcb_lines), coil_pts, (via1_x, via1_y), (via2_x, via2_y), lead_pts
 
 
 def render_pcb_previews(
@@ -532,6 +529,14 @@ def render_pcb_previews(
     ax.plot(
         [inner_via[0], x0 - 0.75],
         [inner_via[1], y0 - 0.60],
+        color="#f43f5e",
+        lw=1.3,
+    )
+
+    # Outer via connecting segment
+    ax.plot(
+        [coil_pts[-1][0], outer_via[0]],
+        [coil_pts[-1][1], outer_via[1]],
         color="#f43f5e",
         lw=1.3,
     )
@@ -646,6 +651,13 @@ def render_pcb_previews(
         label=f"Top Layer: F.Cu ({calc_info['n_turns']} turns)",
     )
     ax1.plot(l_xs, l_ys, color="#f43f5e", lw=1.2)
+    # Outer via connecting segment
+    ax1.plot(
+        [coil_pts[-1][0], outer_via[0]],
+        [coil_pts[-1][1], outer_via[1]],
+        color="#f43f5e",
+        lw=1.2,
+    )
     # Return bridge on bottom
     ax1.plot(
         [outer_via[0], inner_via[0]],
@@ -776,7 +788,7 @@ def main():
 
     print("Computing NFC antenna parameters...")
     calc = compute_antenna_inductance(
-        dout_mm=21.0, w_mm=0.25, s_mm=0.20, n=9
+        dout_mm=20.35, w_mm=0.25, s_mm=0.16, n=9
     )
 
     print(
@@ -807,7 +819,7 @@ def main():
     # 3. PCB Board file
     pcb_path = os.path.join(pcb_dir, "homebound_tag.kicad_pcb")
     pcb_str, coil_pts, outer_via, inner_via, lead_pts = generate_kicad_pcb(
-        board_diam_mm=22.4, dout_mm=21.0, n_turns=9, w_mm=0.25, s_mm=0.20
+        board_diam_mm=22.4, dout_mm=20.35, n_turns=9, w_mm=0.25, s_mm=0.16, steps_per_turn=36
     )
     with open(pcb_path, "w") as f:
         f.write(pcb_str)

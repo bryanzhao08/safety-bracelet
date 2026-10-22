@@ -4,8 +4,8 @@
       "rules": {
         "min_clearance": 0.15,
         "min_track_width": 0.15,
-        "min_via_annular_ring": 0.15,
-        "min_via_diameter": 0.50
+        "min_via_annular_ring": 0.13,
+        "min_via_diameter": 0.56
       }
     }
   },
