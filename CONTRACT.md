@@ -38,6 +38,9 @@ audit(id PK, eventId, actor, action, at, detail JSON)
 - `GET /api/events/:id/export.csv` (admin) → one row per guest: name, email, phone, band, first in, last out, left
   with (names in the same group). Audited.
 - `POST /api/events/:id/end` (admin)
+- `GET /api/events/:id/guests/:guestId/timeline` (admin) → `{guest:{name, email, phone, over21?, idState?}, band?,
+  events:[{at, type:'in'|'out'|'departure'|'id_check', detail}], leftWith:[{name, phone?}], lastSeenInsideAt?}`.
+  Used for incident follow-up ("who was Maya last with?"). Every call is audited. Never includes license data.
 
 **ID scan at check-in** (the door phone decodes the barcode and parses AAMVA fields on the device, then sends only these fields)
 - `POST /api/id-checkin {firstName, lastName, dob, idState, idExpires, licenseNumber}` (monitor) → the server computes `idHash`
