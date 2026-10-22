@@ -15,8 +15,9 @@ export function openDb(file = 'data/homebound-v2.sqlite') {
     );
     CREATE TABLE IF NOT EXISTS guests (
       id TEXT PRIMARY KEY, eventId TEXT NOT NULL, name TEXT NOT NULL, email TEXT, phone TEXT,
-      source TEXT NOT NULL CHECK(source IN ('luma','partiful','manual')),
-      externalId TEXT, createdAt TEXT NOT NULL
+      source TEXT NOT NULL CHECK(source IN ('luma','partiful','manual','id')),
+      externalId TEXT, createdAt TEXT NOT NULL, dob TEXT, over21 INTEGER, idState TEXT,
+      idExpires TEXT, idHash TEXT, idScannedAt TEXT
     );
     CREATE UNIQUE INDEX IF NOT EXISTS guests_external ON guests(eventId, source, externalId) WHERE externalId IS NOT NULL;
     CREATE INDEX IF NOT EXISTS guests_event_name ON guests(eventId, name);
@@ -49,5 +50,27 @@ export function openDb(file = 'data/homebound-v2.sqlite') {
     );
     CREATE INDEX IF NOT EXISTS monitor_sessions_event ON monitor_sessions(eventId);
   `);
+  const columns = new Set(db.prepare('PRAGMA table_info(guests)').all().map(row => row.name));
+  const guestSchema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='guests'").get().sql;
+  if (!columns.has('idHash') || !guestSchema.includes("'id'")) {
+    db.exec(`
+      BEGIN IMMEDIATE;
+      CREATE TABLE guests_new (
+        id TEXT PRIMARY KEY, eventId TEXT NOT NULL, name TEXT NOT NULL, email TEXT, phone TEXT,
+        source TEXT NOT NULL CHECK(source IN ('luma','partiful','manual','id')),
+        externalId TEXT, createdAt TEXT NOT NULL, dob TEXT, over21 INTEGER, idState TEXT,
+        idExpires TEXT, idHash TEXT, idScannedAt TEXT
+      );
+      INSERT INTO guests_new (id,eventId,name,email,phone,source,externalId,createdAt)
+        SELECT id,eventId,name,email,phone,source,externalId,createdAt FROM guests;
+      DROP TABLE guests;
+      ALTER TABLE guests_new RENAME TO guests;
+      CREATE UNIQUE INDEX guests_external ON guests(eventId, source, externalId) WHERE externalId IS NOT NULL;
+      CREATE INDEX guests_event_name ON guests(eventId, name);
+      CREATE INDEX guests_event_email ON guests(eventId, email);
+      COMMIT;
+    `);
+  }
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS guests_event_idhash ON guests(eventId, idHash) WHERE idHash IS NOT NULL');
   return db;
 }

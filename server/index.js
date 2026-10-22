@@ -6,6 +6,7 @@ import path from 'node:path';
 import { openDb } from './db.js';
 import { randomToken, shortCode, secureEqual, hashPin, verifyPin } from './tokens.js';
 import { csvGuests, csvEscape, encryptApiKey, fetchLumaGuests } from './imports.js';
+import { ageAndExpiry, licenseHash, matchGuests, validDate } from './id-checkin.js';
 import { createJobs } from './jobs.js';
 
 const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../web');
@@ -16,7 +17,7 @@ const iso = value => new Date(value).toISOString();
 const alphabet = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 const code6 = () => Array.from({ length: 6 }, () => alphabet[randomInt(alphabet.length)]).join('');
 
-export function createServer({ db = openDb(), now = () => new Date(), fetcher = fetch, startJobs = true } = {}) {
+export function createServer({ db = openDb(), now = () => new Date(), fetcher = fetch, startJobs = true, idSecretPath = 'data/secret.json' } = {}) {
   const jobs = createJobs({ db, now });
   const streams = new Map(), rates = new Map();
   const one = (sql, ...args) => db.prepare(sql).get(...args);
@@ -172,11 +173,44 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
     if ((m = p.match(/^\/api\/events\/([^/]+)$/)) && method === 'GET') {
       const e = admin(req, m[1]); audit(e.id, 'organizer', 'event_lookup'); return json(res, 200, { event: publicEvent(e), stats: counts(e.id) });
     }
+    if (method === 'POST' && p === '/api/id-checkin') {
+      const session = monitor(req, url), b = await body(req), e = event(session.eventId);
+      if (!text(b.firstName, 100) || !text(b.lastName, 100) ||
+          !validDate(b.dob) || !validDate(b.idExpires) ||
+          typeof b.idState !== 'string' || !/^[A-Za-z]{2}$/.test(b.idState.trim()) ||
+          typeof b.licenseNumber !== 'string' || !b.licenseNumber.trim() ||
+          b.licenseNumber.length > 80 || /[\x00-\x1f\x7f]/.test(b.licenseNumber) ||
+          b.dob > e.startsAt.slice(0, 10)) throw fail(400, 'invalid_id_fields');
+      const { over21, expired } = ageAndExpiry(b.dob, b.idExpires, e.startsAt);
+      const idHash = licenseHash(e.id, b.idState, b.licenseNumber, idSecretPath);
+      const previous = one('SELECT id,name,idScannedAt FROM guests WHERE eventId=? AND idHash=?', e.id, idHash);
+      if (previous) {
+        audit(e.id, session.name, 'id_duplicate', { guestId: previous.id });
+        return json(res, 200, { guest: guestPublic(previous), over21, expired, duplicate: { guestId: previous.id, at: previous.idScannedAt } });
+      }
+      const matches = matchGuests(many('SELECT id,name FROM guests WHERE eventId=?', e.id), b.firstName, b.lastName);
+      if (matches.length > 1) {
+        audit(e.id, session.name, 'id_ambiguous', { candidates: matches.length });
+        return json(res, 200, { candidates: matches.map(guestPublic), over21, expired });
+      }
+      let guest, created = false;
+      if (matches.length) {
+        guest = matches[0];
+        if (one('SELECT idHash FROM guests WHERE id=?', guest.id).idHash) throw fail(409, 'id_already_verified');
+      } else {
+        const name = `${b.firstName.trim()} ${b.lastName.trim()}`;
+        guest = { id: addGuest(e.id, { name }, 'id'), name }; created = true;
+      }
+      run('UPDATE guests SET dob=?,over21=?,idState=?,idExpires=?,idHash=?,idScannedAt=? WHERE id=?',
+        b.dob, Number(over21), b.idState.trim().toUpperCase(), b.idExpires, idHash, at(), guest.id);
+      audit(e.id, session.name, 'id_checkin', { guestId: guest.id, created });
+      return json(res, 200, { guest: guestPublic(guest), ...(created ? { created: true } : {}), over21, expired });
+    }
     if (method === 'GET' && p === '/api/guests') {
       const session = monitor(req, url), q = url.searchParams.get('q')?.trim() || '';
       if (q.length > 100) throw fail(400, 'invalid_query');
-      const guests = many('SELECT id,name FROM guests WHERE eventId=? AND name LIKE ? COLLATE NOCASE ORDER BY name LIMIT 100', session.eventId, `%${q}%`);
-      const result = guests.map(g => { const b = one('SELECT token,shortCode FROM bands WHERE eventId=? AND guestId=?', session.eventId, g.id); return { id: g.id, name: g.name, ...(b ? { band: b.shortCode } : {}), inside: b ? inside(b.token) : false }; });
+      const guests = many('SELECT id,name,over21 FROM guests WHERE eventId=? AND name LIKE ? COLLATE NOCASE ORDER BY name LIMIT 100', session.eventId, `%${q}%`);
+      const result = guests.map(g => { const b = one('SELECT token,shortCode FROM bands WHERE eventId=? AND guestId=?', session.eventId, g.id); return { id: g.id, name: g.name, ...(b ? { band: b.shortCode } : {}), inside: b ? inside(b.token) : false, ...(g.over21 === null ? {} : { over21: Boolean(g.over21) }) }; });
       audit(session.eventId, session.name, 'guest_lookup', { query: q }); return json(res, 200, result);
     }
     if (method === 'POST' && p === '/api/scan') {

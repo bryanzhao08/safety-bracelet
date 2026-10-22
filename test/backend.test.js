@@ -1,18 +1,22 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { DatabaseSync } from 'node:sqlite';
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { openDb } from '../server/db.js';
 import { createServer } from '../server/index.js';
 import { createJobs } from '../server/jobs.js';
 import { parseCsv } from '../server/imports.js';
 
-async function fixture(fetcher) {
-  const db = openDb(':memory:'); let time = Date.parse('2026-10-21T22:00:00Z');
-  const server = createServer({ db, now: () => new Date(time), fetcher, startJobs: false });
+async function fixture(fetcher, dbFile = ':memory:', idSecretPath) {
+  const db = openDb(dbFile); let time = Date.parse('2026-10-21T22:00:00Z'), closed = false;
+  const server = createServer({ db, now: () => new Date(time), fetcher, startJobs: false, idSecretPath });
   await new Promise(ok => server.listen(0, '127.0.0.1', ok));
   const base = `http://127.0.0.1:${server.address().port}`;
   return {
     db, base, now: () => new Date(time), setTime: x => { time = Date.parse(x); },
-    close: async () => { await new Promise(ok => server.close(ok)); db.close(); },
+    close: async () => { if (closed) return; closed = true; await new Promise(ok => server.close(ok)); db.close(); },
     request: async (method, path, { body, headers = {}, csv = false, redirect } = {}) => {
       const response = await fetch(base + path, { method, headers: { ...(body !== undefined && !csv ? { 'Content-Type': 'application/json' } : {}), ...headers }, body: body === undefined ? undefined : csv ? body : JSON.stringify(body), redirect });
       const raw = await response.text(); let data; try { data = JSON.parse(raw); } catch { data = raw; }
@@ -168,4 +172,100 @@ test('dashboard SSE requires a token and emits scan and departure events', async
     let output = ''; for (let i = 0; i < 3 && !output.includes('event: departure'); i++) output += await next();
     assert.match(output, /event: departure/); monitorPrivate(output);
   } finally { abort.abort(); await reader.cancel().catch(() => {}); }
+});
+
+test('ID check-in matches names, handles age/expiry, ambiguity, walk-ins and duplicates', async t => {
+  const folder = mkdtempSync(path.join(tmpdir(), 'homebound-id-'));
+  const f = await fixture(undefined, path.join(folder, 'event.sqlite'), path.join(folder, 'secret.json'));
+  t.after(async () => { await f.close(); rmSync(folder, { recursive: true, force: true }); });
+  const s = await setup(f);
+  const make = async name => (await f.request('POST', `/api/events/${s.eventId}/guests`, { headers: s.admin, body: { name } })).data.guest;
+  const maya = await make('Maya Lee');
+  const common = { firstName: 'maya', lastName: 'LEE', dob: '2005-10-22', idState: 'ca', idExpires: '2026-10-20', licenseNumber: 'D1234567' };
+  const exact = await f.request('POST', '/api/id-checkin', { headers: s.monitor, body: common });
+  assert.equal(exact.status, 200, exact.raw); assert.equal(exact.data.guest.id, maya.id);
+  assert.equal(exact.data.over21, false); assert.equal(exact.data.expired, true);
+  const stored = q(f, 'SELECT dob,over21,idState,idExpires,idHash,idScannedAt FROM guests WHERE id=?', maya.id);
+  assert.equal(stored.dob, common.dob); assert.equal(stored.over21, 0); assert.equal(stored.idState, 'CA');
+  assert.match(stored.idHash, /^[0-9a-f]{64}$/); assert.ok(stored.idScannedAt);
+  const duplicate = await f.request('POST', '/api/id-checkin', { headers: s.monitor, body: { ...common, idState: 'CA', licenseNumber: ' d1234567 ' } });
+  assert.equal(duplicate.data.duplicate.guestId, maya.id);
+  assert.equal(duplicate.data.duplicate.at, stored.idScannedAt);
+  const guests = await f.request('GET', '/api/guests?q=Maya', { headers: s.monitor });
+  assert.equal(guests.data[0].over21, false); monitorPrivate(guests.data);
+  const jordan = await make('Jordan Kim');
+  const fuzzy = await f.request('POST', '/api/id-checkin', { headers: s.monitor, body: {
+    ...common, firstName: 'Jordn', lastName: 'Kim', dob: '2005-10-21', idExpires: '2026-10-21', licenseNumber: 'K999',
+  } });
+  assert.equal(fuzzy.data.guest.id, jordan.id); assert.equal(fuzzy.data.over21, true); assert.equal(fuzzy.data.expired, false);
+  const twinA = await make('Alex Stone'), twinB = await make('Alex Stone');
+  const ambiguous = await f.request('POST', '/api/id-checkin', { headers: s.monitor, body: { ...common, firstName: 'Alex', lastName: 'Stone', licenseNumber: 'A111' } });
+  assert.deepEqual(ambiguous.data.candidates.map(x => x.id).sort(), [twinA.id, twinB.id].sort());
+  assert.equal(q(f, 'SELECT COUNT(*) n FROM guests WHERE idHash IS NOT NULL').n, 2);
+  const walkin = await f.request('POST', '/api/id-checkin', { headers: s.monitor, body: { ...common, firstName: 'New', lastName: 'Person', licenseNumber: 'N222' } });
+  assert.equal(walkin.data.created, true); assert.equal(walkin.data.guest.name, 'New Person');
+  assert.equal(q(f, 'SELECT source FROM guests WHERE id=?', walkin.data.guest.id).source, 'id');
+  const linked = await f.request('POST', '/api/scan', { headers: s.monitor, body: { bandToken: s.bands[0].token, direction: 'in', guestId: walkin.data.guest.id } });
+  assert.equal(linked.status, 200, linked.raw);
+  const otherEvent = await setup(f, 1);
+  const otherCheckin = await f.request('POST', '/api/id-checkin', { headers: otherEvent.monitor, body: common });
+  assert.equal(otherCheckin.data.created, true);
+  assert.equal(otherCheckin.data.duplicate, undefined);
+  assert.notEqual(q(f, 'SELECT idHash FROM guests WHERE id=?', otherCheckin.data.guest.id).idHash, stored.idHash);
+});
+
+test('raw license number and address never appear in responses or database files', async t => {
+  const folder = mkdtempSync(path.join(tmpdir(), 'homebound-private-id-'));
+  const dbFile = path.join(folder, 'event.sqlite');
+  const f = await fixture(undefined, dbFile, path.join(folder, 'secret.json'));
+  t.after(async () => { await f.close(); rmSync(folder, { recursive: true, force: true }); });
+  const s = await setup(f, 1);
+  const licenseNumber = 'ZXY987654321', address = '123 Private Lane, Secret City';
+  const requestBody = { firstName: 'Taylor', lastName: 'Morgan', dob: '1990-05-10', idState: 'NY', idExpires: '2028-01-01', licenseNumber, address };
+  const responses = [
+    await f.request('POST', '/api/id-checkin', { headers: s.monitor, body: requestBody }),
+    await f.request('POST', '/api/id-checkin', { headers: s.monitor, body: requestBody }),
+    await f.request('GET', '/api/guests?q=Taylor', { headers: s.monitor }),
+    await f.request('GET', '/api/dashboard', { headers: s.monitor }),
+    await f.request('GET', `/api/events/${s.eventId}/export.csv`, { headers: s.admin }),
+  ];
+  for (const response of responses) {
+    assert.equal(response.status, 200, response.raw);
+    assert.equal(response.raw.includes(licenseNumber), false);
+    assert.equal(response.raw.includes(address), false);
+  }
+  assert.equal(responses[0].data.created, true);
+  assert.equal(responses[1].data.duplicate.guestId, responses[0].data.guest.id);
+  assert.equal(q(f, 'SELECT COUNT(*) n FROM guests WHERE idHash IS NOT NULL').n, 1);
+  await f.close();
+  for (const file of readdirSync(folder)) {
+    const bytes = readFileSync(path.join(folder, file));
+    assert.equal(bytes.includes(Buffer.from(licenseNumber)), false, `${file} contains license number`);
+    assert.equal(bytes.includes(Buffer.from(address)), false, `${file} contains address`);
+  }
+});
+
+test('ID check-in requires monitor auth and rejects invalid dates without storing identity data', async t => {
+  const f = await fixture(); t.after(f.close); await setup(f);
+  const fields = { firstName: 'Alex', lastName: 'Lee', dob: '2000-02-29', idState: 'CA', idExpires: '2028-02-29', licenseNumber: 'X123' };
+  assert.equal((await f.request('POST', '/api/id-checkin', { body: fields })).status, 401);
+  const s = await setup(f);
+  const invalid = await f.request('POST', '/api/id-checkin', { headers: s.monitor, body: { ...fields, dob: '2001-02-29' } });
+  assert.equal(invalid.status, 400);
+  assert.equal(q(f, 'SELECT COUNT(*) n FROM guests WHERE eventId=?', s.eventId).n, 0);
+});
+
+test('existing v2 database migrates guest columns without losing guests', () => {
+  const folder = mkdtempSync(path.join(tmpdir(), 'homebound-migrate-'));
+  const file = path.join(folder, 'old.sqlite');
+  try {
+    const old = new DatabaseSync(file);
+    old.exec("CREATE TABLE guests (id TEXT PRIMARY KEY,eventId TEXT NOT NULL,name TEXT NOT NULL,email TEXT,phone TEXT,source TEXT NOT NULL CHECK(source IN ('luma','partiful','manual')),externalId TEXT,createdAt TEXT NOT NULL)");
+    old.prepare('INSERT INTO guests (id,eventId,name,source,createdAt) VALUES (?,?,?,?,?)').run('g1', 'e1', 'Existing Guest', 'manual', '2026-10-21T00:00:00Z');
+    old.close();
+    const db = openDb(file);
+    assert.equal(db.prepare('SELECT name,dob FROM guests WHERE id=?').get('g1').name, 'Existing Guest');
+    db.prepare('INSERT INTO guests (id,eventId,name,source,createdAt) VALUES (?,?,?,?,?)').run('g2', 'e1', 'ID Guest', 'id', '2026-10-21T00:00:00Z');
+    db.close();
+  } finally { rmSync(folder, { recursive: true, force: true }); }
 });
