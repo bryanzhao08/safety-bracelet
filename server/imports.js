@@ -27,6 +27,18 @@ export function parseCsv(text) {
 
 const clean = s => String(s ?? '').trim();
 const header = s => clean(s).replace(/^\uFEFF/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const attending = new Set(['approved', 'going', 'yes', 'attending', 'checked_in']);
+const declined = new Set(['declined', 'cant_go', 'not_going', 'no']);
+const statusReason = value => {
+  const status = clean(value).toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  if (attending.has(status)) return null;
+  if (declined.has(status)) return 'declined';
+  if (status === 'waitlist' || status === 'waitlisted') return 'waitlist';
+  if (status === 'pending_approval') return 'pending_approval';
+  if (status === 'invited') return 'invited';
+  if (status === 'maybe') return 'maybe';
+  return 'unknown_status';
+};
 export function csvGuests(text) {
   const rows = parseCsv(text);
   if (!rows.length) throw new Error('CSV is empty');
@@ -37,11 +49,13 @@ export function csvGuests(text) {
   const lastCol = find('lastname', 'guestlastname', 'last');
   const emailCol = find('email', 'emailaddress', 'guestemail', 'attendeeemail');
   const phoneCol = find('phone', 'phonenumber', 'mobile', 'guestphone', 'mobilenumber');
+  const statusCol = find('approvalstatus', 'status', 'rsvp');
   if (nameCol < 0 && firstCol < 0) throw new Error('CSV needs a name column');
   return rows.map(row => ({
-    name: clean(nameCol >= 0 ? row[nameCol] : `${row[firstCol] ?? ''} ${row[lastCol] ?? ''}`),
+    name: clean((nameCol >= 0 && row[nameCol]) || `${row[firstCol] ?? ''} ${row[lastCol] ?? ''}`),
     email: emailCol < 0 ? null : clean(row[emailCol]) || null,
     phone: phoneCol < 0 ? null : clean(row[phoneCol]) || null,
+    skipReason: statusCol < 0 ? null : statusReason(row[statusCol]),
   }));
 }
 

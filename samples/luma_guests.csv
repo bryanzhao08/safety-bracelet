@@ -1,0 +1,11 @@
+api_id,name,first_name,last_name,email,phone_number,created_at,approval_status,ticket_name
+gst-001,Maya Chen,Maya,Chen,maya.chen@example.com,+15550100101,2026-10-20T18:01:00Z,approved,General
+gst-002,Jordan Lee,Jordan,Lee,jordan.lee@example.com,+15550100102,2026-10-20T18:05:00Z,approved,General
+gst-003,Sam Park,Sam,Park,sam.park@example.com,+15550100103,2026-10-20T18:09:00Z,approved,General
+gst-004,Priya Natarajan,Priya,Natarajan,priya.n@example.com,+15550100104,2026-10-20T19:12:00Z,approved,General
+gst-005,Diego Alvarez,Diego,Alvarez,diego.a@example.com,+15550100105,2026-10-20T19:30:00Z,approved,General
+gst-006,Ava Thompson,Ava,Thompson,ava.t@example.com,+15550100106,2026-10-20T20:02:00Z,approved,General
+gst-007,Ethan Brooks,Ethan,Brooks,ethan.b@example.com,+15550100107,2026-10-20T20:15:00Z,declined,General
+gst-008,Chloe Kim,Chloe,Kim,chloe.k@example.com,+15550100108,2026-10-20T20:40:00Z,waitlist,General
+gst-009,Noah Patel,Noah,Patel,noah.p@example.com,+15550100109,2026-10-21T09:00:00Z,pending_approval,General
+gst-010,Lena Fischer,Lena,Fischer,lena.f@example.com,+15550100110,2026-10-21T10:22:00Z,approved,General

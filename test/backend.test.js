@@ -48,7 +48,7 @@ test('v2 event, CSV import, scan, dashboard, export and privacy', async t => {
   assert.match(s.session.data.monitorToken, /^[0-9a-f]{32}$/);
   const csvText = 'Full Name,Email Address,Phone Number\r\n"Maya, R",maya@example.test,5551234\r\nJordan Lee,jordan@example.test,5555678\r\n';
   const imported = await f.request('POST', `/api/events/${s.eventId}/import/csv`, { headers: { ...s.admin, 'Content-Type': 'text/csv' }, body: csvText, csv: true });
-  assert.equal(imported.status, 200, imported.raw); assert.deepEqual(imported.data, { imported: 2, skipped: 0 });
+  assert.equal(imported.status, 200, imported.raw); assert.deepEqual(imported.data, { imported: 2, skipped: 0, skippedReasons: {} });
   const roster = await f.request('GET', '/api/guests?q=Maya', { headers: s.monitor });
   assert.equal(roster.status, 200); assert.equal(roster.data.length, 1); monitorPrivate(roster.data);
   const needs = await f.request('POST', '/api/scan', { headers: s.monitor, body: { bandToken: s.bands[0].token, direction: 'in' } });
@@ -74,6 +74,42 @@ test('v2 event, CSV import, scan, dashboard, export and privacy', async t => {
   assert.ok(exportRows.some(row => row[0] === 'Sam Walkin' && row[6] === 'Maya, R'));
   assert.equal((await f.request('GET', `/api/events/${s.eventId}`, { headers: s.admin })).data.stats.groups, 1);
   assert.ok(q(f, "SELECT COUNT(*) n FROM audit WHERE action='roster_export'").n >= 1);
+});
+
+test('CSV import keeps attending Luma and Partiful guests and reports skipped reasons', async t => {
+  const f = await fixture(); t.after(f.close); const s = await setup(f);
+  const route = `/api/events/${s.eventId}/import/csv`;
+  const upload = value => f.request('POST', route, { headers: { ...s.admin, 'Content-Type': 'text/csv' }, body: value, csv: true });
+  const luma = [
+    'name,first_name,last_name,email,phone_number,approval_status',
+    'Maya Lee,Maya,Lee,maya@example.test,4155550101,approved',
+    ',Jordan,Kim,jordan@example.test,4155550102,checked in',
+    'Ari Ames,Ari,Ames,ari@example.test,4155550107,attending',
+    'Dee Cline,Dee,Cline,dee@example.test,4155550103,declined',
+    'Willa West,Willa,West,willa@example.test,4155550104,waitlist',
+    'Penny Park,Penny,Park,penny@example.test,4155550105,pending_approval',
+    'Ivy Ines,Ivy,Ines,ivy@example.test,4155550106,invited',
+  ].join('\n');
+  const first = await upload(luma);
+  assert.equal(first.status, 200, first.raw);
+  assert.deepEqual(first.data, { imported: 3, skipped: 4, skippedReasons: { declined: 1, waitlist: 1, pending_approval: 1, invited: 1 } });
+  const partiful = [
+    'Name,Phone Number,Status',
+    'Alex Going,4155550201,Going',
+    "Casey No,4155550202,Can't Go",
+    'Morgan Maybe,4155550203,Maybe',
+    'Nico Yes,4155550204,Yes',
+    'Ollie No,4155550205,Not Going',
+    'Riley No,4155550206,No',
+  ].join('\n');
+  const second = await upload(partiful);
+  assert.equal(second.status, 200, second.raw);
+  assert.deepEqual(second.data, { imported: 2, skipped: 4, skippedReasons: { declined: 3, maybe: 1 } });
+  const rsvp = await upload('Name,RSVP\nTaylor Yes,Yes\nUnclear Person,\n');
+  assert.deepEqual(rsvp.data, { imported: 1, skipped: 1, skippedReasons: { unknown_status: 1 } });
+  assert.deepEqual(f.db.prepare('SELECT name FROM guests WHERE eventId=? ORDER BY name').all(s.eventId).map(g => g.name),
+    ['Alex Going', 'Ari Ames', 'Jordan Kim', 'Maya Lee', 'Nico Yes', 'Taylor Yes']);
+  assert.equal(q(f, 'SELECT phone FROM guests WHERE name=?', 'Jordan Kim').phone, '4155550102');
 });
 
 test('authorization, one guest per band, and failed relinking', async t => {

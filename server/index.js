@@ -150,18 +150,20 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
       admin(req, m[1]);
       if (!req.headers['content-type']?.startsWith('text/csv')) throw fail(415, 'csv_required');
       let rows; try { rows = csvGuests(await readBody(req)); } catch (error) { throw fail(400, 'invalid_csv', error.message); }
-      let imported = 0, skipped = 0; db.exec('BEGIN IMMEDIATE');
+      let imported = 0, skipped = 0; const skippedReasons = {}; db.exec('BEGIN IMMEDIATE');
       try {
         const seen = new Set();
+        const skip = reason => { skipped++; skippedReasons[reason] = (skippedReasons[reason] || 0) + 1; };
         for (const g of rows) {
-          if (!text(g.name, 200)) { skipped++; continue; }
+          if (g.skipReason) { skip(g.skipReason); continue; }
+          if (!text(g.name, 200)) { skip('missing_name'); continue; }
           const key = g.email?.toLowerCase() || `${g.name.toLowerCase()}|${g.phone || ''}`;
-          if (seen.has(key) || (g.email && one('SELECT id FROM guests WHERE eventId=? AND lower(email)=lower(?)', m[1], g.email))) { skipped++; continue; }
+          if (seen.has(key) || (g.email && one('SELECT id FROM guests WHERE eventId=? AND lower(email)=lower(?)', m[1], g.email))) { skip('duplicate'); continue; }
           seen.add(key); addGuest(m[1], g, 'partiful'); imported++;
         }
-        audit(m[1], 'organizer', 'csv_import', { imported, skipped }); db.exec('COMMIT');
+        audit(m[1], 'organizer', 'csv_import', { imported, skipped, skippedReasons }); db.exec('COMMIT');
       } catch (error) { db.exec('ROLLBACK'); throw error; }
-      return json(res, 200, { imported, skipped });
+      return json(res, 200, { imported, skipped, skippedReasons });
     }
     if ((m = p.match(/^\/api\/events\/([^/]+)\/guests$/)) && method === 'POST') {
       const e = event(m[1]); let actor;

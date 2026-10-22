@@ -15,3 +15,5 @@ agy_c.log
 .venv/
 **/.venv/
 __pycache__/
+agy_csv.log
+agy_testids.log

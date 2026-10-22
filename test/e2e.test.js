@@ -56,7 +56,7 @@ test('a full party keeps ID data private from monitors, responses and SQLite', a
     const imported = await request('POST', `/api/events/${eventId}/import/csv`, {
       headers: { ...admin, 'Content-Type': 'text/csv' }, body: importCsv, csv: true,
     });
-    assert.deepEqual(imported.data, { imported: 3, skipped: 0 });
+    assert.deepEqual(imported.data, { imported: 3, skipped: 0, skippedReasons: {} });
     const made = await request('POST', `/api/events/${eventId}/bands`, { headers: admin, body: { count: 5 } });
     assert.equal(made.status, 200, made.raw);
     assert.equal(made.data.bands.length, 5);
