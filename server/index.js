@@ -171,6 +171,40 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
     if ((m = p.match(/^\/api\/events\/([^/]+)\/end$/)) && method === 'POST') {
       admin(req, m[1]); const ended = at(); run('UPDATE events SET endsAt=? WHERE id=?', ended, m[1]); audit(m[1], 'organizer', 'event_ended'); return json(res, 200, { endsAt: ended });
     }
+    if ((m = p.match(/^\/api\/events\/([^/]+)\/guests\/([^/]+)\/timeline$/)) && method === 'GET') {
+      admin(req, m[1]);
+      audit(m[1], 'organizer', 'guest_timeline_lookup', { guestId: m[2] });
+      const guest = one('SELECT id,name,email,phone,over21,idState,idScannedAt FROM guests WHERE eventId=? AND id=?', m[1], m[2]);
+      if (!guest) throw fail(404, 'guest_not_found');
+      const band = one('SELECT token,shortCode FROM bands WHERE eventId=? AND guestId=?', m[1], guest.id);
+      const scans = many(`SELECT s.at,s.direction,s.monitorName,b.shortCode FROM scans s
+        LEFT JOIN bands b ON b.token=s.bandToken WHERE s.eventId=? AND s.guestId=? ORDER BY s.at,s.id`, m[1], guest.id);
+      const departures = many(`SELECT d.at,d.groupId,b.shortCode FROM departures d
+        LEFT JOIN bands b ON b.token=d.bandToken WHERE d.eventId=? AND d.guestId=? ORDER BY d.at,d.id`, m[1], guest.id);
+      const companions = groupId => many(`SELECT g.id,g.name,g.phone FROM departures d
+        JOIN guests g ON g.id=d.guestId WHERE d.eventId=? AND d.groupId=? AND d.guestId<>?
+        ORDER BY g.name,g.id`, m[1], groupId, guest.id);
+      const events = scans.map(scan => ({ at: scan.at, type: scan.direction,
+        detail: { band: scan.shortCode, monitorName: scan.monitorName } }));
+      for (const departure of departures) events.push({ at: departure.at, type: 'departure',
+        detail: { band: departure.shortCode, groupId: departure.groupId,
+          leftWith: companions(departure.groupId).map(person => person.name) } });
+      if (guest.idScannedAt) events.push({ at: guest.idScannedAt, type: 'id_check',
+        detail: { over21: Boolean(guest.over21) } });
+      events.sort((a, b) => a.at.localeCompare(b.at));
+      const lastDeparture = departures.at(-1);
+      const leftWith = lastDeparture ? companions(lastDeparture.groupId).map(person => ({
+        name: person.name, ...(person.phone ? { phone: person.phone } : {}),
+      })) : [];
+      const lastInside = scans.filter(scan => scan.direction === 'in').at(-1)?.at;
+      return json(res, 200, {
+        guest: { name: guest.name, email: guest.email, phone: guest.phone,
+          ...(guest.over21 === null ? {} : { over21: Boolean(guest.over21) }),
+          ...(guest.idState ? { idState: guest.idState } : {}) },
+        ...(band ? { band: { shortCode: band.shortCode } } : {}),
+        events, leftWith, ...(lastInside ? { lastSeenInsideAt: lastInside } : {}),
+      });
+    }
     if ((m = p.match(/^\/api\/events\/([^/]+)$/)) && method === 'GET') {
       const e = admin(req, m[1]); audit(e.id, 'organizer', 'event_lookup'); return json(res, 200, { event: publicEvent(e), stats: counts(e.id) });
     }
