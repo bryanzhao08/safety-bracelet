@@ -10,3 +10,8 @@ agy_hwfix.log
 agy_a.log
 agy_b.log
 agy_c.log
+
+# Python virtualenvs (CadQuery etc.)
+.venv/
+**/.venv/
+__pycache__/
