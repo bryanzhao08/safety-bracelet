@@ -224,6 +224,82 @@ def make_slider(
     return body
 
 
+# Fold-and-snap clip: the cheapest option. One flat print (~3 g, a few cents of PLA), clips onto a band that's already on someone's
+# wrist. Lay the band across the base, fold the lid over, press: two pegs punch through the band and snap into
+# the base. The 20 mm NFC sticker ends up sealed inside, between lid and band. Cut the band off to remove.
+SNAP_BANDS = {
+    # name: (band width, gap for band thickness)
+    "tyvek_19": (19.0, 0.4),
+    "tyvek_25": (25.0, 0.4),
+    "woven_15": (15.0, 1.3),
+}
+
+
+def make_snap_clip(
+    band_w: float,
+    band_gap: float,
+    length: float = 32.0,
+    base_t: float = 1.8,
+    lid_t: float = 1.6,
+    hinge_t: float = 0.45,
+    hinge_len: float = 4.5,
+    sticker_diam: float = 20.5,
+    sticker_depth: float = 0.6,
+    peg_x: float = 13.0,
+    peg_r: float = 0.95,
+    hole_r: float = 1.1,
+    barb_r: float = 1.35,
+    barb_h: float = 0.8,
+    rail_w: float = 1.2,
+) -> cq.Workplane:
+    """
+    One-piece fold-over clip with a living hinge, laid out flat for printing (no supports).
+
+    Base at y = 0, lid at y = width + hinge_len, joined by a thin hinge strip along X. Pegs on the lid's inner
+    face go through the band and the base holes; the barbed tips catch in a counterbore on the base underside,
+    so they sit flush and nothing sharp touches the wrist.
+    """
+    width = max(sticker_diam + 2.4, band_w + 1.0 + 2 * rail_w)
+    lid_y = width + hinge_len
+
+    def plate(t, y):
+        p = cq.Workplane("XY").box(length, width, t, centered=(True, True, False)).translate((0, y, 0))
+        return p.edges("|Z").fillet(2.5)
+
+    # Base: rails either side of the band, peg holes with a counterbore underneath for the barbs
+    base = plate(base_t, 0)
+    for side in (-1, 1):
+        y = side * (band_w / 2 + 0.5 + rail_w / 2)
+        if abs(y) + rail_w / 2 <= width / 2:
+            base = base.union(
+                cq.Workplane("XY").box(length - 5, rail_w, band_gap, centered=(True, True, False)).translate((0, y, base_t))
+            )
+    for x in (-peg_x, peg_x):
+        base = base.cut(cq.Workplane("XY").circle(hole_r).extrude(base_t + band_gap).translate((x, 0, 0)))
+        base = base.cut(cq.Workplane("XY").circle(barb_r + 0.25).extrude(barb_h).translate((x, 0, 0)))
+        base = base.cut(  # lead-in so the peg finds the hole
+            cq.Workplane("XY").circle(hole_r).workplane(offset=0.5).circle(hole_r + 0.5).loft()
+            .translate((x, 0, base_t - 0.5))
+        )
+
+    # Lid: sticker pocket and barbed pegs on the inner (printed-up) face
+    lid = plate(lid_t, lid_y)
+    lid = lid.cut(cq.Workplane("XY").circle(sticker_diam / 2).extrude(sticker_depth).translate((0, lid_y, lid_t - sticker_depth)))
+    shaft = band_gap + base_t - barb_h
+    for x in (-peg_x, peg_x):
+        peg = cq.Workplane("XY").circle(peg_r).extrude(shaft).translate((x, lid_y, lid_t))
+        barb = (
+            cq.Workplane("XY").circle(barb_r).workplane(offset=barb_h).circle(0.6).loft()
+            .translate((x, lid_y, lid_t + shaft))
+        )
+        lid = lid.union(peg).union(barb)
+
+    hinge = cq.Workplane("XY").box(length - 8, hinge_len + 2, hinge_t, centered=(True, True, False)).translate(
+        (0, width / 2 + hinge_len / 2, 0)
+    )
+    return base.union(hinge).union(lid)
+
+
 def render_preview(
     shape: cq.Workplane,
     out_png: str,
@@ -387,6 +463,22 @@ def main():
             f"Outer: {bb.xlen:.1f} x {bb.ylen:.1f} x {bb.zlen:.1f} mm | Channel: {cw:.1f} x {ch:.1f} mm "
             f"| Grip ridges: {rh:.2f} mm | Pocket: Ø25.5 x 1.0 mm",
             base_color=(0.85, 0.35, 0.25),
+        )
+
+    # 5. Fold-and-snap clips (cheapest, clip onto a band already on the wrist)
+    for name, (bw, gap) in SNAP_BANDS.items():
+        print(f"Generating snap_{name}...")
+        snap = make_snap_clip(bw, gap)
+        base = os.path.join(out_dir, f"snap_{name}")
+        cq.exporters.export(snap, base + ".step")
+        cq.exporters.export(snap, base + ".stl")
+        render_preview(
+            snap,
+            base + ".png",
+            f"Homebound fold-and-snap NFC clip ({name.replace('_', ' ')} band), print layout",
+            f"Folded: 32 x {max(22.9, bw + 3.4):.1f} x {1.8 + gap + 1.6:.1f} mm | Ø20 NFC sticker sealed inside "
+            f"| 2 barbed pegs punch through band | ~3 g PLA",
+            base_color=(0.95, 0.65, 0.15),
         )
 
     print("\nAll CAD models successfully generated in cad/out/:")

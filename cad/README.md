@@ -22,6 +22,24 @@ The clips hold a standard **25 mm round NTAG213 / NTAG216 NFC sticker** (or cust
 
 ---
 
+## Fold-and-snap clip (cheapest, recommended for disposable bands)
+
+`out/snap_tyvek_19.*`, `out/snap_tyvek_25.*`, `out/snap_woven_15.*`
+
+One flat print, about 3 g of PLA (a few cents), and one 20 mm NTAG213 sticker (about $0.10). A base and a lid are
+joined by a thin hinge. It clips onto a band that is **already on the wrist**:
+
+1. Stick the 20 mm NFC sticker in the round pocket on the lid.
+2. Lay the band across the base, between the two side rails.
+3. Fold the lid over and squeeze. Two barbed pegs punch through the band and snap into the base.
+
+The sticker ends up sealed inside, so it can't be peeled off or swapped. The peg tips sit flush in counterbores on
+the underside, so nothing sharp touches skin. To remove it, cut the band off. Folded size: 32 × 22.9 × 3.8 mm
+(Tyvek) or 4.7 mm (woven).
+
+**Printing:** print it flat exactly as laid out, with the pegs pointing up and no supports. PETG gives the hinge
+more life, though it only has to fold once. At volume, this shape can be injection-molded in PP for under $0.02.
+
 ## Slide-on holder for disposable concert bands (recommended)
 
 `out/slider_tyvek_19.*`, `out/slider_tyvek_25.*`, `out/slider_woven_15.*`
