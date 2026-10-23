@@ -1,7 +1,32 @@
 // web/pilot/pilot.js - Pilot program signup logic
 import { submitPilot } from '../shared/api.js';
+import * as api from '../shared/api.js';
+import * as config from '../shared/config.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Demo Event CTA
+  const demoBtn = document.getElementById('btn-pilot-demo');
+  if (demoBtn) {
+    demoBtn.addEventListener('click', async () => {
+      demoBtn.disabled = true;
+      demoBtn.textContent = 'Loading sample...';
+      try {
+        if (typeof api.startDemo === 'function') {
+          await api.startDemo();
+        } else if (typeof config.startDemo === 'function') {
+          await config.startDemo();
+        } else {
+          try {
+            localStorage.setItem('hb_demo', '1');
+          } catch {}
+        }
+      } catch (err) {
+        console.error('Failed to start demo:', err);
+      }
+      window.location.href = '../dashboard/';
+    });
+  }
+
   // Mobile Menu Logic
   const menuBtn = document.getElementById('mobile-menu-btn');
   const closeBtn = document.getElementById('mobile-close-btn');

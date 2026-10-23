@@ -75,6 +75,10 @@ function setup() {
         headers: ['at', 'groupId', 'guestName', 'guestId', 'bandToken'],
       },
       {
+        name: 'Interactions',
+        headers: ['at', 'aName', 'bName', 'bandA', 'bandB', 'guestA', 'guestB', 'source'],
+      },
+      {
         name: 'Audit',
         headers: ['at', 'actor', 'action', 'detail', 'id'],
       },
@@ -681,11 +685,102 @@ function handleDepartures(settings, actor, body) {
   };
 }
 
+function handleMeet(settings, body) {
+  const myBandToken = String(body.myBandToken || '').trim();
+  const theirBandToken = String(body.theirBandToken || '').trim();
+  const at = body.at || new Date().toISOString();
+
+  if (!myBandToken || !theirBandToken) {
+    throw { status: 400, error: 'missing_tokens', message: 'Both band tokens are required' };
+  }
+
+  if (myBandToken === theirBandToken) {
+    throw { status: 400, error: 'same_band', message: 'Cannot meet yourself' };
+  }
+
+  const bands = getRows('Bands');
+  const bandA = bands.find(b => b.token === myBandToken);
+  const bandB = bands.find(b => b.token === theirBandToken);
+
+  if (!bandA || !bandB || !bandA.guestId || !bandB.guestId) {
+    throw { status: 409, error: 'not_inside', message: 'Both bands must be registered and linked to guests' };
+  }
+
+  const guests = getRows('Guests');
+  const guestA = guests.find(g => String(g.id) === String(bandA.guestId));
+  const guestB = guests.find(g => String(g.id) === String(bandB.guestId));
+
+  if (!guestA || !guestB) {
+    throw { status: 409, error: 'not_inside', message: 'Guests not found' };
+  }
+
+  // Tapper must currently be inside
+  const scans = getRows('Scans').filter(s => String(s.guestId) === String(guestA.id));
+  const lastScan = scans[scans.length - 1];
+  if (!lastScan || lastScan.direction !== 'in') {
+    throw { status: 409, error: 'not_inside', message: 'Tapper must be checked in and currently inside' };
+  }
+
+  // Rate limit: 30 per band per hour via CacheService
+  const cache = CacheService.getScriptCache();
+  const rateKey = 'meet_rate:' + myBandToken;
+  const count = Number(cache.get(rateKey) || 0);
+  if (count >= 30) {
+    throw { status: 429, error: 'rate_limited', message: 'Too many taps. Try again later.' };
+  }
+
+  const otherFirstName = (guestB.name || '').trim().split(/\s+/)[0] || 'Friend';
+
+  // 5-min dedupe: same pair within 5 min is one interaction (return existing one)
+  const interactions = getRows('Interactions');
+  const reqTimeMs = new Date(at).getTime();
+  const existing = interactions.slice().reverse().find(i => {
+    const isPair = (String(i.guestA) === String(guestA.id) && String(i.guestB) === String(guestB.id)) ||
+                   (String(i.guestA) === String(guestB.id) && String(i.guestB) === String(guestA.id));
+    if (!isPair) return false;
+    const itemTimeMs = new Date(i.at).getTime();
+    return Math.abs(reqTimeMs - itemTimeMs) <= 5 * 60 * 1000;
+  });
+
+  if (existing) {
+    return { ok: true, at: existing.at, with: { firstName: otherFirstName } };
+  }
+
+  // Increment rate count
+  cache.put(rateKey, String(count + 1), 3600);
+
+  appendRow('Interactions', {
+    at,
+    aName: guestA.name,
+    bName: guestB.name,
+    bandA: myBandToken,
+    bandB: theirBandToken,
+    guestA: String(guestA.id),
+    guestB: String(guestB.id),
+    source: 'guest_tap'
+  });
+
+  return {
+    ok: true,
+    at,
+    with: { firstName: otherFirstName }
+  };
+}
+
 function handleDashboard(settings) {
   const guests = getRows('Guests');
   const bands = getRows('Bands');
   const scans = getRows('Scans');
   const deps = getRows('Departures');
+  const interactions = getRows('Interactions');
+
+  const meetCountByGuest = new Map();
+  for (const i of interactions) {
+    const a = String(i.guestA);
+    const b = String(i.guestB);
+    meetCountByGuest.set(a, (meetCountByGuest.get(a) || 0) + 1);
+    meetCountByGuest.set(b, (meetCountByGuest.get(b) || 0) + 1);
+  }
 
   const bandByGuest = new Map(bands.filter(b => b.guestId).map(b => [String(b.guestId), b]));
   const groupPeople = new Map();
@@ -722,6 +817,7 @@ function handleDashboard(settings) {
       name: g.name,
       band: band?.shortCode || null,
       status,
+      meetups: meetCountByGuest.get(gid) || 0,
       ...(firstIn ? { inAt: firstIn.at } : {}),
       ...(last?.direction === 'out' ? { outAt: last.at } : {}),
       ...(dep && mates.length ? { leftWith: mates } : {})
@@ -935,6 +1031,7 @@ function handleExportCsv(settings) {
   const bands = getRows('Bands');
   const scans = getRows('Scans');
   const deps = getRows('Departures');
+  const interactions = getRows('Interactions');
 
   const byGroup = new Map();
   for (const d of deps) {
@@ -943,7 +1040,20 @@ function handleExportCsv(settings) {
   }
   const byId = new Map(guests.map(g => [String(g.id), g]));
 
-  const lines = ['name,email,phone,band,first in,last out,left with'];
+  const metByGuest = new Map();
+  for (const i of interactions) {
+    const a = String(i.guestA);
+    const b = String(i.guestB);
+    const timeA = i.at ? new Date(i.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase() : '';
+    const bEntry = i.bName + (timeA ? ' ' + timeA : '');
+    const aEntry = i.aName + (timeA ? ' ' + timeA : '');
+    if (!metByGuest.has(a)) metByGuest.set(a, []);
+    metByGuest.get(a).push(bEntry);
+    if (!metByGuest.has(b)) metByGuest.set(b, []);
+    metByGuest.get(b).push(aEntry);
+  }
+
+  const lines = ['name,email,phone,band,first in,last out,left with,met'];
   for (const g of guests) {
     const gid = String(g.id);
     const gb = bands.filter(b => String(b.guestId) === gid);
@@ -965,7 +1075,8 @@ function handleExportCsv(settings) {
       gb.map(b => b.shortCode).join('; '),
       first,
       last,
-      mates.join('; ')
+      mates.join('; '),
+      (metByGuest.get(gid) || []).join('; ')
     ].map(csvEscape).join(','));
   }
   return { csv: lines.join('\r\n') + '\r\n' };
@@ -982,6 +1093,7 @@ function handleTimeline(settings, guestId) {
   const scans = getRows('Scans').filter(s => String(s.guestId) === String(guest.id));
   const departures = getRows('Departures');
   const guestDeps = departures.filter(d => String(d.guestId) === String(guest.id));
+  const interactions = getRows('Interactions');
   const byId = new Map(guests.map(g => [String(g.id), g]));
 
   const companions = groupId => departures
@@ -1007,6 +1119,22 @@ function handleTimeline(settings, guestId) {
         leftWith: companions(dep.groupId).map(p => p.name)
       }
     });
+  }
+
+  for (const i of interactions) {
+    if (String(i.guestA) === String(guest.id)) {
+      events.push({
+        at: i.at,
+        type: 'met',
+        detail: { with: i.bName || byId.get(String(i.guestB))?.name || 'Guest' }
+      });
+    } else if (String(i.guestB) === String(guest.id)) {
+      events.push({
+        at: i.at,
+        type: 'met',
+        detail: { with: i.aName || byId.get(String(i.guestA))?.name || 'Guest' }
+      });
+    }
   }
 
   if (guest.idScannedAt) {
@@ -1124,6 +1252,7 @@ function runRetention() {
     clearRows('Bands');
     clearRows('Scans');
     clearRows('Departures');
+    clearRows('Interactions');
 
     audit(settings.id, 'retention', 'data_purged', { purgedAt: new Date().toISOString() });
   } finally {
@@ -1166,7 +1295,7 @@ function doPost(e) {
     }
 
     let result;
-    const writeActions = ['pilot', 'setup', 'addGuest', 'idCheckin', 'scan', 'departures', 'importCsv', 'createBands', 'updateEvent', 'endEvent'];
+    const writeActions = ['pilot', 'setup', 'addGuest', 'idCheckin', 'scan', 'departures', 'importCsv', 'createBands', 'updateEvent', 'endEvent', 'meet'];
     const isWrite = writeActions.includes(action);
 
     let lock = null;
@@ -1258,6 +1387,12 @@ function doPost(e) {
         case 'addGuest': {
           verifyMonitorOrAdmin(settings, monitorToken, adminPin);
           result = handleAddGuest(settings, body.name, body.email, body.phone);
+          break;
+        }
+
+        // Guest meetup action (no login; band token is the credential)
+        case 'meet': {
+          result = handleMeet(settings, body);
           break;
         }
 

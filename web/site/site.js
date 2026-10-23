@@ -1,6 +1,31 @@
 // web/site/site.js - Marketing site navigation & mobile menu logic
 
+import * as api from '../shared/api.js';
+import * as config from '../shared/config.js';
+
 document.addEventListener('DOMContentLoaded', () => {
+  const tryDemoBtn = document.getElementById('btn-try-demo');
+  if (tryDemoBtn) {
+    tryDemoBtn.addEventListener('click', async () => {
+      tryDemoBtn.disabled = true;
+      tryDemoBtn.textContent = 'Loading sample...';
+      try {
+        if (typeof api.startDemo === 'function') {
+          await api.startDemo();
+        } else if (typeof config.startDemo === 'function') {
+          await config.startDemo();
+        } else {
+          try {
+            localStorage.setItem('hb_demo', '1');
+          } catch {}
+        }
+      } catch (err) {
+        console.error('Failed to start demo:', err);
+      }
+      window.location.href = '../dashboard/';
+    });
+  }
+
   const menuBtn = document.getElementById('mobile-menu-btn');
   const closeBtn = document.getElementById('mobile-close-btn');
   const navSheet = document.getElementById('mobile-nav-sheet');

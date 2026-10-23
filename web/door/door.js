@@ -3,6 +3,7 @@ import * as api from '../shared/api.js';
 import * as offline from './offline.js';
 import { parseAamva } from '../shared/aamva.js';
 import { parseScannedValue } from '../shared/qr-scanner.js';
+import { initDemoBanner } from './demo-banner.js';
 
 // DOM Elements
 const joinView = document.getElementById('join-view');
@@ -256,6 +257,7 @@ document.querySelector('.mode-switch')?.addEventListener('click', (e) => {
 let pendingBandToken = null;
 
 async function initSession() {
+  initDemoBanner();
   const urlParams = new URLSearchParams(window.location.search);
   const prefillToken = urlParams.get('band') || urlParams.get('bandToken') || urlParams.get('b');
   if (prefillToken) {

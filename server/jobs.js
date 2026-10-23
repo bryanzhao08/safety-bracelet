@@ -12,7 +12,7 @@ export function createJobs({ db, now = () => new Date() }) {
       try {
         const count = table => db.prepare(`SELECT COUNT(*) n FROM ${table} WHERE eventId = ?`).get(event.id).n;
         const summary = { guests: count('guests'), bands: count('bands'), scans: count('scans'), departures: count('departures') };
-        for (const table of ['guests', 'bands', 'scans', 'departures', 'monitor_sessions', 'idempotency', 'audit']) {
+        for (const table of ['guests', 'bands', 'scans', 'departures', 'interactions', 'monitor_sessions', 'idempotency', 'audit']) {
           db.prepare(`DELETE FROM ${table} WHERE eventId = ?`).run(event.id);
         }
         db.prepare('DELETE FROM events WHERE id = ?').run(event.id);

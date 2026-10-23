@@ -21,6 +21,7 @@ bands(token PK, eventId, shortCode (4 chars, unique per event), guestId NULL, cr
 scans(id PK, eventId, bandToken, guestId NULL, direction 'in'|'out', at, monitorName)
 departures(id PK, eventId, groupId, guestId NULL, bandToken, at)   -- one row per person; same groupId = left together
 audit(id PK, eventId, actor, action, at, detail JSON)
+interactions(id PK, eventId, bandA, bandB, guestA NULL, guestB NULL, at, source 'guest_tap')  -- bandA = tapper's own band
 ```
 
 ## Endpoints
@@ -49,6 +50,23 @@ audit(id PK, eventId, actor, action, at, detail JSON)
   → `{guest?:{id,name}, candidates?:[{id,name}], created?:true, over21, expired, duplicate?:{guestId, at}}`
   (`created` = walk-in guest made from the ID when there's no match and the event allows walk-ins; `duplicate` = same idHash
   already checked in tonight). The door then links a band with `POST /api/scan {…, direction:'in', guestId}`.
+
+**Guest meetups (tap your phone to someone's band)**
+- A phone that reads a band opens `/t/<token>` (server) or `t/?b=<token>` (Pages). The page keeps the guest's
+  own band in `localStorage.hb_my_band`.
+  - First tap with none saved: offer "This is my band".
+  - Tapping your own band: show "Your band".
+  - Tapping another band: `POST /api/meet {myBandToken, theirBandToken, at?}` (no login; the band token is the
+    credential) → `{ok, at, with:{firstName}}`.
+- Rules:
+  - Both bands must be in this event, linked to guests, and the tapper's band must currently be inside.
+    Otherwise `409 {error:'not_inside'}`.
+  - The same pair within 5 min is one interaction (return the existing one).
+  - Rate limit: 30 per band per hour.
+  - The response reveals only the other guest's **first name**.
+- Timeline gains `{type:'met', at, detail:{with:name}}` entries for both guests. Export gets a "met" column:
+  names with times.
+- The dashboard roster row may show a meetup count. Monitors see names only, as everywhere.
 
 **Monitor (door + dashboard)**
 - `GET /api/guests?q=` → name search `[{id, name, band?, inside, over21?}]` (no email or phone)
@@ -79,3 +97,4 @@ audit(id PK, eventId, actor, action, at, detail JSON)
 3. A band links to exactly one guest per event; relinking needs admin.
 4. Retention deletes all personal rows.
 5. Scan is under 50 ms with 2,000 guests.
+6. `/api/meet` never returns more than the other guest's first name; meetups are deleted by retention.

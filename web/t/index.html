@@ -6,7 +6,7 @@
   <title>Homebound Safety Band</title>
   <link rel="stylesheet" href="../shared/base.css">
   <style>
-    .band-page {
+    .tap-page {
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -15,76 +15,330 @@
       padding: 1.5rem;
       text-align: center;
     }
-    .band-icon {
-      width: 72px;
-      height: 72px;
+
+    .tap-card {
+      max-width: 440px;
+      width: 100%;
+      padding: 2.25rem 1.75rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+    }
+
+    .tap-icon-ring {
+      width: 76px;
+      height: 76px;
       border-radius: 50%;
-      background: rgba(255, 180, 76, 0.15);
-      border: 2px solid var(--accent-amber);
+      background: rgba(255, 122, 26, 0.14);
+      border: 1.5px solid rgba(255, 122, 26, 0.4);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2rem;
+      font-size: 2.2rem;
       margin-bottom: 1.5rem;
+      box-shadow: 0 4px 20px rgba(255, 122, 26, 0.2);
     }
-    .band-id-box {
-      margin: 1.5rem 0;
-      padding: 0.75rem 1.25rem;
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      font-family: var(--font-mono);
-      font-size: 0.95rem;
-      color: var(--accent-amber);
-      word-break: break-all;
+
+    .tap-icon-ring.pink-ring {
+      background: rgba(255, 79, 163, 0.16);
+      border-color: rgba(255, 79, 163, 0.45);
+      box-shadow: 0 4px 20px rgba(255, 79, 163, 0.25);
+    }
+
+    .tap-icon-ring.amber-ring {
+      background: rgba(255, 180, 76, 0.16);
+      border-color: rgba(255, 180, 76, 0.45);
+    }
+
+    .tap-title {
+      font-family: var(--font-display);
+      font-size: clamp(1.75rem, 6vw, 2.25rem);
+      line-height: 1.15;
+      margin-bottom: 0.75rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .tap-sub {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      line-height: 1.5;
+      margin-bottom: 1.75rem;
+      max-width: 360px;
+    }
+
+    .privacy-line {
+      margin-top: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      opacity: 0.85;
+    }
+
+    .reset-link {
+      display: inline-block;
+      margin-top: 1rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      text-decoration: underline;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0.25rem 0.5rem;
+      font-family: inherit;
+    }
+
+    .reset-link:hover {
+      color: var(--text);
+    }
+
+    .door-footer {
+      margin-top: 2rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+      width: 100%;
+    }
+
+    .door-link {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+
+    .door-link:hover {
+      color: var(--text);
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
-  <div class="band-page">
-    <div class="card" style="max-width: 480px; width: 100%; padding: 2rem 1.5rem;">
-      <div style="display: flex; justify-content: center;">
-        <div class="band-icon">🎗️</div>
-      </div>
-      <h1 style="font-size: 1.5rem; margin-bottom: 0.75rem;">This is a Homebound safety band.</h1>
-      <p class="text-muted" style="margin-bottom: 1rem; line-height: 1.6;">
-        This band is worn by an attendee at a private event to help guests look out for one another and leave safely together.
-      </p>
-
-      <div id="bandIdContainer" style="display: none;">
-        <p class="text-dim" style="font-size: 0.85rem; margin-bottom: 0.25rem;">Band Token</p>
-        <div id="bandIdDisplay" class="band-id-box"></div>
-      </div>
-
-      <div style="margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--border);">
-        <p class="text-dim" style="font-size: 0.9rem; margin-bottom: 1rem;">Are you working the event door?</p>
-        <a id="doorStaffLink" href="../door/" class="btn btn-secondary btn-block">
-          Open Door Check-In
-        </a>
+  <div class="tap-page">
+    <div id="tapCard" class="glass tap-card">
+      <div id="tapContent">
+        <!-- Rendered by JS -->
+        <p class="text-muted">Loading safety band...</p>
       </div>
     </div>
   </div>
 
   <script type="module">
-    import { getMonitorToken } from '../shared/api.js';
+    import { getMonitorToken, recordMeetup, formatTime } from '../shared/api.js';
+    import { isDemo } from '../shared/config.js';
 
-    const params = new URLSearchParams(window.location.search);
-    const bandToken = params.get('b');
+    function getToken() {
+      const params = new URLSearchParams(window.location.search);
+      const qToken = params.get('b') || params.get('band') || params.get('bandToken');
+      if (qToken) return qToken.trim();
+
+      const meta = document.querySelector('meta[name="band-token"], meta[name="hb-band"]')?.getAttribute('content');
+      if (meta && meta !== 'index.html') return meta.trim();
+      const bodyAttr = document.body?.getAttribute('data-band-token');
+      if (bodyAttr && bodyAttr !== 'index.html') return bodyAttr.trim();
+      const scriptEl = document.getElementById('hb-band-token');
+      if (scriptEl) {
+        try {
+          const val = JSON.parse(scriptEl.textContent).trim();
+          if (val && val !== 'index.html') return val;
+        } catch (_) {}
+      }
+
+      const segments = window.location.pathname.split('/').filter(Boolean);
+      const last = segments[segments.length - 1];
+      if (last && last !== 't' && last !== 'index.html') {
+        return decodeURIComponent(last).trim();
+      }
+      return null;
+    }
+
+    const bandToken = getToken();
     const monitorToken = getMonitorToken();
 
-    // If an active monitor session exists, jump straight to the door scanner
-    if (monitorToken && bandToken) {
+    // 1. If a monitor session exists, open door scanner with this band.
+    // The sample event logs you in as door staff, so it shows the guest flow instead to let you try meetups.
+    if (monitorToken && bandToken && !isDemo()) {
       window.location.replace(`../door/?band=${encodeURIComponent(bandToken)}`);
     } else {
-      if (bandToken) {
-        const bandIdContainer = document.getElementById('bandIdContainer');
-        const bandIdDisplay = document.getElementById('bandIdDisplay');
-        const doorStaffLink = document.getElementById('doorStaffLink');
+      initGuestPage();
+    }
 
-        bandIdDisplay.textContent = bandToken;
-        bandIdContainer.style.display = 'block';
-        doorStaffLink.href = `../door/?band=${encodeURIComponent(bandToken)}`;
+    // Sample event only: bands of guests who are inside, read from the in-browser sample sheet,
+    // so you can pretend to tap your band and then a friend's.
+    function renderDemoPicker(container) {
+      let bands = [];
+      try {
+        const sheet = JSON.parse(localStorage.getItem('hb_demo_sheet') || '{}');
+        const rowsOf = (tab) => (Array.isArray(sheet[tab]) ? sheet[tab] : sheet[tab]?.rows) || [];
+        const [bh, ...brows] = rowsOf('Bands');
+        const [gh, ...grows] = rowsOf('Guests');
+        const [sh, ...srows] = rowsOf('Scans');
+        const names = Object.fromEntries(grows.map(r => [r[gh.indexOf('id')], r[gh.indexOf('name')]]));
+        const lastDir = {};
+        for (const r of srows) lastDir[r[sh.indexOf('bandToken')]] = r[sh.indexOf('direction')];
+        bands = brows
+          .filter(r => r[bh.indexOf('guestId')] && lastDir[r[bh.indexOf('token')]] === 'in')
+          .slice(0, 5)
+          .map(r => ({ token: r[bh.indexOf('token')], name: names[r[bh.indexOf('guestId')]] || 'Guest' }));
+      } catch (_) {}
+      const mine = localStorage.getItem('hb_my_band');
+      const link = (b) => `?b=${encodeURIComponent(b.token)}`;
+      container.innerHTML = bands.length < 2
+        ? `<h1 class="tap-title">Sample meetups</h1><p class="tap-sub">Check a couple of guests in at the door first.</p>`
+        : `<h1 class="tap-title">Try a meetup</h1>
+           <p class="tap-sub">${mine ? 'Now pretend to tap a friend’s band:' : 'First, pretend this is your band:'}</p>
+           <div style="display:grid;gap:10px;margin-top:16px">
+             ${(mine ? bands.filter(b => b.token !== mine) : bands.slice(0, 1))
+               .map(b => `<a class="btn btn-secondary btn-block" href="${link(b)}">${mine ? 'Tap' : 'Tap my band'} (${b.name.split(' ')[0]})</a>`).join('')}
+           </div>`;
+    }
+
+    function initGuestPage() {
+      const container = document.getElementById('tapContent');
+
+      if (!bandToken && isDemo()) {
+        renderDemoPicker(container);
+        return;
       }
+
+      if (!bandToken) {
+        container.innerHTML = `
+          <div class="tap-icon-ring">🎗️</div>
+          <h1 class="tap-title">Homebound safety band</h1>
+          <p class="tap-sub">Tap your phone to an NFC wristband or scan its QR code to begin.</p>
+          <div class="door-footer">
+            <a href="../door/" class="door-link">Working the event door? Open door scanner</a>
+          </div>
+        `;
+        return;
+      }
+
+      renderState();
+    }
+
+    async function renderState() {
+      const container = document.getElementById('tapContent');
+      const savedBand = localStorage.getItem('hb_my_band');
+
+      // State A: No band saved in localStorage
+      if (!savedBand) {
+        container.innerHTML = `
+          <div class="tap-icon-ring">🎗️</div>
+          <h1 class="tap-title">Is this your wristband?</h1>
+          <p class="tap-sub">Save this band to your phone to log friends you meet tonight.</p>
+          <button id="claimBtn" class="btn btn-primary btn-block" style="min-height: 56px; font-size: 1.1rem; font-weight: 700; border-radius: var(--radius-full);">
+            Yes, this is my band
+          </button>
+          <p class="privacy-line">Logged for the host's safety record only. Deleted after 30 days.</p>
+          <div class="door-footer">
+            <a href="../door/?band=${encodeURIComponent(bandToken)}" class="door-link">Working the event door? Open door check-in</a>
+          </div>
+        `;
+
+        document.getElementById('claimBtn')?.addEventListener('click', () => {
+          localStorage.setItem('hb_my_band', bandToken);
+          renderSavedState();
+        });
+        return;
+      }
+
+      // State B: Tapping own saved band
+      if (savedBand === bandToken) {
+        container.innerHTML = `
+          <div class="tap-icon-ring">🎗️</div>
+          <h1 class="tap-title">This is your band.</h1>
+          <p class="tap-sub">Tap your phone to a friend's band to log that you met.</p>
+          <button id="resetBtn" class="reset-link">Not my band? Reset</button>
+          <p class="privacy-line">Logged for the host's safety record only. Deleted after 30 days.</p>
+          <div class="door-footer">
+            <a href="../door/?band=${encodeURIComponent(bandToken)}" class="door-link">Working the event door? Open door check-in</a>
+          </div>
+        `;
+
+        document.getElementById('resetBtn')?.addEventListener('click', () => {
+          localStorage.removeItem('hb_my_band');
+          renderState();
+        });
+        return;
+      }
+
+      // State C: Tapping another person's band -> log meetup immediately
+      container.innerHTML = `
+        <div class="tap-icon-ring pink-ring">💫</div>
+        <h1 class="tap-title">Logging meetup...</h1>
+        <p class="tap-sub">Connecting your bands...</p>
+      `;
+
+      try {
+        const res = await recordMeetup(savedBand, bandToken);
+        const firstName = res.with?.firstName || 'Friend';
+        const timeStr = formatTime(res.at || new Date().toISOString());
+
+        container.innerHTML = `
+          <div class="tap-icon-ring pink-ring">🤝</div>
+          <div style="margin-bottom: 1.25rem;">
+            <span class="band-chip band-pink" style="font-size: 1.1rem; padding: 8px 24px 8px 16px;">${firstName}</span>
+          </div>
+          <h1 class="tap-title" style="margin-bottom: 0.5rem;">You met ${firstName} · ${timeStr}</h1>
+          <p class="tap-sub">Recorded with the host for tonight's safety record.</p>
+          <button id="resetBtn" class="reset-link">Not my band? Reset</button>
+          <p class="privacy-line">Logged for the host's safety record only. Deleted after 30 days.</p>
+          <div class="door-footer">
+            <a href="../door/?band=${encodeURIComponent(bandToken)}" class="door-link">Working the event door? Open door check-in</a>
+          </div>
+        `;
+
+        document.getElementById('resetBtn')?.addEventListener('click', () => {
+          localStorage.removeItem('hb_my_band');
+          renderState();
+        });
+      } catch (err) {
+        let errorTitle = "Couldn't log meetup";
+        let errorSub = err.message || "An error occurred while logging meetup.";
+
+        if (err.error === 'not_inside') {
+          errorTitle = "Check in at the door first.";
+          errorSub = "Only guests checked in inside the event can log meetups.";
+        } else if (err.error === 'rate_limited') {
+          errorTitle = "Too many taps. Try again later.";
+          errorSub = "You've tapped bands too many times this hour.";
+        }
+
+        container.innerHTML = `
+          <div class="tap-icon-ring amber-ring">⚠️</div>
+          <h1 class="tap-title">${errorTitle}</h1>
+          <p class="tap-sub">${errorSub}</p>
+          <button id="resetBtn" class="reset-link">Not my band? Reset</button>
+          <p class="privacy-line">Logged for the host's safety record only. Deleted after 30 days.</p>
+          <div class="door-footer">
+            <a href="../door/?band=${encodeURIComponent(bandToken)}" class="door-link">Working the event door? Open door check-in</a>
+          </div>
+        `;
+
+        document.getElementById('resetBtn')?.addEventListener('click', () => {
+          localStorage.removeItem('hb_my_band');
+          renderState();
+        });
+      }
+    }
+
+    function renderSavedState() {
+      const container = document.getElementById('tapContent');
+      container.innerHTML = `
+        <div class="tap-icon-ring">✓</div>
+        <h1 class="tap-title">Saved.</h1>
+        <p class="tap-sub">Tap your phone to a friend's band to log that you met.</p>
+        <button id="resetBtn" class="reset-link">Not my band? Reset</button>
+        <p class="privacy-line">Logged for the host's safety record only. Deleted after 30 days.</p>
+        <div class="door-footer">
+          <a href="../door/?band=${encodeURIComponent(bandToken)}" class="door-link">Working the event door? Open door check-in</a>
+        </div>
+      `;
+
+      document.getElementById('resetBtn')?.addEventListener('click', () => {
+        localStorage.removeItem('hb_my_band');
+        renderState();
+      });
     }
   </script>
 </body>

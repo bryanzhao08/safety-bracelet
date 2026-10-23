@@ -255,6 +255,26 @@
   max-width: 640px;
 }
 
+.pilot-demo-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin-top: 0.5rem;
+}
+
+.pilot-demo-btn {
+  min-height: 48px;
+  font-size: var(--text-16);
+  padding: 0.75rem 1.5rem;
+}
+
+.pilot-demo-subtext {
+  font-size: var(--text-14);
+  color: var(--text-muted);
+  margin: 0;
+}
+
 /* Details Grid: Who it's for & What's included */
 .pilot-details-grid {
   display: grid;

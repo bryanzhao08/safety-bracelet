@@ -261,11 +261,24 @@
   max-width: 660px;
 }
 
+.hero-actions-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  align-items: flex-start;
+}
+
 .hero-actions {
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.hero-demo-subtext {
+  font-size: var(--text-14);
+  color: var(--text-muted);
+  margin: 0;
 }
 
 .hero-btn-primary {

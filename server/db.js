@@ -59,6 +59,12 @@ export function openDb(file = process.env.HB_DB || 'data/homebound-v2.sqlite') {
       id TEXT PRIMARY KEY, chapter TEXT NOT NULL, school TEXT NOT NULL, email TEXT NOT NULL,
       eventSize INTEGER, note TEXT, createdAt TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS interactions (
+      id TEXT PRIMARY KEY, eventId TEXT NOT NULL, bandA TEXT NOT NULL, bandB TEXT NOT NULL,
+      guestA TEXT, guestB TEXT, at TEXT NOT NULL, source TEXT NOT NULL DEFAULT 'guest_tap'
+    );
+    CREATE INDEX IF NOT EXISTS interactions_event_banda ON interactions(eventId, bandA);
+    CREATE INDEX IF NOT EXISTS interactions_event_bandb ON interactions(eventId, bandB);
   `);
   const eventColumns = new Set(db.prepare('PRAGMA table_info(events)').all().map(row => row.name));
   if (!eventColumns.has('capacity')) db.exec('ALTER TABLE events ADD COLUMN capacity INTEGER');

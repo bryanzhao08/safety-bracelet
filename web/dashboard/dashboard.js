@@ -1,5 +1,6 @@
 // web/dashboard/dashboard.js - Left-Aligned Live Monitor & Organizer Dashboard
 import * as api from '../shared/api.js';
+import { initDemoBanner } from './demo-banner.js';
 
 // DOM Elements
 const eventTitle = document.getElementById('event-title');
@@ -310,6 +311,7 @@ function renderClosingChecklist() {
 
 // --- Auth & Session ---
 async function init() {
+  initDemoBanner();
   updateSoundButtonUI();
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -492,9 +494,17 @@ function renderRoster() {
       statusText = 'Not arrived';
     }
 
+    const meetups = Number(guest.meetups || guest.meetupCount || 0);
+    const meetupBadge = meetups > 0
+      ? `<span class="roster-meetup-badge">${meetups} meetup${meetups === 1 ? '' : 's'}</span>`
+      : '';
+
     row.innerHTML = `
       <div class="roster-guest-info">
-        <span class="roster-guest-name">${escapeHtml(guest.name)}</span>
+        <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+          <span class="roster-guest-name">${escapeHtml(guest.name)}</span>
+          ${meetupBadge}
+        </div>
         ${guest.band ? `<span class="roster-guest-meta">[${escapeHtml(guest.band)}]</span>` : ''}
       </div>
       <div>

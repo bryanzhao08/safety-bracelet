@@ -17,6 +17,17 @@ const text = (value, max = 200) => typeof value === 'string' && value.trim().len
 const iso = value => new Date(value).toISOString();
 const alphabet = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 const code6 = () => Array.from({ length: 6 }, () => alphabet[randomInt(alphabet.length)]).join('');
+const formatTimeAmPm = isoString => {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return '';
+  let h = d.getUTCHours();
+  const m = String(d.getUTCMinutes()).padStart(2, '0');
+  const ampm = h >= 12 ? 'pm' : 'am';
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${m} ${ampm}`;
+};
 
 export function createServer({ db = openDb(), now = () => new Date(), fetcher = fetch, startJobs = true, idSecretPath } = {}) {
   const jobs = createJobs({ db, now });
@@ -109,6 +120,34 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
       if (!owner || !secureEqual(req.headers['x-owner-token'], owner)) throw fail(403, 'owner_required');
       return json(res, 200, many('SELECT id,chapter,school,email,eventSize,note,createdAt FROM pilot_signups ORDER BY createdAt DESC,id DESC'));
     }
+    if (method === 'POST' && p === '/api/meet') {
+      const b = await body(req);
+      if (!text(b.myBandToken, 200) || !text(b.theirBandToken, 200)) throw fail(400, 'invalid_meet');
+      if (b.myBandToken === b.theirBandToken) throw fail(400, 'self_meet');
+      const bandA = one('SELECT * FROM bands WHERE token=?', b.myBandToken);
+      const bandB = one('SELECT * FROM bands WHERE token=?', b.theirBandToken);
+      if (!bandA || !bandB || bandA.eventId !== bandB.eventId || !bandA.guestId || !bandB.guestId || !inside(bandA.token)) throw fail(409, 'not_inside');
+      const idem = idempotency(req, res, bandA.eventId); if (idem.replayed) return;
+      let timestamp = at();
+      if (b.at !== undefined) {
+        const clientTime = Date.parse(b.at);
+        if (typeof b.at !== 'string' || !Number.isFinite(clientTime) || Math.abs(clientTime - Date.parse(timestamp)) > 12 * 3_600_000) throw fail(400, 'invalid_meet_time');
+        timestamp = new Date(clientTime).toISOString();
+      }
+      const recent = one(`SELECT at FROM interactions WHERE eventId=? AND
+        ((bandA=? AND bandB=?) OR (bandA=? AND bandB=?))
+        ORDER BY at DESC LIMIT 1`, bandA.eventId, bandA.token, bandB.token, bandB.token, bandA.token);
+      const guestB = one('SELECT name FROM guests WHERE id=?', bandB.guestId);
+      const firstName = guestB.name.trim().split(/\s+/)[0];
+      if (recent && Math.abs(Date.parse(timestamp) - Date.parse(recent.at)) < 5 * 60_000) {
+        return idem.respond(200, { ok: true, at: recent.at, with: { firstName } });
+      }
+      rate(`meet:${bandA.token}`, 30, 3_600_000);
+      run('INSERT INTO interactions (id,eventId,bandA,bandB,guestA,guestB,at,source) VALUES (?,?,?,?,?,?,?,?)',
+        randomToken(), bandA.eventId, bandA.token, bandB.token, bandA.guestId, bandB.guestId, timestamp, 'guest_tap');
+      audit(bandA.eventId, 'guest', 'guest_meet', { bandA: bandA.shortCode, bandB: bandB.shortCode });
+      return idem.respond(200, { ok: true, at: timestamp, with: { firstName } });
+    }
     if (method === 'POST' && p === '/api/events') {
       const b = await body(req);
       if (!text(b.name, 120) || !Number.isFinite(Date.parse(b.startsAt)) || !Number.isFinite(Date.parse(b.endsAt)) || Date.parse(b.endsAt) <= Date.parse(b.startsAt)) throw fail(400, 'invalid_event');
@@ -194,15 +233,22 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
       const bands = many('SELECT * FROM bands WHERE eventId=?', m[1]);
       const scans = many('SELECT * FROM scans WHERE eventId=? ORDER BY at,id', m[1]);
       const deps = many('SELECT * FROM departures WHERE eventId=? ORDER BY at,id', m[1]);
+      const interactions = many('SELECT at,guestA,guestB FROM interactions WHERE eventId=? ORDER BY at,id', m[1]);
       const byGroup = new Map(); for (const d of deps) { if (!byGroup.has(d.groupId)) byGroup.set(d.groupId, []); byGroup.get(d.groupId).push(d); }
       const byId = new Map(guests.map(g => [g.id, g]));
-      const lines = ['name,email,phone,band,first in,last out,left with'];
+      const lines = ['name,email,phone,band,first in,last out,left with,met'];
       for (const g of guests) {
         const gb = bands.filter(b => b.guestId === g.id), tokens = new Set(gb.map(b => b.token));
         const gs = scans.filter(s => s.guestId === g.id), gd = deps.filter(d => d.guestId === g.id);
         const first = gs.find(s => s.direction === 'in')?.at || '', last = gs.filter(s => s.direction === 'out').at(-1)?.at || '';
         const latest = gd.at(-1), mates = latest ? byGroup.get(latest.groupId).filter(d => d.guestId !== g.id).map(d => byId.get(d.guestId)?.name).filter(Boolean) : [];
-        lines.push([g.name, g.email, g.phone, gb.map(b => b.shortCode).join('; '), first, last, mates.join('; ')].map(csvEscape).join(','));
+        const guestMeets = interactions.filter(i => i.guestA === g.id || i.guestB === g.id);
+        const metList = guestMeets.map(i => {
+          const otherId = i.guestA === g.id ? i.guestB : i.guestA;
+          const otherName = byId.get(otherId)?.name || '';
+          return `${otherName} ${formatTimeAmPm(i.at)}`;
+        }).filter(Boolean);
+        lines.push([g.name, g.email, g.phone, gb.map(b => b.shortCode).join('; '), first, last, mates.join('; '), metList.join('; ')].map(csvEscape).join(','));
       }
       return csv(res, lines.join('\r\n') + '\r\n');
     }
@@ -229,6 +275,16 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
           leftWith: companions(departure.groupId).map(person => person.name) } });
       if (guest.idScannedAt) events.push({ at: guest.idScannedAt, type: 'id_check',
         detail: { over21: Boolean(guest.over21) } });
+      const meets = many(`SELECT i.at,
+        CASE WHEN i.guestA = ? THEN gb.name ELSE ga.name END as otherName
+        FROM interactions i
+        LEFT JOIN guests ga ON ga.id = i.guestA
+        LEFT JOIN guests gb ON gb.id = i.guestB
+        WHERE i.eventId = ? AND (i.guestA = ? OR i.guestB = ?)
+        ORDER BY i.at, i.id`, guest.id, m[1], guest.id, guest.id);
+      for (const meet of meets) {
+        events.push({ at: meet.at, type: 'met', detail: { with: meet.otherName } });
+      }
       events.sort((a, b) => a.at.localeCompare(b.at));
       const lastDeparture = departures.at(-1);
       const leftWith = lastDeparture ? companions(lastDeparture.groupId).map(person => ({
@@ -345,6 +401,12 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
       const session = monitor(req, url), e = event(session.eventId);
       const guests = many('SELECT id,name FROM guests WHERE eventId=? ORDER BY name,id', e.id), bands = many('SELECT token,shortCode,guestId FROM bands WHERE eventId=?', e.id);
       const scans = many('SELECT bandToken,guestId,direction,at FROM scans WHERE eventId=? ORDER BY at,id', e.id), deps = many('SELECT groupId,guestId,at FROM departures WHERE eventId=? ORDER BY at,id', e.id);
+      const interactions = many('SELECT guestA,guestB FROM interactions WHERE eventId=?', e.id);
+      const meetCounts = new Map();
+      for (const i of interactions) {
+        if (i.guestA) meetCounts.set(i.guestA, (meetCounts.get(i.guestA) || 0) + 1);
+        if (i.guestB) meetCounts.set(i.guestB, (meetCounts.get(i.guestB) || 0) + 1);
+      }
       const bandByGuest = new Map(bands.filter(b => b.guestId).map(b => [b.guestId, b]));
       const groupPeople = new Map(); for (const d of deps) { if (!groupPeople.has(d.groupId)) groupPeople.set(d.groupId, []); groupPeople.get(d.groupId).push(d.guestId); }
       const names = new Map(guests.map(g => [g.id, g.name]));
@@ -352,7 +414,7 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
         const band = bandByGuest.get(g.id), gs = scans.filter(s => s.guestId === g.id), last = gs.at(-1), dep = deps.filter(d => d.guestId === g.id).at(-1);
         const status = last?.direction === 'in' ? 'inside' : last ? 'left' : 'not_arrived';
         const mates = dep ? groupPeople.get(dep.groupId).filter(id => id !== g.id).map(id => names.get(id)).filter(Boolean) : [];
-        return { name: g.name, band: band?.shortCode || null, status, ...(gs.find(s => s.direction === 'in') ? { inAt: gs.find(s => s.direction === 'in').at } : {}), ...(last?.direction === 'out' ? { outAt: last.at } : {}), ...(dep ? { leftWith: mates } : {}) };
+        return { name: g.name, band: band?.shortCode || null, status, ...(gs.find(s => s.direction === 'in') ? { inAt: gs.find(s => s.direction === 'in').at } : {}), ...(last?.direction === 'out' ? { outAt: last.at } : {}), ...(dep ? { leftWith: mates } : {}), meetups: meetCounts.get(g.id) || 0 };
       });
       const recentDepartures = [...groupPeople].map(([groupId, ids]) => ({ at: deps.find(d => d.groupId === groupId).at, people: ids.map(id => names.get(id)).filter(Boolean) })).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 20);
       audit(e.id, session.name, 'dashboard_lookup');
@@ -377,10 +439,16 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
       const cookie = req.headers.cookie?.match(/(?:^|;\s*)hb_monitor=([0-9a-f]{32})/)?.[1];
       const session = cookie && one('SELECT eventId FROM monitor_sessions WHERE token=?', cookie);
       if (band && session?.eventId === band.eventId) { res.writeHead(302, { Location: `/door?bandToken=${encodeURIComponent(tap[1])}`, 'Cache-Control': 'no-store' }); return res.end(); }
+      const token = tap[1];
+      const tHtmlPath = path.resolve(webRoot, 't/index.html');
+      let content = await readFile(tHtmlPath, 'utf8');
+      const meta = `<meta name="band-token" content="${token}">\n  <meta name="hb-band" content="${token}">\n  <script type="application/json" id="hb-band-token">${JSON.stringify(token)}</script>`;
+      content = content.replace(/<head[^>]*>/i, match => `${match}\n  ${meta}`);
+      content = content.replace(/<body([^>]*)>/i, (_, attrs) => `<body data-band-token="${token}"${attrs}>`);
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-      return res.end(req.method === 'HEAD' ? '' : '<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Homebound band</title><h1>This is a Homebound safety band</h1></html>');
+      return res.end(req.method === 'HEAD' ? '' : content);
     }
-    let relative = p === '/' ? 'admin/index.html' : ['/door', '/dashboard', '/admin'].includes(p) ? `${p.slice(1)}/index.html` : p.slice(1);
+    let relative = p === '/' ? 'admin/index.html' : ['/door', '/dashboard', '/admin', '/t'].includes(p) ? `${p.slice(1)}/index.html` : p.slice(1);
     const full = path.resolve(webRoot, relative);
     if (!full.startsWith(webRoot + path.sep)) throw fail(403, 'forbidden');
     let info; try { info = await stat(full); } catch { throw fail(404, 'not_found'); }

@@ -1,5 +1,6 @@
 // web/program/program.js - Homebound Band Programmer Controller
 import * as api from '../shared/api.js';
+import { initDemoBanner } from './demo-banner.js';
 
 const hasWebNfc = 'NDEFReader' in window;
 
@@ -77,6 +78,7 @@ function showFlash(message, type = 'green', duration = 2500) {
 // --- Initialization ---
 
 function init() {
+  initDemoBanner();
   // Check Web NFC support
   if (!hasWebNfc) {
     deviceWarning.classList.remove('hidden');

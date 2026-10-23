@@ -1,5 +1,53 @@
-# Status
-
+# Status- 2026-10-22 (Antigravity Agent C — Guest meetups on Node server):
+  • Completed all requirements of `TASK_AGY_MEET_SERVER.md` and CONTRACT.md invariant 6:
+    - `server/db.js`: Added migration-safe `interactions` table (`id PK, eventId, bandA, bandB, guestA, guestB, at, source DEFAULT 'guest_tap'`) and indexed `(eventId, bandA)` and `(eventId, bandB)`.
+    - `server/index.js` (`POST /api/meet`): Public meetup endpoint with credentials as `myBandToken`. Validates that both bands belong to the same event, both are linked to guests, and the tapper is currently inside (`409 not_inside`). Enforces band cannot meet itself (`400 self_meet`). Dedupes unordered pairs within 5 minutes, returning the existing row without creating duplicate interactions. Enforces rate limit of 30 meets per requesting band per hour (`429 rate_limited`). Strictly returns first name only (`{ok: true, at, with: {firstName}}`). Supports client `at` timestamp (within ±12h), accepts `Idempotency-Key`, and writes an audit row (`guest_meet`).
+    - `server/index.js` (`/t/:bandToken`): Preserves existing monitor-session 302 redirect. For public taps, serves `web/t/index.html` with injected `<meta name="band-token" content="...">`, `<meta name="hb-band" content="...">`, `<script type="application/json" id="hb-band-token">"..."</script>`, and `<body data-band-token="...">` so `web/t/index.html` can run the guest flow at `/t/<token>` seamlessly (coordinated with Agent A). Also serves `t/index.html` at route `/t`.
+    - Incident Timeline: `GET /api/events/:id/guests/:guestId/timeline` adds `{type: 'met', at, detail: {with: otherGuestName}}` chronologically for both guests.
+    - Organizer Export: `GET /api/events/:id/export.csv` adds `met` column with names and times formatted as e.g. `"Jess 12:10 am; Priya 1:02 am"`.
+    - Monitor Dashboard: `GET /api/dashboard` roster rows include `meetups:int` count (preserving privacy).
+    - Retention: Hourly retention job purges `interactions` table along with guests, bands, scans, and departures.
+    - Tests: Added `test/meet.test.js` covering happy path, audit logging, idempotency replay, `not_inside` rejections, self-meet, 5-minute dedupe, rate limiting, first-name-only privacy verification (zero leakage of surname, email, phone, or guest IDs), incident timeline integration, export CSV formatting, dashboard roster meetup counts, retention purge, and `/t/:bandToken` token metadata injection.
+  • How to run: `npm start`; `npm test` passes all 27 test suites. No git commands run.
+- 2026-10-22 (Antigravity Agent A — In-browser sample event, guest meetups on Sheets, and guest tap page):
+  • Completed all requirements of `TASK_AGY_DEMO.md`:
+    - `web/shared/config.js` & `web/shared/demo-backend.js`:
+      • Built `{type: 'demo'}` backend active when `localStorage.hb_demo === '1'` or URL has `?demo=1` (saved and stripped from the address bar, taking priority over server and sheets modes).
+      • Implemented in-browser Apps Script execution running real `sheets/Code.gs` inside a comprehensive suite of fakes (`SpreadsheetApp`, `Utilities`, `LockService`, `CacheService`, `ContentService`, `PropertiesService`, `Session`, `ScriptApp`).
+      • Embedded synchronous pure-JS SHA-256 and HMAC-SHA256 without external CDNs or dependencies.
+      • Sheet fake stores tabs as 2D arrays, persisting to `localStorage.hb_demo_sheet`, with `localStorage.hb_demo_cache` for idempotency and rate limiting.
+      • `startDemo(options)` seeds realistic party: "Sample party: Friday 10 pm", 24 guests with diverse first/last names, 30 bands, 12 checked in (inside) over the last 2 hours, 2 groups that left together, 4 meetups, known Admin PIN `00000000`, Monitor Code `DEMO42`, and Monitor session named "You" so every page works immediately with nothing to type.
+      • `createEvent` in demo mode resets and reseeds the sample event.
+      • `exitDemo()` clears demo state and credentials.
+      • Exported names for Agent B (available from both `web/shared/config.js` and `web/shared/api.js`): `isDemo`, `startDemo`, `exitDemo`.
+    - `sheets/Code.gs` & `web/setup/Code.gs` & `web/setup/Code.js`:
+      • Added `Interactions` tab with headers `['at', 'aName', 'bName', 'bandA', 'bandB', 'guestA', 'guestB', 'source']`.
+      • Implemented public `meet` action adhering to CONTRACT.md invariants: inside check (tapper must currently be inside), 5-min dedupe (returning existing interaction without duplicate rows), 30 taps/hour per band rate limiting via `CacheService`, and strictly first-name-only response (`{ok: true, at, with: {firstName}}`).
+      • Updated `handleTimeline` to include `{type: 'met', at, detail: {with: name}}` chronologically for both guests.
+      • Updated `handleDashboard` roster to include `meetups` count per guest.
+      • Updated `handleExportCsv` with `met` column formatted with names and times.
+      • Updated `runRetention` to clear `Interactions` rows after retention period.
+      • Synchronized `sheets/Code.gs` with `web/setup/Code.gs` and `web/setup/Code.js`.
+      • Extended `sheets/test/local.test.js` with meet cases (happy path, not_inside, 5-min dedupe, first-name only, timeline, dashboard, and retention purge).
+    - `web/shared/api.js`:
+      • Added new export `recordMeetup(myBandToken, theirBandToken)` supporting server `POST /api/meet`, Sheets action `meet`, and Demo backend.
+      • Routed demo mode through `demoCall` so all methods (`searchGuests`, `idCheckin`, `scanBand`, `recordDepartures`, `getDashboard`, `openDashboardStream`, `getGuestTimeline`, `updateEvent`, `createEvent`) run seamlessly in demo mode.
+    - `web/t/index.html` (Guest Tap Page):
+      • Preserved monitor redirect: if active monitor session exists, immediately forwards to `../door/?band=<token>`.
+      • Implemented complete guest flow using `localStorage.hb_my_band`:
+        - No band saved: shows "Is this your wristband?" with primary glossy pill button "Yes, this is my band" -> saves to localStorage and transitions to "Saved. Tap your phone to a friend's band to log that you met."
+        - Own band: shows "This is your band. Tap your phone to a friend's band to log that you met."
+        - Another band: immediately calls `recordMeetup` and renders "You met [firstName] · [time]" in large Archivo typography with glossy pink wristband chip (`.band-chip.band-pink`).
+        - Error handling: `not_inside` -> "Check in at the door first."; `rate_limited` -> "Too many taps. Try again later."
+        - Includes "Not my band? Reset" link and privacy notice: "Logged for the host's safety record only. Deleted after 30 days."
+        - Token extraction handles `t/?b=<token>`, server `/t/<token>` URL paths, `<meta name="band-token">`, and `#hb-band-token` JSON.
+        - Styled with Liquid Glass design system and relative URLs.
+    - Verification:
+      • `node --test sheets/test/*.test.js`: All tests pass (both `local.test.js` and `demo.test.js`).
+      • `npm test`: Passes all 27 server test suites.
+      • Tested real Chrome browser flows over `http://localhost:4400/site/?demo=1`, `/dashboard/`, `/door/`, `/admin/`, and `/t/`: demo mode takes priority, all pages load sample event instantly without server API, and full wristband claiming and meetup logging verified.
+  • How to run: `npm start`; open `http://localhost:4400/site/?demo=1` or run tests with `npm test` and `node --test sheets/test/*.test.js`.
+  • Left: None; all requirements complete. No git commands run.
 - 2026-10-21: Built the v1 backend described by `TASK_CODEX.md` as it read at task start: SQLite schema, token and PIN utilities, all v1 API routes, monitor SSE, Web Push with console fallback, timed alerts, retention, and a 30-band demo seeder. Run with `npm start`; verify with `npm test` (10 passing tests) or seed with `npm run demo`.
 - The v1 backend was superseded by the revised v2 task below.
 - 2026-10-21: Rebuilt `server/` for the v2 contract: event and monitor auth, CSV and mockable Luma imports, bands, guest linking at scan, grouped departures, private monitor dashboard with SSE, organizer export, audit, and 30-day retention. Run with `npm start`; `npm test` passes 7 suites; `npm run demo` seeds 40 imported guests and 40 bands. The earlier v1 local database is preserved as `data/homebound.sqlite`; v2 uses `data/homebound-v2.sqlite`.
@@ -63,7 +111,17 @@
     - "Closing Time" Sweep Mode: Dedicated mode (`#closing-time-view`) presenting everyone still inside in large text (≥ 1.4rem) with their band short code, check-in time, interactive check-off boxes, and a printable supervisor sweep checklist (`@media print`).
     - Sound & Vibration Alerts: Web Audio API 2-tone melodic departure chime and haptic vibration (`navigator.vibrate([120, 60, 120])`) triggering on every new departure group, with a header mute/unmute toggle.
     - Resilient SSE Auto-Reconnect: Live status pill (`Live` green dot vs `Reconnecting...` amber pulsing dot) with exponential backoff and automatic snapshot re-fetch to ensure zero missed departures across network interruptions.
-  • Run: `npm start` → Admin at http://localhost:4400/admin, Dashboard at http://localhost:4400/dashboard. All 18 backend tests pass via `npm test`.
+  • Run: `npm start` → Admin at http://localhost:4400/admin, Dashboard at http://localhost:4400/dashboard. All 18 backend tests pass via `npm test`.- 2026-10-22 (Antigravity Agent C — Guest meetups on Node server):
+  • Completed all requirements of `TASK_AGY_MEET_SERVER.md` and CONTRACT.md invariant 6:
+    - `server/db.js`: Added migration-safe `interactions` table (`id PK, eventId, bandA, bandB, guestA, guestB, at, source DEFAULT 'guest_tap'`) and indexed `(eventId, bandA)` and `(eventId, bandB)`.
+    - `server/index.js` (`POST /api/meet`): Public meetup endpoint with credentials as `myBandToken`. Validates that both bands belong to the same event, both are linked to guests, and the tapper is currently inside (`409 not_inside`). Enforces band cannot meet itself (`400 self_meet`). Dedupes unordered pairs within 5 minutes, returning the existing row without creating duplicate interactions. Enforces rate limit of 30 meets per requesting band per hour (`429 rate_limited`). Strictly returns first name only (`{ok: true, at, with: {firstName}}`). Supports client `at` timestamp (within ±12h), accepts `Idempotency-Key`, and writes an audit row (`guest_meet`).
+    - `server/index.js` (`/t/:bandToken`): Preserves existing monitor-session 302 redirect. For public taps, serves `web/t/index.html` with injected `<meta name="band-token" content="...">`, `<meta name="hb-band" content="...">`, `<script type="application/json" id="hb-band-token">"..."</script>`, and `<body data-band-token="...">` so `web/t/index.html` can run the guest flow at `/t/<token>` seamlessly (coordinated with Agent A). Also serves `t/index.html` at route `/t`.
+    - Incident Timeline: `GET /api/events/:id/guests/:guestId/timeline` adds `{type: 'met', at, detail: {with: otherGuestName}}` chronologically for both guests.
+    - Organizer Export: `GET /api/events/:id/export.csv` adds `met` column with names and times formatted as e.g. `"Jess 12:10 am; Priya 1:02 am"`.
+    - Monitor Dashboard: `GET /api/dashboard` roster rows include `meetups:int` count (preserving privacy).
+    - Retention: Hourly retention job purges `interactions` table along with guests, bands, scans, and departures.
+    - Tests: Added `test/meet.test.js` covering happy path, audit logging, idempotency replay, `not_inside` rejections, self-meet, 5-minute dedupe, rate limiting, first-name-only privacy verification (zero leakage of surname, email, phone, or guest IDs), incident timeline integration, export CSV formatting, dashboard roster meetup counts, retention purge, and `/t/:bandToken` token metadata injection.
+  • How to run: `npm start`; `npm test` passes all 27 test suites. No git commands run.
 
 - 2026-10-22 (Codex CSV status filter): CSV imports now recognize Luma `approval_status`, Partiful `Status`, and `RSVP`; only attending values are imported when a status column exists. The response includes `skippedReasons` for declined, waitlist, pending approval, invited, maybe, unknown status, duplicate, and missing name rows. Luma/Partiful/RSVP tests pass; run with `npm test` (19/19). No remaining CSV work.
   • Commit attempt failed: this sandbox cannot create `.git/index.lock` (Operation not permitted). Changes remain in the working tree; no push was attempted.
@@ -125,7 +183,53 @@
   • Service Worker: Bumped `CACHE_NAME` to `hb-door-v4` in `web/door/sw.js`.
   • Verification: Launched Chrome mobile CDP emulation (390 × 844) and captured 4 screenshots into `web/_screens/`: `door2-in.png`, `door2-out-together.png`, `door2-link-sheet.png`, `door2-result.png`. Visually inspected every screenshot: zero horizontal scroll, excellent WCAG AA contrast, and crisp liquid glass aesthetics. Full test suite passes 19/19 with `npm test`. No git commands run.
 
-
-
-
-
+- 2026-10-22 (Antigravity Agent C — Guest meetups on Node server):
+  • Completed all requirements of `TASK_AGY_MEET_SERVER.md` and CONTRACT.md invariant 6:
+    - `server/db.js`: Added migration-safe `interactions` table (`id PK, eventId, bandA, bandB, guestA, guestB, at, source DEFAULT 'guest_tap'`) and indexed `(eventId, bandA)` and `(eventId, bandB)`.
+    - `server/index.js` (`POST /api/meet`): Public meetup endpoint with credentials as `myBandToken`. Validates that both bands belong to the same event, both are linked to guests, and the tapper is currently inside (`409 not_inside`). Enforces band cannot meet itself (`400 self_meet`). Dedupes unordered pairs within 5 minutes, returning the existing row without creating duplicate interactions. Enforces rate limit of 30 meets per requesting band per hour (`429 rate_limited`). Strictly returns first name only (`{ok: true, at, with: {firstName}}`). Supports client `at` timestamp (within ±12h), accepts `Idempotency-Key`, and writes an audit row (`guest_meet`).
+    - `server/index.js` (`/t/:bandToken`): Preserves existing monitor-session 302 redirect. For public taps, serves `web/t/index.html` with injected `<meta name="band-token" content="...">`, `<meta name="hb-band" content="...">`, `<script type="application/json" id="hb-band-token">"..."</script>`, and `<body data-band-token="...">` so `web/t/index.html` can run the guest flow at `/t/<token>` seamlessly (coordinated with Agent A). Also serves `t/index.html` at route `/t`.
+    - Incident Timeline: `GET /api/events/:id/guests/:guestId/timeline` adds `{type: 'met', at, detail: {with: otherGuestName}}` chronologically for both guests.
+    - Organizer Export: `GET /api/events/:id/export.csv` adds `met` column with names and times formatted as e.g. `"Jess 12:10 am; Priya 1:02 am"`.
+    - Monitor Dashboard: `GET /api/dashboard` roster rows include `meetups:int` count (preserving privacy).
+    - Retention: Hourly retention job purges `interactions` table along with guests, bands, scans, and departures.
+    - Tests: Added `test/meet.test.js` covering happy path, audit logging, idempotency replay, `not_inside` rejections, self-meet, 5-minute dedupe, rate limiting, first-name-only privacy verification (zero leakage of surname, email, phone, or guest IDs), incident timeline integration, export CSV formatting, dashboard roster meetup counts, retention purge, and `/t/:bandToken` token metadata injection.
+  • How to run: `npm start`; `npm test` passes all 27 test suites. No git commands run.
+- 2026-10-22 (Antigravity Agent A — In-browser sample event, guest meetups on Sheets, and guest tap page):
+  • Completed all requirements of `TASK_AGY_DEMO.md`:
+    - `web/shared/config.js` & `web/shared/demo-backend.js`:
+      • Built `{type: 'demo'}` backend active when `localStorage.hb_demo === '1'` or URL has `?demo=1` (saved and stripped from the address bar, taking priority over server and sheets modes).
+      • Implemented in-browser Apps Script execution running real `sheets/Code.gs` inside a comprehensive suite of fakes (`SpreadsheetApp`, `Utilities`, `LockService`, `CacheService`, `ContentService`, `PropertiesService`, `Session`, `ScriptApp`).
+      • Embedded synchronous pure-JS SHA-256 and HMAC-SHA256 without external CDNs or dependencies.
+      • Sheet fake stores tabs as 2D arrays, persisting to `localStorage.hb_demo_sheet`, with `localStorage.hb_demo_cache` for idempotency and rate limiting.
+      • `startDemo(options)` seeds realistic party: "Sample party: Friday 10 pm", 24 guests with diverse first/last names, 30 bands, 12 checked in (inside) over the last 2 hours, 2 groups that left together, 4 meetups, known Admin PIN `00000000`, Monitor Code `DEMO42`, and Monitor session named "You" so every page works immediately with nothing to type.
+      • `createEvent` in demo mode resets and reseeds the sample event.
+      • `exitDemo()` clears demo state and credentials.
+      • Exported names for Agent B (available from both `web/shared/config.js` and `web/shared/api.js`): `isDemo`, `startDemo`, `exitDemo`.
+    - `sheets/Code.gs` & `web/setup/Code.gs` & `web/setup/Code.js`:
+      • Added `Interactions` tab with headers `['at', 'aName', 'bName', 'bandA', 'bandB', 'guestA', 'guestB', 'source']`.
+      • Implemented public `meet` action adhering to CONTRACT.md invariants: inside check (tapper must currently be inside), 5-min dedupe (returning existing interaction without duplicate rows), 30 taps/hour per band rate limiting via `CacheService`, and strictly first-name-only response (`{ok: true, at, with: {firstName}}`).
+      • Updated `handleTimeline` to include `{type: 'met', at, detail: {with: name}}` chronologically for both guests.
+      • Updated `handleDashboard` roster to include `meetups` count per guest.
+      • Updated `handleExportCsv` with `met` column formatted with names and times.
+      • Updated `runRetention` to clear `Interactions` rows after retention period.
+      • Synchronized `sheets/Code.gs` with `web/setup/Code.gs` and `web/setup/Code.js`.
+      • Extended `sheets/test/local.test.js` with meet cases (happy path, not_inside, 5-min dedupe, first-name only, timeline, dashboard, and retention purge).
+    - `web/shared/api.js`:
+      • Added new export `recordMeetup(myBandToken, theirBandToken)` supporting server `POST /api/meet`, Sheets action `meet`, and Demo backend.
+      • Routed demo mode through `demoCall` so all methods (`searchGuests`, `idCheckin`, `scanBand`, `recordDepartures`, `getDashboard`, `openDashboardStream`, `getGuestTimeline`, `updateEvent`, `createEvent`) run seamlessly in demo mode.
+    - `web/t/index.html` (Guest Tap Page):
+      • Preserved monitor redirect: if active monitor session exists, immediately forwards to `../door/?band=<token>`.
+      • Implemented complete guest flow using `localStorage.hb_my_band`:
+        - No band saved: shows "Is this your wristband?" with primary glossy pill button "Yes, this is my band" -> saves to localStorage and transitions to "Saved. Tap your phone to a friend's band to log that you met."
+        - Own band: shows "This is your band. Tap your phone to a friend's band to log that you met."
+        - Another band: immediately calls `recordMeetup` and renders "You met [firstName] · [time]" in large Archivo typography with glossy pink wristband chip (`.band-chip.band-pink`).
+        - Error handling: `not_inside` -> "Check in at the door first."; `rate_limited` -> "Too many taps. Try again later."
+        - Includes "Not my band? Reset" link and privacy notice: "Logged for the host's safety record only. Deleted after 30 days."
+        - Token extraction handles `t/?b=<token>`, server `/t/<token>` URL paths, `<meta name="band-token">`, and `#hb-band-token` JSON.
+        - Styled with Liquid Glass design system and relative URLs.
+    - Verification:
+      • `node --test sheets/test/*.test.js`: All tests pass (both `local.test.js` and `demo.test.js`).
+      • `npm test`: Passes all 27 server test suites.
+      • Tested real Chrome browser flows over `http://localhost:4400/site/?demo=1`, `/dashboard/`, `/door/`, `/admin/`, and `/t/`: demo mode takes priority, all pages load sample event instantly without server API, and full wristband claiming and meetup logging verified.
+  • How to run: `npm start`; open `http://localhost:4400/site/?demo=1` or run tests with `npm test` and `node --test sheets/test/*.test.js`.
+  • Left: None; all requirements complete. No git commands run.

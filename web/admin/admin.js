@@ -1,6 +1,7 @@
 // web/admin/admin.js - Single Column Sequential Organizer Admin
 import * as api from '../shared/api.js';
 import { generateQRSvg } from '../shared/qr.js';
+import { initDemoBanner } from './demo-banner.js';
 
 // DOM Elements
 const flashBanner = document.getElementById('flash-banner');
@@ -608,19 +609,52 @@ function renderTimelineCard(data) {
   }
 
   tlEventsContainer.innerHTML = '';
-  const events = data.events || [];
+  const events = (data.events || []).slice().sort((a, b) => new Date(a.at) - new Date(b.at));
   if (events.length === 0) {
     tlEventsContainer.innerHTML = '<div class="text-muted">No timeline entries logged for this guest</div>';
   } else {
     events.forEach(ev => {
       const item = document.createElement('div');
-      item.style.padding = '0.4rem 0';
-      item.style.borderBottom = '1px solid var(--border)';
-      item.innerHTML = `
-        <span style="color: var(--slate); font-size: 13px;">${api.formatDateTime(ev.at)}</span> &middot;
-        <strong style="color: var(--tyvek);">${escapeHtml(ev.type.toUpperCase())}</strong>
-        ${ev.detail ? `<span style="color: var(--slate);"> &mdash; ${escapeHtml(JSON.stringify(ev.detail))}</span>` : ''}
-      `;
+      item.className = 'timeline-event-row';
+
+      if (ev.type === 'met') {
+        const targetName = ev.detail?.with || ev.detail?.name || (typeof ev.detail === 'string' ? ev.detail : 'friend');
+        item.innerHTML = `
+          <span class="timeline-time">${api.formatDateTime(ev.at)}</span> &middot;
+          <span class="timeline-met-entry">
+            <span class="timeline-pink-dot" aria-hidden="true"></span>
+            <strong>Met ${escapeHtml(targetName)}</strong>
+          </span>
+        `;
+      } else if (ev.type === 'in') {
+        item.innerHTML = `
+          <span class="timeline-time">${api.formatDateTime(ev.at)}</span> &middot;
+          <strong style="color: var(--band-orange);">Door check-in</strong>
+        `;
+      } else if (ev.type === 'out') {
+        item.innerHTML = `
+          <span class="timeline-time">${api.formatDateTime(ev.at)}</span> &middot;
+          <strong style="color: var(--slate);">Door exit</strong>
+        `;
+      } else if (ev.type === 'departure') {
+        const withWho = ev.detail?.with || ev.detail?.people;
+        const withStr = Array.isArray(withWho) && withWho.length > 0 ? ` with ${escapeHtml(withWho.join(', '))}` : '';
+        item.innerHTML = `
+          <span class="timeline-time">${api.formatDateTime(ev.at)}</span> &middot;
+          <strong style="color: var(--band-pink);">Left${withStr}</strong>
+        `;
+      } else if (ev.type === 'id_check') {
+        item.innerHTML = `
+          <span class="timeline-time">${api.formatDateTime(ev.at)}</span> &middot;
+          <strong style="color: var(--tyvek);">ID verified</strong>
+        `;
+      } else {
+        item.innerHTML = `
+          <span class="timeline-time">${api.formatDateTime(ev.at)}</span> &middot;
+          <strong style="color: var(--tyvek);">${escapeHtml(ev.type.toUpperCase())}</strong>
+          ${ev.detail ? `<span style="color: var(--slate);"> &mdash; ${escapeHtml(JSON.stringify(ev.detail))}</span>` : ''}
+        `;
+      }
       tlEventsContainer.appendChild(item);
     });
   }
@@ -672,6 +706,7 @@ function escapeHtml(str) {
 
 // --- Initialize Session ---
 async function init() {
+  initDemoBanner();
   initDatePickers();
   checkSheetsMode();
 

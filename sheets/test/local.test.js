@@ -218,6 +218,7 @@ test('Google Sheets backend: setup -> importCsv -> monitorSession -> idCheckin -
   assert.equal(bandsRes.bands.length, 5, 'Should create 5 bands');
   const band1 = bandsRes.bands[0];
   const band2 = bandsRes.bands[1];
+  const band3 = bandsRes.bands[2];
   assert.ok(band1.url.includes('/t/?b='), 'Band URL should match /t/?b=<token>');
 
   // 3. Join monitor session
@@ -324,6 +325,45 @@ test('Google Sheets backend: setup -> importCsv -> monitorSession -> idCheckin -
   });
   assert.deepEqual(idemScan1, idemScan2, 'Idempotent request should return cached response');
 
+  // 5b. Meetups (guest meetups via band tap)
+  // Not inside: band 3 is unlinked and not inside
+  const notInsideRes1 = callDoPost({
+    action: 'meet',
+    myBandToken: band3.token,
+    theirBandToken: band2.token,
+  });
+  assert.equal(notInsideRes1.error, 'not_inside', 'Unlinked/outside band cannot tap');
+
+  // Happy path: band 1 (guest 1) and band 2 (guest 2) are both inside
+  const meet1 = callDoPost({
+    action: 'meet',
+    myBandToken: band1.token,
+    theirBandToken: band2.token,
+  });
+  assert.equal(meet1.ok, true, 'Meetup should succeed');
+  assert.ok(meet1.at, 'Meetup has timestamp');
+  assert.ok(meet1.with, 'Meetup reveals with object');
+  const expectedFirstName2 = guest2.name.trim().split(/\s+/)[0];
+  assert.equal(meet1.with.firstName, expectedFirstName2, 'Meetup reveals ONLY first name of other guest');
+  assert.equal(meet1.with.name, undefined, 'Full name must not be revealed in meet response');
+  assert.equal(meet1.with.email, undefined, 'Email must not be revealed in meet response');
+  assert.equal(meet1.with.phone, undefined, 'Phone must not be revealed in meet response');
+
+  // Verify Interactions tab has exactly 1 row
+  const interactionsSheet = sheetsMap.get('Interactions');
+  assert.ok(interactionsSheet, 'Interactions sheet should exist');
+  assert.equal(interactionsSheet.rows.length, 2, 'Interactions should have header + 1 row');
+
+  // Dedupe: calling meet again within 5 min returns existing interaction without adding a row
+  const meetDedupe = callDoPost({
+    action: 'meet',
+    myBandToken: band2.token,
+    theirBandToken: band1.token,
+  });
+  assert.equal(meetDedupe.ok, true);
+  assert.equal(meetDedupe.at, meet1.at, 'Dedupe returns existing meetup timestamp');
+  assert.equal(interactionsSheet.rows.length, 2, 'Dedupe should not add a new row');
+
   // 6. Departures (2 bands leaving together)
   const depRes = callDoPost({
     action: 'departures',
@@ -349,6 +389,7 @@ test('Google Sheets backend: setup -> importCsv -> monitorSession -> idCheckin -
   assert.ok(rosterElena, 'Elena Rostova should be on roster');
   assert.equal(rosterElena.status, 'left', 'Elena should have left');
   assert.ok(rosterElena.leftWith.includes(guest2.name), 'Elena should have left with guest2');
+  assert.equal(rosterElena.meetups, 1, 'Elena should have 1 meetup recorded');
 
   // 8. Admin endpoints: event stats, timeline, export.csv, bands.csv
   const eventRes = callDoPost({
@@ -364,7 +405,8 @@ test('Google Sheets backend: setup -> importCsv -> monitorSession -> idCheckin -
     guestId: guest1.id,
   });
   assert.equal(timelineRes.guest.name, 'Elena Rostova');
-  assert.ok(timelineRes.events.length >= 3, 'Timeline should include id_check, in scan, and departure');
+  assert.ok(timelineRes.events.length >= 4, 'Timeline should include id_check, in scan, met, and departure');
+  assert.ok(timelineRes.events.some(e => e.type === 'met'), 'Timeline should include met event');
   assert.ok(timelineRes.leftWith.length >= 1, 'Timeline leftWith should include guest2');
 
   const exportCsvRes = callDoPost({
@@ -425,6 +467,7 @@ test('Google Sheets backend: setup -> importCsv -> monitorSession -> idCheckin -
   assert.equal(sheetsMap.get('Bands').rows.length, 1, 'Retention should clear Bands to header only');
   assert.equal(sheetsMap.get('Scans').rows.length, 1, 'Retention should clear Scans to header only');
   assert.equal(sheetsMap.get('Departures').rows.length, 1, 'Retention should clear Departures to header only');
+  assert.equal(sheetsMap.get('Interactions').rows.length, 1, 'Retention should clear Interactions to header only');
 
   // 11. Public pilot sign-up: stored, validated, formula-safe
   const ok = callDoPost({ action: 'pilot', chapter: 'Alpha Test', school: 'Test U', email: 'risk@example.test', eventSize: 120, note: '=HYPERLINK("x")' });

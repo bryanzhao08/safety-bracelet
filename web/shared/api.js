@@ -1,6 +1,9 @@
-// web/shared/api.js - Client API module for Homebound v2 (Server & Sheets modes)
+// web/shared/api.js - Client API module for Homebound v2 (Server, Sheets & Demo modes)
 
-import { getBackend, PILOT_SHEET_URL } from './config.js';
+import { getBackend, PILOT_SHEET_URL, isDemo, startDemo, exitDemo } from './config.js';
+import { demoCall } from './demo-backend.js';
+
+export { isDemo, startDemo, exitDemo };
 
 const STORAGE_KEYS = {
   MONITOR_TOKEN: 'hb_monitor_token',
@@ -76,6 +79,9 @@ async function request(path, options = {}) {
  */
 async function sheetsCall(action, args = {}) {
   const backend = getBackend();
+  if (backend.type === 'demo') {
+    return demoCall(action, args);
+  }
   if (backend.type !== 'sheets' || !backend.url) {
     throw new ApiError(400, 'sheets_not_configured', 'Google Sheet URL not configured. Visit /setup/ to connect a sheet.');
   }
@@ -192,7 +198,7 @@ export function clearAdminSession() {
  */
 export async function joinMonitor(eventId, { monitorCode, name }) {
   const backend = getBackend();
-  if (backend.type === 'sheets') {
+  if (backend.type === 'sheets' || backend.type === 'demo') {
     const res = await sheetsCall('monitorSession', { monitorCode, name });
     saveMonitorSession({
       token: res.monitorToken,
@@ -222,7 +228,7 @@ export async function joinMonitor(eventId, { monitorCode, name }) {
  */
 export async function searchGuests(q = '') {
   const backend = getBackend();
-  if (backend.type === 'sheets') {
+  if (backend.type === 'sheets' || backend.type === 'demo') {
     return sheetsCall('searchGuests', { q: (q || '').trim() });
   }
   return request(`/api/guests?q=${encodeURIComponent(q.trim())}`);
@@ -243,7 +249,7 @@ export async function idCheckin({ firstName, lastName, dob, idState, idExpires, 
   };
 
   const backend = getBackend();
-  if (backend.type === 'sheets') {
+  if (backend.type === 'sheets' || backend.type === 'demo') {
     return sheetsCall('idCheckin', payload);
   }
 
@@ -264,7 +270,7 @@ export async function scanBand({ bandToken, shortCode, direction, guestId }) {
   if (guestId) payload.guestId = guestId;
 
   const backend = getBackend();
-  if (backend.type === 'sheets') {
+  if (backend.type === 'sheets' || backend.type === 'demo') {
     return sheetsCall('scan', payload);
   }
 
@@ -284,7 +290,7 @@ export async function recordDepartures({ bandTokens, shortCodes }) {
   else if (shortCodes && shortCodes.length) payload.shortCodes = shortCodes.map(s => s.toUpperCase());
 
   const backend = getBackend();
-  if (backend.type === 'sheets') {
+  if (backend.type === 'sheets' || backend.type === 'demo') {
     return sheetsCall('departures', payload);
   }
 
@@ -300,7 +306,7 @@ export async function recordDepartures({ bandTokens, shortCodes }) {
  */
 export async function getDashboard() {
   const backend = getBackend();
-  if (backend.type === 'sheets') {
+  if (backend.type === 'sheets' || backend.type === 'demo') {
     return sheetsCall('dashboard');
   }
   return request('/api/dashboard');
@@ -309,12 +315,12 @@ export async function getDashboard() {
 /**
  * Connect to dashboard live stream.
  * Server mode: EventSource SSE.
- * Sheets mode: Polling dashboard every 5s with synthesized scan and departure events.
+ * Sheets mode / Demo mode: Polling dashboard every 5s with synthesized scan and departure events.
  */
 export function openDashboardStream({ onStats, onScan, onDeparture, onError, onOpen }) {
   const backend = getBackend();
 
-  if (backend.type === 'sheets') {
+  if (backend.type === 'sheets' || backend.type === 'demo') {
     let closed = false;
     let interval = null;
     let lastRosterStatus = new Map();
@@ -458,7 +464,7 @@ export async function addWalkInGuest(eventId, { name, email, phone }) {
   if (phone && phone.trim()) payload.phone = phone.trim();
 
   const backend = getBackend();
-  if (backend.type === 'sheets') {
+  if (backend.type === 'sheets' || backend.type === 'demo') {
     return sheetsCall('addGuest', payload);
   }
 
@@ -476,6 +482,9 @@ export async function addWalkInGuest(eventId, { name, email, phone }) {
  */
 export async function createEvent({ name, startsAt, endsAt }) {
   const backend = getBackend();
+  if (backend.type === 'demo') {
+    return startDemo({ name, startsAt, endsAt });
+  }
   if (backend.type === 'sheets') {
     throw new ApiError(
       400,
@@ -506,7 +515,7 @@ export async function createEvent({ name, startsAt, endsAt }) {
  */
 export async function getEvent(eventId, adminPin = null) {
   const backend = getBackend();
-  if (backend.type === 'sheets') {
+  if (backend.type === 'sheets' || backend.type === 'demo') {
     const pin = adminPin || getAdminPin();
     return sheetsCall('event', pin ? { auth: { adminPin: pin } } : {});
   }
@@ -523,7 +532,7 @@ export async function getEvent(eventId, adminPin = null) {
  */
 export async function importLuma(eventId, { apiKey, lumaEventId }) {
   const backend = getBackend();
-  if (backend.type === 'sheets') {
+  if (backend.type === 'sheets' || backend.type === 'demo') {
     throw new ApiError(
       400,
       'unsupported_in_sheets',
@@ -550,7 +559,7 @@ export async function importLuma(eventId, { apiKey, lumaEventId }) {
  */
 export async function importCsv(eventId, csvContent) {
   const backend = getBackend();
-  if (backend.type === 'sheets') {
+  if (backend.type === 'sheets' || backend.type === 'demo') {
     return sheetsCall('importCsv', { csvContent });
   }
 
@@ -570,7 +579,7 @@ export async function importCsv(eventId, csvContent) {
  */
 export async function generateBands(eventId, count) {
   const backend = getBackend();
-  if (backend.type === 'sheets') {
+  if (backend.type === 'sheets' || backend.type === 'demo') {
     const siteUrl = typeof window !== 'undefined'
       ? `${window.location.origin}${window.location.pathname.replace(/\/admin\/.*$|\/setup\/.*$/, '')}`
       : undefined;
@@ -593,7 +602,7 @@ export async function generateBands(eventId, count) {
  */
 export async function getBandsCsv(eventId) {
   const backend = getBackend();
-  if (backend.type === 'sheets') {
+  if (backend.type === 'sheets' || backend.type === 'demo') {
     const res = await sheetsCall('bandsCsv');
     return res.csv || res;
   }
@@ -610,7 +619,7 @@ export async function getBandsCsv(eventId) {
  */
 export async function getExportCsv(eventId) {
   const backend = getBackend();
-  if (backend.type === 'sheets') {
+  if (backend.type === 'sheets' || backend.type === 'demo') {
     const res = await sheetsCall('exportCsv');
     return res.csv || res;
   }
@@ -627,7 +636,7 @@ export async function getExportCsv(eventId) {
  */
 export async function endEvent(eventId) {
   const backend = getBackend();
-  if (backend.type === 'sheets') {
+  if (backend.type === 'sheets' || backend.type === 'demo') {
     return sheetsCall('endEvent');
   }
 
@@ -646,7 +655,7 @@ export async function endEvent(eventId) {
  */
 export async function getGuestTimeline(eventId, guestId) {
   const backend = getBackend();
-  if (backend.type === 'sheets') {
+  if (backend.type === 'sheets' || backend.type === 'demo') {
     return sheetsCall('timeline', { guestId });
   }
 
@@ -662,7 +671,7 @@ export async function getGuestTimeline(eventId, guestId) {
  */
 export async function updateEvent(eventId, updates = {}) {
   const backend = getBackend();
-  if (backend.type === 'sheets') {
+  if (backend.type === 'sheets' || backend.type === 'demo') {
     return sheetsCall('updateEvent', updates);
   }
 
@@ -678,10 +687,30 @@ export async function updateEvent(eventId, updates = {}) {
 }
 
 /**
+ * Record meetup between two bands: POST /api/meet or action 'meet'
+ */
+export async function recordMeetup(myBandToken, theirBandToken) {
+  const backend = getBackend();
+  if (backend.type === 'sheets' || backend.type === 'demo') {
+    return sheetsCall('meet', { myBandToken, theirBandToken });
+  }
+
+  return request('/api/meet', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ myBandToken, theirBandToken }),
+  });
+}
+
+/**
  * Submit pilot program signup: POST /api/pilot
  */
 export async function submitPilot({ chapter, school, email, eventSize, note }) {
-  if (getBackend().type === 'sheets') {
+  const backend = getBackend();
+  if (backend.type === 'demo') {
+    return sheetsCall('pilot', { chapter, school, email, eventSize: eventSize ?? null, note: note || null });
+  }
+  if (backend.type === 'sheets') {
     if (!PILOT_SHEET_URL) {
       throw new ApiError(503, 'pilot_not_connected', 'Pilot sign-ups are not connected on this site yet.');
     }
