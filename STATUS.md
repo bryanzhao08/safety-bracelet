@@ -88,4 +88,15 @@
     - In `web/door/door.js`: Make door scanner accept `?band=` query param the same way it accepts `/t/` prefill.
     - In `web/site/site.js:142`: Raw `fetch('/api/pilot')` can be switched to `submitPilot()` now exported from `../shared/api.js`.
     - In `web/program/program.js:156`: Raw `fetch('/api/events/.../bands.csv')` can be switched to `getBandsCsv()` from `../shared/api.js`.
+- 2026-10-22 (Antigravity UI fix pass): Completed all items in `TASK_AGY_UI_FIX.md`:
+  • Fixed Door 360–390 px overflow: resolved viewport constraints, added `.join-view-screen` / `.join-card` responsive box-sizing and padding, preventing horizontal scroll at 360–390 px.
+  • Handled Door `?band=<token>`: `door.js` now handles `?band=<token>`, `?bandToken=<token>`, and `?b=<token>` prefills on load and across session logins.
+  • Fonts: Linked Google Fonts (`Archivo` and `Atkinson Hyperlegible Next`) in every owned HTML page's `<head>`, ensured `--font-display` / `--font-sans` name them first, and applied Archivo at `font-stretch: 75%` (`font-variation-settings: 'wdth' 75, 'wght' 800`) for door verdicts, big inside count, and site hero headline.
+  • Admin Step 1 & Steps 2–4: Removed redundant "Step N" pills/eyebrows keeping only step numbers, dropped form label asterisks, cleaned secondary login into a quiet "Already made an event?" block with normal spacing and non-spaced placeholders, renamed buttons to sentence case ("Create event", "Open event", etc.).
+  • Site Hero: Replaced demo panel with wristband motif featuring "Maya" and "Jess" band chips starting orange as "Inside 11:15 pm" and orchestrating together into pink as "Left together 1:42 am", respecting `prefers-reduced-motion`; removed all "→" glyphs and " · " joined meta strings.
+  • Copy: Applied sentence case across buttons, headers, and navigation ("Start door shift", "Door scanner", "Live dashboard", "Guest roster"); removed all "→" glyphs from links.
+  • Dashboard: Connected to demo event, verified Archivo condensed font display for inside count, and rendered roster rows as band chips (orange inside, pink left together, slate outline not arrived).
+  • Switched `site.js` to `submitPilot()` from `../shared/api.js` (and verified `program.js` uses `getBandsCsv()`).
+  • Re-captured all 8 verification screenshots into `web/_screens/` (`door`, `dashboard`, `admin`, `site` at 390 px and 1280 px) waiting for `document.fonts.ready` and inspected each one. All 19 backend tests pass via `npm test`.
+
 

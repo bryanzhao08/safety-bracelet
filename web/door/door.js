@@ -188,11 +188,18 @@ btnModeOut.addEventListener('click', () => {
 });
 
 // --- Shift Join & Session Management ---
+// Handles ?band=<token> and ?bandToken=<token> prefill from NFC / QR / /t/<token> redirect
+let pendingBandToken = null;
+
 async function initSession() {
   const urlParams = new URLSearchParams(window.location.search);
-  const prefillToken = urlParams.get('band') || urlParams.get('bandToken');
+  // Door accepts ?band=<token> exactly like the /t/<token> prefill
+  const prefillToken = urlParams.get('band') || urlParams.get('bandToken') || urlParams.get('b');
+  if (prefillToken) {
+    pendingBandToken = prefillToken;
+  }
   const urlEventId = urlParams.get('event') || urlParams.get('eventId');
-  const urlCode = urlParams.get('code');
+  const urlCode = urlParams.get('code') || urlParams.get('monitorCode');
 
   if (urlEventId && joinEventId) joinEventId.value = urlEventId;
   if (urlCode && joinMonitorCode) joinMonitorCode.value = urlCode;
@@ -206,9 +213,15 @@ async function initSession() {
 
     initNfc();
 
-    if (prefillToken) {
-      handleBandScanned({ bandToken: prefillToken });
-      window.history.replaceState({}, '', window.location.pathname);
+    if (pendingBandToken) {
+      const token = pendingBandToken;
+      pendingBandToken = null;
+      handleBandScanned({ bandToken: token });
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('band');
+      cleanUrl.searchParams.delete('bandToken');
+      cleanUrl.searchParams.delete('b');
+      window.history.replaceState({}, '', cleanUrl.pathname + (cleanUrl.search ? cleanUrl.search : ''));
     }
   } else {
     joinView.classList.remove('hidden');
@@ -231,11 +244,15 @@ joinForm.addEventListener('submit', async (e) => {
     doorView.classList.remove('hidden');
     initNfc();
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const prefillToken = urlParams.get('band') || urlParams.get('bandToken');
-    if (prefillToken) {
-      handleBandScanned({ bandToken: prefillToken });
-      window.history.replaceState({}, '', window.location.pathname);
+    if (pendingBandToken) {
+      const token = pendingBandToken;
+      pendingBandToken = null;
+      handleBandScanned({ bandToken: token });
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('band');
+      cleanUrl.searchParams.delete('bandToken');
+      cleanUrl.searchParams.delete('b');
+      window.history.replaceState({}, '', cleanUrl.pathname + (cleanUrl.search ? cleanUrl.search : ''));
     }
   } catch (err) {
     joinError.textContent = err.message || 'Failed to join shift. Check Event ID and Monitor Code.';

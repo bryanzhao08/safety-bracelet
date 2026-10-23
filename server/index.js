@@ -390,7 +390,7 @@ export function createServer({ db = openDb(), now = () => new Date(), fetcher = 
     res.end(req.method === 'HEAD' ? undefined : await readFile(full));
   }
   const server = http.createServer(async (req, res) => {
-    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'");
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'");
     res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Referrer-Policy', 'no-referrer'); res.setHeader('X-Frame-Options', 'DENY');
     try { const url = new URL(req.url, 'http://localhost'); if (url.pathname.startsWith('/api/')) await api(req, res, url); else await staticFile(req, res, url); }
     catch (error) { if (res.headersSent) return res.destroy(); if (!error.status) console.error(error); json(res, error.status || 500, { error: error.error || 'internal_error', message: error.status ? error.message : 'Internal server error' }); }

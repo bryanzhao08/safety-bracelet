@@ -310,8 +310,11 @@ function showAdminView() {
   eventSetupForms?.classList.add('hidden');
   eventLoadedSummary?.classList.remove('hidden');
   btnSwitchEvent?.classList.remove('hidden');
-  document.getElementById('step-1-badge').textContent = 'Connected';
-  document.getElementById('step-1-badge').className = 'badge badge-green';
+  const badge = document.getElementById('step-1-badge');
+  if (badge) {
+    badge.textContent = 'Connected';
+    badge.className = 'badge badge-green';
+  }
 }
 
 btnSwitchEvent?.addEventListener('click', () => {

@@ -78,7 +78,9 @@
 
 .hero-headline {
   font-family: var(--font-display);
-  font-variation-settings: 'wdth' 68, 'wght' 800;
+  font-stretch: 75%;
+  font-variation-settings: 'wdth' 75, 'wght' 800;
+  font-weight: 800;
   font-size: clamp(40px, 8vw, var(--text-88));
   line-height: 0.98;
   letter-spacing: -0.04em;
@@ -103,8 +105,8 @@
 
 /* -------------------------------------------------------------
    HERO WRISTBAND ANIMATION
-   A band chip animating from IN (orange) to "left together" (pink)
-   with a second chip appearing alongside it.
+   Two band chips ("Maya" and "Jess") start orange as "Inside 11:15 pm"
+   and on page load, slide together and turn pink as "Left together 1:42 am".
    ------------------------------------------------------------- */
 .hero-band-stage {
   width: 100%;
@@ -112,7 +114,7 @@
   background-color: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 2.5rem 1.75rem;
+  padding: 2rem 1.75rem;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -127,92 +129,105 @@
   font-weight: 600;
 }
 
-.hero-bands-container {
+.hero-band-demo-track {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1.5rem;
   width: 100%;
+  animation: track-slide-together 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Animated Band 1 (Maya) */
-.hero-band-1 {
-  animation: band1-cycle 7s infinite ease-in-out;
+.hero-demo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 10px 24px 10px 16px;
+  font-size: var(--text-16);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  border-radius: var(--radius-full);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  animation: chip-turn-pink 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  max-width: 100%;
 }
 
-/* Animated Band 2 (Jess) */
-.hero-band-2 {
-  animation: band2-cycle 7s infinite ease-in-out;
+.chip-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
-/* Group Clasp Connector */
-.hero-band-clasp {
-  animation: clasp-cycle 7s infinite ease-in-out;
+.chip-status-inside {
+  font-weight: 600;
+  opacity: 0.88;
+  animation: status-inside-fade 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes band1-cycle {
-  0%, 35% {
+.chip-status-left {
+  font-weight: 600;
+  opacity: 0.88;
+  display: none;
+  animation: status-left-fade 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes track-slide-together {
+  0%, 30% {
+    gap: 1.5rem;
+  }
+  70%, 100% {
+    gap: 0.5rem;
+  }
+}
+
+@keyframes chip-turn-pink {
+  0%, 30% {
     background-color: var(--band-orange);
     color: #1B2340;
-    transform: translateY(0);
   }
-  45%, 90% {
+  70%, 100% {
     background-color: var(--band-pink);
     color: #1B2340;
-    transform: translateY(0);
-  }
-  98%, 100% {
-    background-color: var(--band-orange);
-    color: #1B2340;
   }
 }
 
-@keyframes band2-cycle {
+@keyframes status-inside-fade {
   0%, 35% {
-    opacity: 0;
-    transform: translateY(12px) scale(0.95);
-    pointer-events: none;
-  }
-  45%, 90% {
     opacity: 1;
-    transform: translateY(0) scale(1);
-    pointer-events: auto;
+    display: inline;
   }
-  98%, 100% {
+  55%, 100% {
     opacity: 0;
-    transform: translateY(12px) scale(0.95);
+    display: none;
   }
 }
 
-@keyframes clasp-cycle {
-  0%, 40% {
+@keyframes status-left-fade {
+  0%, 45% {
     opacity: 0;
-    transform: scale(0.9);
+    display: none;
   }
-  50%, 88% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  96%, 100% {
-    opacity: 0;
-    transform: scale(0.9);
+  60%, 100% {
+    opacity: 0.88;
+    display: inline;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-band-1 {
+  .hero-band-demo-track {
+    animation: none;
+    gap: 0.5rem;
+  }
+  .hero-demo-chip {
     animation: none;
     background-color: var(--band-pink);
     color: #1B2340;
   }
-  .hero-band-2 {
-    animation: none;
-    opacity: 1;
-    transform: none;
+  .chip-status-inside {
+    display: none !important;
   }
-  .hero-band-clasp {
-    animation: none;
-    opacity: 1;
-    transform: none;
+  .chip-status-left {
+    display: inline !important;
+    opacity: 0.88;
   }
 }
 

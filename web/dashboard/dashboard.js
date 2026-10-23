@@ -314,7 +314,12 @@ async function init() {
 
   const urlParams = new URLSearchParams(window.location.search);
   const urlEvent = urlParams.get('event') || urlParams.get('eventId');
+  const urlCode = urlParams.get('code') || urlParams.get('monitorCode');
+  const urlName = urlParams.get('name') || 'Monitor';
+
   if (urlEvent && loginEventId) loginEventId.value = urlEvent;
+  if (urlCode && loginCode) loginCode.value = urlCode;
+  if (urlName && loginName) loginName.value = urlName;
 
   const session = api.getMonitorSession();
   const adminSession = api.getAdminSession();
@@ -326,6 +331,15 @@ async function init() {
   } else if (adminSession && adminSession.pin) {
     loginModal.classList.remove('open');
     await loadDashboard();
+  } else if (urlEvent && urlCode) {
+    try {
+      await api.joinMonitor(urlEvent, { monitorCode: urlCode.toUpperCase(), name: urlName });
+      loginModal.classList.remove('open');
+      await loadDashboard();
+      connectSse();
+    } catch {
+      loginModal.classList.add('open');
+    }
   } else {
     loginModal.classList.add('open');
   }
@@ -460,29 +474,31 @@ function renderRoster() {
 
   filtered.forEach(guest => {
     const row = document.createElement('div');
-    row.className = 'roster-item';
+    let statusText = '';
 
-    let chipHtml = '';
     if (guest.status === 'inside') {
+      row.className = 'roster-item roster-band-orange';
       const timeStr = guest.inAt ? ` · ${api.formatTime(guest.inAt)}` : '';
-      chipHtml = `<span class="wristband-chip band-orange">Inside${timeStr}</span>`;
+      statusText = `Inside${timeStr}`;
     } else if (guest.status === 'left') {
+      row.className = 'roster-item roster-band-pink';
       const companions = Array.isArray(guest.leftWith) && guest.leftWith.length > 0
         ? ` with ${escapeHtml(guest.leftWith.join(', '))}`
         : '';
       const timeStr = guest.outAt ? ` · ${api.formatTime(guest.outAt)}` : '';
-      chipHtml = `<span class="wristband-chip band-pink">Left${companions}${timeStr}</span>`;
+      statusText = `Left${companions}${timeStr}`;
     } else {
-      chipHtml = `<span class="wristband-chip band-outline">Not arrived</span>`;
+      row.className = 'roster-item roster-band-outline';
+      statusText = 'Not arrived';
     }
 
     row.innerHTML = `
       <div class="roster-guest-info">
         <span class="roster-guest-name">${escapeHtml(guest.name)}</span>
-        ${guest.band ? `<span class="roster-guest-meta">Band [${escapeHtml(guest.band)}]</span>` : ''}
+        ${guest.band ? `<span class="roster-guest-meta">[${escapeHtml(guest.band)}]</span>` : ''}
       </div>
       <div>
-        ${chipHtml}
+        <span class="roster-guest-status">${statusText}</span>
       </div>
     `;
     rosterList.appendChild(row);

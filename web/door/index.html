@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
   <title>Homebound Door Scanner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Atkinson+Hyperlegible+Next:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared/base.css">
   <link rel="stylesheet" href="door.css">
 </head>
@@ -18,11 +21,11 @@
   </div>
 
   <!-- Join Shift Screen (shown when not logged in) -->
-  <div id="join-view" class="door-app" style="justify-content: center; align-items: center; padding: 2rem 1rem;">
-    <div class="card" style="width: 100%; max-width: 440px;">
+  <div id="join-view" class="door-app join-view-screen">
+    <div class="card join-card">
       <div style="margin-bottom: 1.5rem;">
-        <span class="wristband-chip band-orange" style="margin-bottom: 0.75rem;">Homebound Door</span>
-        <h1 style="font-size: var(--text-28);">Start Door Shift</h1>
+        <span class="wristband-chip band-orange" style="margin-bottom: 0.75rem;">Homebound door</span>
+        <h1 style="font-size: var(--text-28);">Start door shift</h1>
         <p class="text-muted mt-sm">Enter monitor code to scan wristbands</p>
       </div>
 
@@ -45,12 +48,12 @@
         <div id="join-error" class="badge badge-amber hidden" style="margin-bottom: 1rem; width: 100%; justify-content: center;"></div>
 
         <button type="submit" class="btn btn-primary btn-block" style="min-height: 56px; font-size: var(--text-20);">
-          Start Door Shift
+          Start door shift
         </button>
       </form>
 
       <div style="margin-top: 1.5rem; text-align: center;">
-        <a href="../dashboard/" class="text-muted" style="font-size: var(--text-14);">Go to Dashboard &rarr;</a>
+        <a href="../dashboard/" class="text-muted" style="font-size: var(--text-14);">Go to dashboard</a>
       </div>
     </div>
   </div>
@@ -118,17 +121,17 @@
           </div>
 
           <div id="id-tap-prompt" class="tap-band-prompt">
-            &rarr; Tap wristband to link
+            Tap wristband to link
           </div>
           <button id="btn-cancel-id" class="btn btn-secondary btn-block" type="button">
-            Cancel ID Check
+            Cancel ID check
           </button>
         </div>
 
         <!-- Secondary Actions Row: Search Guest & Camera QR -->
         <div class="door-secondary-actions">
           <button id="btn-open-guest-search" class="btn btn-secondary" type="button">
-            Search Guest
+            Search guest
           </button>
           <button id="btn-open-qr-scanner" class="btn btn-secondary" type="button">
             Camera QR
@@ -139,7 +142,7 @@
         <form id="manual-code-form" class="manual-code-form">
           <input type="text" id="manual-code-input" class="input input-short-code" maxlength="4" placeholder="CODE" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
           <button type="submit" class="btn btn-primary" style="min-width: 100px;">
-            Check In
+            Check in
           </button>
         </form>
       </main>
@@ -179,7 +182,7 @@
         <form id="manual-code-form-out" class="manual-code-form">
           <input type="text" id="manual-code-input-out" class="input input-short-code" maxlength="4" placeholder="CODE" autocomplete="off" autocorrect="off" autocapitalize="characters">
           <button type="submit" class="btn btn-pink" style="min-width: 100px;">
-            Add Out
+            Add out
           </button>
         </form>
       </main>
@@ -188,7 +191,7 @@
     <!-- BOTTOM HALF: HUGE IN | OUT TOGGLE THUMB TARGETS -->
     <div class="door-bottom-controls">
       <div class="mode-switch-wrapper">
-        <div class="mode-switch" role="tablist" aria-label="Door Mode">
+        <div class="mode-switch" role="tablist" aria-label="Door mode">
           <button id="btn-mode-in" class="mode-btn active-in" type="button" role="tab" aria-selected="true">
             <span class="mode-title font-condensed">IN</span>
             <span class="mode-sub">Check in</span>
@@ -230,13 +233,13 @@
   <div id="guest-search-modal" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 id="guest-search-title">Guest List</h2>
+        <h2 id="guest-search-title">Guest list</h2>
         <button id="btn-close-guest-search" class="btn btn-secondary" style="min-height: 40px; min-width: 40px; padding: 0;">&times;</button>
       </div>
       <div class="modal-body">
         <input type="search" id="guest-search-input" class="input" placeholder="Search by name..." autocomplete="off">
         <button id="btn-open-add-walkin" class="btn btn-secondary btn-block" type="button">
-          + Add Walk-in Guest
+          + Add walk-in guest
         </button>
         <div id="guest-search-results" class="flex-col gap-sm" style="max-height: 300px; overflow-y: auto;"></div>
       </div>
@@ -247,13 +250,13 @@
   <div id="walkin-modal" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Add Walk-in Guest</h2>
+        <h2>Add walk-in guest</h2>
         <button id="btn-close-walkin" class="btn btn-secondary" style="min-height: 40px; min-width: 40px; padding: 0;">&times;</button>
       </div>
       <form id="walkin-form">
         <div class="modal-body">
           <div class="form-group">
-            <label class="form-label" for="walkin-name">Full Name *</label>
+            <label class="form-label" for="walkin-name">Full name</label>
             <input type="text" id="walkin-name" class="input" placeholder="Guest name" required>
           </div>
           <div class="form-group">
@@ -267,7 +270,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" id="btn-cancel-walkin" class="btn btn-secondary">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save &amp; Link Band</button>
+          <button type="submit" class="btn btn-primary">Save &amp; link band</button>
         </div>
       </form>
     </div>

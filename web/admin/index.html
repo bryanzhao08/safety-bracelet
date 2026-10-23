@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Homebound Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Atkinson+Hyperlegible+Next:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared/base.css">
   <link rel="stylesheet" href="admin.css">
 </head>
@@ -40,7 +43,6 @@
           <h2 class="step-title">Create or connect event</h2>
           <p class="step-desc">Set up your safety check-in for tonight</p>
         </div>
-        <span id="step-1-badge" class="badge badge-muted">Step 1</span>
       </div>
 
       <!-- Google Sheets setup notice (shown when createEvent returns use_sheet_setup) -->
@@ -53,7 +55,7 @@
         </p>
         <div>
           <a href="../setup/" class="btn btn-primary" style="min-height: 44px; display: inline-flex;">
-            Connect a Google Sheet &rarr;
+            Connect a Google Sheet
           </a>
         </div>
       </div>
@@ -62,35 +64,35 @@
       <div id="event-setup-forms">
         <form id="create-event-form" style="display: flex; flex-direction: column; gap: 0.85rem;">
           <div class="form-group" style="margin-bottom: 0;">
-            <label class="form-label" for="create-name">Event Name *</label>
+            <label class="form-label" for="create-name">Event name</label>
             <input type="text" id="create-name" class="input" placeholder="e.g. Chapter Formal" required>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem;">
             <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label" for="create-starts">Starts At *</label>
+              <label class="form-label" for="create-starts">Starts at</label>
               <input type="datetime-local" id="create-starts" class="input" required>
             </div>
             <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label" for="create-ends">Ends At *</label>
+              <label class="form-label" for="create-ends">Ends at</label>
               <input type="datetime-local" id="create-ends" class="input" required>
             </div>
           </div>
           <button type="submit" class="btn btn-primary btn-block" style="margin-top: 0.5rem;">
-            Create Event &amp; Get PIN
+            Create event
           </button>
         </form>
 
         <div style="border-top: 1px solid var(--border); margin: 1.5rem 0 1rem 0;"></div>
 
         <form id="login-event-form" style="display: flex; flex-direction: column; gap: 0.75rem;">
-          <div style="font-weight: 600; font-size: var(--text-14); color: var(--slate);">Or log into existing event:</div>
-          <div style="display: grid; grid-template-columns: 1fr 140px; gap: 0.5rem;">
+          <div style="font-weight: 600; font-size: var(--text-14); color: var(--slate);">Already made an event?</div>
+          <div style="display: grid; grid-template-columns: 1fr 140px; gap: 0.75rem;">
             <input type="text" id="admin-event-id" class="input" placeholder="Event ID" required>
-            <input type="password" id="admin-pin" class="input input-short-code" maxlength="8" placeholder="PIN" required>
+            <input type="password" id="admin-pin" class="input" maxlength="8" placeholder="Admin PIN" required>
           </div>
-          <input type="text" id="admin-monitor-code" class="input input-short-code" maxlength="6" placeholder="Door code (optional)">
+          <input type="text" id="admin-monitor-code" class="input" maxlength="6" placeholder="Door code (optional)">
           <button type="submit" class="btn btn-secondary btn-block">
-            Connect Existing Event
+            Open event
           </button>
         </form>
       </div>
@@ -103,7 +105,7 @@
             <p id="event-dates-display" class="text-muted" style="font-size: var(--text-14);">Starts ... &middot; Ends ...</p>
             <!-- Open Google Sheet Link (in sheets mode) -->
             <a id="sheet-external-link" href="#" target="_blank" rel="noopener" class="sheet-external-link hidden">
-              Open the Google Sheet &rarr;
+              Open the Google Sheet
             </a>
           </div>
           <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem;">
@@ -148,7 +150,6 @@
           <h2 class="step-title">Import guests</h2>
           <p class="step-desc">Upload RSVPs from Luma or Partiful (CSV)</p>
         </div>
-        <span class="badge badge-muted">Step 2</span>
       </div>
 
       <div class="csv-howtos">
@@ -166,7 +167,7 @@
       <div id="csv-preview" class="hidden" style="display: flex; flex-direction: column; gap: 0.5rem;">
         <div class="badge badge-green" id="csv-status"></div>
         <button id="btn-upload-csv" class="btn btn-primary" type="button">
-          Import Guests from CSV
+          Import guests from CSV
         </button>
       </div>
       <div id="csv-result" class="hidden"></div>
@@ -189,10 +190,10 @@
           + Add single walk-in guest
         </summary>
         <form id="admin-guest-form" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem;">
-          <input type="text" id="guest-name" class="input" placeholder="Full name *" required>
+          <input type="text" id="guest-name" class="input" placeholder="Full name" required>
           <input type="email" id="guest-email" class="input" placeholder="Email (optional)">
           <input type="tel" id="guest-phone" class="input" placeholder="Phone (optional)">
-          <button type="submit" class="btn btn-secondary">Add Guest</button>
+          <button type="submit" class="btn btn-secondary">Add guest</button>
         </form>
       </details>
     </section>
@@ -205,7 +206,6 @@
           <h2 class="step-title">Make bands</h2>
           <p class="step-desc">Generate wristband short codes &amp; print sheets</p>
         </div>
-        <span class="badge badge-muted">Step 3</span>
       </div>
 
       <form id="generate-bands-form" style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
@@ -214,16 +214,16 @@
           <input type="number" id="band-count" class="input" min="1" max="2000" value="50" required>
         </div>
         <button type="submit" class="btn btn-primary">
-          Generate Bands
+          Generate bands
         </button>
       </form>
 
       <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
         <button id="btn-view-sheet" class="btn btn-secondary" type="button">
-          Print Wristband Cards
+          Print wristband cards
         </button>
         <button id="btn-view-avery" class="btn btn-secondary" type="button">
-          Print Avery 2"&times;1" Labels
+          Print Avery 2"&times;1" labels
         </button>
         <button id="btn-download-nfc-csv" class="btn btn-secondary" type="button">
           Download NFC CSV
@@ -238,7 +238,7 @@
             <p id="sheet-preview-desc" style="color: #666; font-size: 13px;">Letter size format</p>
           </div>
           <div style="display: flex; gap: 0.5rem;">
-            <button id="btn-trigger-print" class="btn btn-primary" type="button">Print Now</button>
+            <button id="btn-trigger-print" class="btn btn-primary" type="button">Print now</button>
             <button id="btn-close-print-sheet" class="btn btn-secondary" type="button">Close</button>
           </div>
         </div>
@@ -254,7 +254,6 @@
           <h2 class="step-title">Share door link</h2>
           <p class="step-desc">Send to your sober monitors &amp; volunteers</p>
         </div>
-        <span class="badge badge-muted">Step 4</span>
       </div>
 
       <div class="secret-box">
@@ -284,7 +283,7 @@
       </div>
 
       <button id="btn-copy-all-credentials" class="btn btn-primary btn-block" type="button">
-        Copy All Details for Volunteers
+        Copy all details for volunteers
       </button>
     </section>
 
@@ -295,7 +294,6 @@
           <h2 class="step-title">Incident follow-up</h2>
           <p class="step-desc">Audit-trailed guest lookup for safety checks</p>
         </div>
-        <span class="badge badge-muted">Follow-up</span>
       </div>
 
       <p class="text-muted" style="font-size: var(--text-14); margin: 0;">
@@ -340,10 +338,10 @@
 
       <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
         <button id="btn-download-export-csv" class="btn btn-secondary" type="button">
-          Export Safety Record (CSV)
+          Export safety record (CSV)
         </button>
         <button id="btn-end-event" class="btn btn-danger" type="button">
-          End Event Now
+          End event now
         </button>
       </div>
     </section>
@@ -353,7 +351,7 @@
   <div id="secrets-modal" class="modal-overlay">
     <div class="modal-content" style="max-width: 540px;">
       <div class="modal-header">
-        <h2 style="color: var(--band-orange);">Event Created!</h2>
+        <h2 style="color: var(--band-orange);">Event created!</h2>
       </div>
       <div class="modal-body">
         <div class="badge badge-amber" style="width: 100%; justify-content: center; padding: 0.6rem;">
@@ -387,7 +385,7 @@
         </div>
 
         <button id="btn-copy-all" class="btn btn-primary btn-block mt-sm" type="button">
-          Copy All Details
+          Copy all details
         </button>
         <div id="copy-all-feedback" class="badge badge-green hidden" style="width: 100%; justify-content: center;">
           Copied to clipboard
@@ -395,7 +393,7 @@
       </div>
       <div class="modal-footer">
         <button id="btn-dismiss-secrets" class="btn btn-secondary" type="button">
-          I Have Saved the PIN &rarr; Proceed
+          I have saved the PIN
         </button>
       </div>
     </div>

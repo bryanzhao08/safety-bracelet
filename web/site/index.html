@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Homebound &mdash; Get everyone home safe</title>
   <meta name="description" content="NFC wristbands for parties. Tap at the door on the way in. When guests leave together, one tap records the group. Deleted after 30 days.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Atkinson+Hyperlegible+Next:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../shared/base.css">
   <link rel="stylesheet" href="site.css">
 </head>
@@ -49,7 +52,7 @@
 
       <div class="hero-actions">
         <a href="#pilot" class="btn btn-primary" style="min-height: 48px; font-size: var(--text-16);">
-          Request free pilot kit &rarr;
+          Request free pilot kit
         </a>
         <a href="../door/" class="btn btn-secondary" style="min-height: 48px; font-size: var(--text-16);">
           Try the door scanner
@@ -57,31 +60,22 @@
       </div>
 
       <!-- Hero Wristband Animation -->
-      <div class="hero-band-stage" aria-label="Wristband departure demonstration">
-        <div class="hero-stage-label">At the door &middot; Departure grouping:</div>
+      <div class="hero-band-stage" aria-label="Wristband departure grouping demonstration">
+        <div class="hero-stage-label">Wristband departure grouping</div>
 
-        <div class="hero-bands-container">
-          <!-- Band 1 (Maya): cycles from Orange IN to Pink Left Together -->
-          <div class="hero-band-1 wristband-banner">
-            <div style="display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; padding-right: 14px;">
-              <span style="font-family: var(--font-display); font-size: var(--text-16); font-weight: 700;">Maya Chen</span>
-              <span id="hero-band-1-meta" style="font-size: var(--text-14); opacity: 0.9;">Inside &middot; 11:15 pm &rarr; Left together &middot; 1:42 am</span>
-            </div>
+        <div class="hero-band-demo-track">
+          <!-- Maya band chip -->
+          <div class="hero-demo-chip hero-chip-maya wristband-chip">
+            <span class="chip-name">Maya</span>
+            <span class="chip-status chip-status-inside">Inside 11:15 pm</span>
+            <span class="chip-status chip-status-left">Left together 1:42 am</span>
           </div>
 
-          <!-- Band 2 (Jess): slides in as Pink Left Together -->
-          <div class="hero-band-2 wristband-banner" style="background-color: var(--band-pink); color: #1B2340;">
-            <div style="display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; padding-right: 14px;">
-              <span style="font-family: var(--font-display); font-size: var(--text-16); font-weight: 700;">Jess Taylor</span>
-              <span style="font-size: var(--text-14); opacity: 0.9;">Left together &middot; 1:42 am</span>
-            </div>
-          </div>
-
-          <!-- Group clasp indicator -->
-          <div class="hero-band-clasp">
-            <span class="wristband-chip band-pink" style="font-size: 13px;">
-              Linked departure group: Maya + Jess
-            </span>
+          <!-- Jess band chip -->
+          <div class="hero-demo-chip hero-chip-jess wristband-chip">
+            <span class="chip-name">Jess</span>
+            <span class="chip-status chip-status-inside">Inside 11:15 pm</span>
+            <span class="chip-status chip-status-left">Left together 1:42 am</span>
           </div>
         </div>
       </div>
@@ -252,6 +246,6 @@
     </div>
   </footer>
 
-  <script src="site.js"></script>
+  <script type="module" src="site.js"></script>
 </body>
 </html>

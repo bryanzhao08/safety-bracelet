@@ -88,6 +88,8 @@ html, body {
   font-size: var(--text-16);
   line-height: 1.5;
   min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -161,7 +163,9 @@ p {
 /* Condensed Display Type for Verdicts and Counts */
 .font-condensed {
   font-family: var(--font-display);
-  font-variation-settings: 'wdth' 68, 'wght' 800;
+  font-stretch: 75%;
+  font-variation-settings: 'wdth' 75, 'wght' 800;
+  font-weight: 800;
   letter-spacing: -0.03em;
   font-feature-settings: 'tnum' 1;
 }
@@ -396,6 +400,7 @@ p {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
+  max-width: 100%;
 }
 
 .container {
@@ -528,3 +533,9 @@ p {
 .mt-lg { margin-top: 1.5rem; }
 .text-center { text-align: center; }
 .hidden { display: none !important; }
+
+/* Header buttons stay on one line on phones */
+@media (max-width: 480px) {
+  header .btn, nav .btn { white-space: nowrap; padding: 0.4rem 0.6rem; min-height: 40px; font-size: 13px; }
+  header, header nav { flex-wrap: wrap; row-gap: 0.5rem; }
+}
