@@ -1,7 +1,7 @@
 /* web/site/site.css - Restyled Site: Wristband Motif & No Generic SaaS Clichés */
 
 .site-body {
-  background-color: var(--bg);
+  background-color: transparent;
   color: var(--text);
   min-height: 100vh;
   display: flex;
@@ -9,8 +9,11 @@
 }
 
 .site-header {
-  background-color: var(--panel);
-  border-bottom: 1px solid var(--border);
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06), 0 4px 20px rgba(8, 12, 30, 0.25);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -111,16 +114,32 @@
 .hero-band-stage {
   width: 100%;
   max-width: 680px;
-  background-color: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+  border-radius: var(--radius-glass);
   padding: 2rem 1.75rem;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 1.25rem;
-  box-shadow: var(--shadow-elevated);
   margin-top: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-band-stage::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 40%);
+  pointer-events: none;
+  border-radius: inherit;
 }
 
 .hero-stage-label {
@@ -138,7 +157,8 @@
 }
 
 .hero-demo-chip {
-  display: inline-flex;
+  display: inline-grid;
+  grid-template-columns: auto auto;
   align-items: center;
   gap: 0.75rem;
   padding: 10px 24px 10px 16px;
@@ -146,27 +166,31 @@
   font-family: var(--font-sans);
   font-weight: 700;
   border-radius: var(--radius-full);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 0 rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.25);
   animation: chip-turn-pink 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   max-width: 100%;
 }
 
 .chip-name {
+  grid-column: 1;
   font-family: var(--font-display);
   font-weight: 800;
   letter-spacing: -0.01em;
 }
 
 .chip-status-inside {
+  grid-column: 2;
+  grid-row: 1;
   font-weight: 600;
   opacity: 0.88;
   animation: status-inside-fade 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .chip-status-left {
+  grid-column: 2;
+  grid-row: 1;
   font-weight: 600;
-  opacity: 0.88;
-  display: none;
+  opacity: 0;
   animation: status-left-fade 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -192,23 +216,19 @@
 
 @keyframes status-inside-fade {
   0%, 35% {
-    opacity: 1;
-    display: inline;
+    opacity: 0.88;
   }
   55%, 100% {
     opacity: 0;
-    display: none;
   }
 }
 
 @keyframes status-left-fade {
   0%, 45% {
     opacity: 0;
-    display: none;
   }
-  60%, 100% {
+  65%, 100% {
     opacity: 0.88;
-    display: inline;
   }
 }
 
@@ -223,11 +243,10 @@
     color: #1B2340;
   }
   .chip-status-inside {
-    display: none !important;
+    opacity: 0 !important;
   }
   .chip-status-left {
-    display: inline !important;
-    opacity: 0.88;
+    opacity: 0.88 !important;
   }
 }
 
@@ -319,13 +338,30 @@
   font-size: var(--text-14);
 }
 
-/* Pilot Form */
+/* Pilot Form - Glass */
 .pilot-card {
-  background-color: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+  border-radius: var(--radius-glass);
   padding: 2rem;
   max-width: 640px;
+  position: relative;
+  overflow: hidden;
+}
+
+.pilot-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 40%);
+  pointer-events: none;
+  border-radius: inherit;
 }
 
 .site-footer {
@@ -334,4 +370,11 @@
   margin-top: auto;
   font-size: var(--text-14);
   color: var(--text-muted);
+}
+
+/* Fallback for browsers without backdrop-filter */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .site-header, .hero-band-stage, .pilot-card {
+    background-color: var(--panel) !important;
+  }
 }

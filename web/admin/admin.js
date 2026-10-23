@@ -675,6 +675,29 @@ async function init() {
   initDatePickers();
   checkSheetsMode();
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlEvent = urlParams.get('event') || urlParams.get('eventId');
+  const urlPin = urlParams.get('pin') || urlParams.get('adminPin');
+  const urlCode = urlParams.get('code') || urlParams.get('monitorCode');
+
+  if (urlEvent && urlPin) {
+    try {
+      const data = await api.getEvent(urlEvent, urlPin);
+      api.saveAdminSession({ eventId: urlEvent, adminPin: urlPin, monitorCode: urlCode });
+      currentEvent = data.event;
+      renderEventStats(data);
+      showAdminView();
+      if (urlCode) {
+        try {
+          await api.joinMonitor(urlEvent, { monitorCode: urlCode, name: 'Organizer Admin' });
+        } catch {}
+      }
+      return;
+    } catch (e) {
+      console.warn('Auto-login from URL failed:', e);
+    }
+  }
+
   const session = api.getAdminSession();
   if (session && session.eventId && session.pin) {
     try {

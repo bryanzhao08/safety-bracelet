@@ -1,5 +1,5 @@
 // web/door/sw.js - Service Worker for Homebound Door Scanner
-const CACHE_NAME = 'hb-door-v2';
+const CACHE_NAME = 'hb-door-v3';
 
 const PRECACHE_PATHS = [
   './',
@@ -53,8 +53,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Never intercept API requests
-  if (url.pathname.includes('/api/')) {
+  // Never intercept API requests or other origins (Google Fonts, Apps Script)
+  if (url.origin !== self.location.origin || url.pathname.includes('/api/')) {
     return;
   }
 

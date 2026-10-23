@@ -4,15 +4,23 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: transparent;
 }
 
+/* Header - Sticky Glass */
 .program-header {
-  background-color: var(--bg-surface);
-  border-bottom: 1px solid var(--border);
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06), 0 4px 20px rgba(8, 12, 30, 0.25);
   padding: 0.75rem 1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .program-brand {
@@ -45,7 +53,7 @@
 .divider::after {
   content: '';
   flex: 1;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .divider:not(:empty)::before {
@@ -57,13 +65,13 @@
 }
 
 .drop-zone {
-  border: 2px dashed var(--border);
+  border: 2px dashed var(--glass-border);
   border-radius: var(--radius-md);
   padding: 1.5rem 1rem;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  background-color: rgba(23, 33, 66, 0.4);
+  background-color: rgba(10, 14, 35, 0.4);
 }
 
 .drop-zone:hover,
@@ -113,10 +121,24 @@
 
 /* Progress Section */
 .progress-card {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+  border-radius: var(--radius-glass);
   padding: 1rem 1.25rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 40%);
+  pointer-events: none;
+  border-radius: inherit;
 }
 
 .progress-header {
@@ -144,7 +166,8 @@
   font-weight: 700;
   padding: 0.25rem 0.6rem;
   border-radius: var(--radius-sm);
-  background: var(--bg-surface-elevated);
+  background: rgba(10, 14, 35, 0.45);
+  border: 1px solid var(--glass-border);
 }
 
 .stat-chip.chip-green {
@@ -162,7 +185,7 @@
 .progress-track {
   width: 100%;
   height: 10px;
-  background-color: var(--bg);
+  background-color: rgba(10, 14, 35, 0.5);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
@@ -176,9 +199,12 @@
 
 /* Tag Write Stage (The giant card) */
 .stage-card {
-  background-color: var(--bg-surface);
-  border: 2px solid var(--border);
-  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+  border-radius: var(--radius-glass);
   padding: 2rem 1.5rem;
   text-align: center;
   position: relative;
@@ -186,15 +212,24 @@
   transition: all 0.2s ease;
 }
 
+.stage-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 40%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
 .stage-card.stage-ready {
   border-color: var(--accent-amber);
-  box-shadow: 0 0 25px rgba(255, 180, 76, 0.2);
+  box-shadow: var(--glass-highlight), 0 0 25px rgba(255, 180, 76, 0.2);
 }
 
 .stage-card.stage-success {
   border-color: var(--accent-green);
   background: rgba(46, 204, 113, 0.12);
-  box-shadow: 0 0 35px rgba(46, 204, 113, 0.35);
+  box-shadow: var(--glass-highlight), 0 0 35px rgba(46, 204, 113, 0.35);
 }
 
 .stage-card.stage-error {
@@ -289,10 +324,31 @@
 
 /* Sticker List Drawer / Sheet */
 .stickers-list-card {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+  border-radius: var(--radius-glass);
   padding: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.stickers-list-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 40%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Fallback for browsers without backdrop-filter */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .program-header, .progress-card, .stage-card, .stickers-list-card {
+    background-color: var(--panel) !important;
+  }
 }
 
 .stickers-grid {

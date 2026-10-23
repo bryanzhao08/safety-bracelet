@@ -98,5 +98,15 @@
   • Dashboard: Connected to demo event, verified Archivo condensed font display for inside count, and rendered roster rows as band chips (orange inside, pink left together, slate outline not arrived).
   • Switched `site.js` to `submitPilot()` from `../shared/api.js` (and verified `program.js` uses `getBandsCsv()`).
   • Re-captured all 8 verification screenshots into `web/_screens/` (`door`, `dashboard`, `admin`, `site` at 390 px and 1280 px) waiting for `document.fonts.ready` and inspected each one. All 19 backend tests pass via `npm test`.
+- 2026-10-22 (Antigravity Liquid Glass restyle): Completed all requirements of `TASK_AGY_GLASS.md`:
+  • Background: Added fixed living backdrop in `web/shared/base.css` with `--night` base and 3 large, soft, blurred radial-gradient blobs in band colors (orange, pink, lime at 35% opacity) drifting slowly on a 60s loop with `@keyframes liquid-drift`; static under `prefers-reduced-motion`.
+  • Glass Material Tokens & Surfaces: Defined `--glass-bg`, `--glass-bg-strong`, `--glass-border`, `--glass-blur`, `--glass-highlight`, and `--glass-shadow`. Created `.glass` with 28px radius, `backdrop-filter: blur(24px) saturate(180%)`, inset highlights, and diagonal specular sheen `::before`. Applied to cards, panels, admin steps, dashboard roster and departures panels, door login card, modals, and site hero demo stage.
+  • Top Bars: Sticky glass headers with `--glass-bg-strong` across door, dashboard, admin, site, and band programmer.
+  • Buttons & Inputs: Primary buttons styled as glossy pills (solid band-orange/pink with inset highlight), secondary buttons styled as small glass capsules (radius 999px), inputs given darker glass tint `rgba(10,14,35,0.35)` with orange focus glow ring. Prevented nested `backdrop-filter` inside glass containers to maximize mobile GPU performance.
+  • Segmented Controls: Glass tracks with sliding solid thumbs animated with 250ms spring (`cubic-bezier(.3,1.4,.5,1)`) on door IN|OUT toggle and dashboard roster filters.
+  • Band Chips: Preserved solid colors and added soft inner top highlights (`box-shadow: inset 0 1px 0 rgba(255,255,255,0.45)...`) for glossy Tyvek physical appearance.
+  • Preserved Full-Screen Verdict Flood: Verdict flash remains 100% solid color with high readability at dark doors.
+  • Verification: Re-captured all 8 screenshots (`door`, `dashboard` joined with demo event, `admin`, and `site` at 390 × 844 mobile CDP emulation and 1280 desktop) into `web/_screens/glass-*.png`. Inspected every screenshot: WCAG AA contrast maintained, glass blur and specular sheens clearly visible, zero horizontal scroll. All 19 backend tests pass via `npm test`.
+
 
 

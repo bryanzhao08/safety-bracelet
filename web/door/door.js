@@ -172,6 +172,7 @@ btnModeIn.addEventListener('click', () => {
   btnModeIn.setAttribute('aria-selected', 'true');
   btnModeOut.className = 'mode-btn';
   btnModeOut.setAttribute('aria-selected', 'false');
+  if (btnModeIn.parentElement) btnModeIn.parentElement.classList.remove('mode-out');
   inModeContainer.classList.remove('hidden');
   outModeContainer.classList.add('hidden');
 });
@@ -182,6 +183,7 @@ btnModeOut.addEventListener('click', () => {
   btnModeOut.setAttribute('aria-selected', 'true');
   btnModeIn.className = 'mode-btn';
   btnModeIn.setAttribute('aria-selected', 'false');
+  if (btnModeOut.parentElement) btnModeOut.parentElement.classList.add('mode-out');
   outModeContainer.classList.remove('hidden');
   inModeContainer.classList.add('hidden');
   renderLeavingTray();
@@ -204,7 +206,21 @@ async function initSession() {
   if (urlEventId && joinEventId) joinEventId.value = urlEventId;
   if (urlCode && joinMonitorCode) joinMonitorCode.value = urlCode;
 
-  const session = api.getMonitorSession();
+  let session = api.getMonitorSession();
+  if (!session && urlEventId && urlCode) {
+    try {
+      const res = await api.joinMonitor(urlEventId, { monitorCode: urlCode.toUpperCase(), name: 'Door' });
+      session = api.getMonitorSession();
+      doorEventName.textContent = res.event?.name || 'Homebound Event';
+      doorMonitorName.textContent = 'Monitor: Door';
+      joinView.classList.add('hidden');
+      doorView.classList.remove('hidden');
+      initNfc();
+    } catch (e) {
+      console.warn('Auto-join failed:', e);
+    }
+  }
+
   if (session && session.token && session.eventId) {
     doorEventName.textContent = session.eventName || 'Homebound Event';
     doorMonitorName.textContent = `Monitor: ${session.name || 'Active'}`;

@@ -8,7 +8,7 @@
   min-height: 100vh;
   width: 100%;
   max-width: 100%;
-  background-color: var(--night);
+  background-color: transparent;
   color: var(--tyvek);
   position: relative;
   overflow-x: hidden;
@@ -34,17 +34,22 @@
   margin: auto 0;
 }
 
-/* Door Header */
+/* Door Header - Sticky Glass */
 .door-header {
-  background-color: var(--panel);
-  border-bottom: 1px solid var(--border);
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06), 0 4px 20px rgba(8, 12, 30, 0.25);
   padding: 0.6rem 1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
   flex-shrink: 0;
-  z-index: 10;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .door-monitor-info {
@@ -76,11 +81,11 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background-color: rgba(37, 47, 85, 0.6);
+  background: rgba(10, 14, 35, 0.45);
   padding: 0.35rem 0.75rem;
   font-size: var(--text-14);
   color: var(--slate);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--glass-border);
   flex-shrink: 0;
 }
 
@@ -146,33 +151,65 @@
 
 /* Big Scan ID Button */
 .btn-scan-id {
-  background-color: var(--panel);
+  background: var(--glass-bg-strong);
   color: var(--tyvek);
-  border: 2px solid var(--border);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   min-height: 72px;
   font-size: var(--text-20);
   font-weight: 700;
-  border-radius: var(--radius-lg);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-glass);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
+}
+.btn-scan-id::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 40%);
+  pointer-events: none;
+  border-radius: inherit;
 }
 .btn-scan-id:hover:not(:disabled) {
   border-color: var(--band-orange);
-  background-color: var(--panel-elevated);
+  box-shadow: var(--glass-highlight), 0 0 20px rgba(255, 122, 26, 0.35);
 }
 
 /* ID Result Card */
 .id-result-card {
-  background-color: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+  border-radius: var(--radius-glass);
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  position: relative;
+  overflow: hidden;
+}
+.id-result-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 40%);
+  pointer-events: none;
+  border-radius: inherit;
 }
 
 /* Full-width ID Age Band (Lime for 21+, Red for Under 21 / Expired) */
@@ -192,7 +229,7 @@
   align-items: center;
   justify-content: space-between;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 0 rgba(0, 0, 0, 0.15), 0 4px 14px rgba(0, 0, 0, 0.3);
 }
 
 .id-age-band::after {
@@ -203,7 +240,7 @@
   bottom: 0;
   width: 12px;
   border-left: 2px dashed rgba(27, 35, 64, 0.4);
-  background-image: radial-gradient(circle at 100% 50%, var(--panel) 3px, transparent 3.5px);
+  background-image: radial-gradient(circle at 100% 50%, var(--night) 3px, transparent 3.5px);
   background-size: 10px 9px;
   background-repeat: repeat-y;
   border-top-right-radius: inherit;
@@ -258,13 +295,29 @@
 
 /* Leaving Tray (OUT Mode) */
 .leaving-tray-card {
-  background-color: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+  border-radius: var(--radius-glass);
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+.leaving-tray-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 40%);
+  pointer-events: none;
+  border-radius: inherit;
 }
 
 .leaving-tray-header {
@@ -302,7 +355,8 @@
   gap: 0.5rem;
   min-height: 60px;
   padding: 0.75rem;
-  background-color: rgba(27, 35, 64, 0.6);
+  background: rgba(10, 14, 35, 0.45);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   align-items: center;
 }
@@ -318,15 +372,18 @@
 .btn-done-leaving {
   background-color: var(--band-pink);
   color: #1B2340;
-  border-color: var(--band-pink);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: var(--glass-highlight), 0 4px 20px rgba(255, 79, 163, 0.4);
   min-height: 64px;
   font-family: var(--font-display);
   font-size: var(--text-20);
   font-weight: 700;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
 }
 .btn-done-leaving:hover:not(:disabled) {
   background-color: #f03e94;
+  box-shadow: var(--glass-highlight), 0 6px 24px rgba(255, 79, 163, 0.55);
 }
 
 /* -------------------------------------------------------------
@@ -334,8 +391,10 @@
    ------------------------------------------------------------- */
 .door-bottom-controls {
   flex-shrink: 0;
-  background-color: var(--night);
-  border-top: 1px solid var(--border);
+  background: rgba(15, 20, 36, 0.75);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-top: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
   z-index: 10;
@@ -349,19 +408,48 @@
 }
 
 .mode-switch {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-  background-color: var(--panel);
-  padding: 0.4rem;
-  border-radius: var(--radius-lg);
-  border: 1.5px solid var(--border);
+  gap: 6px;
+  background: rgba(10, 14, 35, 0.45);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  padding: 6px;
+  border-radius: 22px;
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  isolation: isolate;
+}
+
+/* Solid glass thumb with 250ms spring */
+.mode-switch::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 6px;
+  width: calc(50% - 9px);
+  background-color: var(--band-orange);
+  border-radius: 16px;
+  box-shadow: var(--glass-highlight), 0 4px 18px rgba(255, 122, 26, 0.45);
+  transition: transform 250ms cubic-bezier(.3, 1.4, .5, 1), background-color 250ms ease, box-shadow 250ms ease;
+  z-index: 1;
+}
+
+.mode-switch:has(#btn-mode-out.active-out)::before,
+.mode-switch.mode-out::before {
+  transform: translateX(calc(100% + 6px));
+  background-color: var(--band-pink);
+  box-shadow: var(--glass-highlight), 0 4px 18px rgba(255, 79, 163, 0.45);
 }
 
 .mode-btn {
+  position: relative;
+  z-index: 2;
   min-height: 76px;
-  border-radius: var(--radius-md);
-  border: 2px solid transparent;
+  border-radius: 16px;
+  border: none;
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -370,7 +458,7 @@
   gap: 0.15rem;
   background-color: transparent;
   color: var(--slate);
-  transition: all 0.15s ease-out;
+  transition: color 0.15s ease-out;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
@@ -395,17 +483,13 @@
 
 /* Active States */
 .mode-btn.active-in {
-  background-color: var(--band-orange);
   color: #1B2340;
-  border-color: var(--band-orange);
-  box-shadow: 0 4px 18px rgba(255, 122, 26, 0.45);
+  font-weight: 800;
 }
 
 .mode-btn.active-out {
-  background-color: var(--band-pink);
   color: #1B2340;
-  border-color: var(--band-pink);
-  box-shadow: 0 4px 18px rgba(255, 79, 163, 0.45);
+  font-weight: 800;
 }
 
 /* -------------------------------------------------------------
