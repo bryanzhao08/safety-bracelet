@@ -4,20 +4,26 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
   <title>Homebound Door Scanner</title>
-  <link rel="stylesheet" href="/shared/base.css">
-  <link rel="stylesheet" href="/door/door.css">
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="door.css">
 </head>
 <body>
-  <!-- Flash Banner for Check-in / Out Feedback -->
-  <div id="flash-banner" class="flash-banner" role="alert" aria-live="assertive"></div>
+  <!-- Full-Screen Flood Result Overlay (1.2 s orchestrated feedback) -->
+  <div id="verdict-flood" class="verdict-flood" role="alert" aria-live="assertive">
+    <div class="flood-inner">
+      <div id="flood-badge" class="flood-subverdict">IN</div>
+      <div id="flood-name" class="flood-name">GUEST</div>
+      <div id="flood-detail" class="flood-detail"></div>
+    </div>
+  </div>
 
   <!-- Join Shift Screen (shown when not logged in) -->
-  <div id="join-view" class="container door-app" style="justify-content: center; max-width: 480px; padding: 2rem 1rem;">
-    <div class="card">
-      <div style="text-align: center; margin-bottom: 1.5rem;">
-        <div class="brand-icon" style="margin: 0 auto 0.75rem auto; width: 44px; height: 44px; font-size: 1.5rem;">H</div>
-        <h1>Homebound Door</h1>
-        <p class="text-muted mt-sm">Enter monitor code to start scanning wristbands</p>
+  <div id="join-view" class="door-app" style="justify-content: center; align-items: center; padding: 2rem 1rem;">
+    <div class="card" style="width: 100%; max-width: 440px;">
+      <div style="margin-bottom: 1.5rem;">
+        <span class="wristband-chip band-orange" style="margin-bottom: 0.75rem;">Homebound Door</span>
+        <h1 style="font-size: var(--text-28);">Start Door Shift</h1>
+        <p class="text-muted mt-sm">Enter monitor code to scan wristbands</p>
       </div>
 
       <form id="join-form">
@@ -28,7 +34,7 @@
 
         <div class="form-group">
           <label class="form-label" for="join-monitor-code">Monitor Code</label>
-          <input type="text" id="join-monitor-code" class="input input-code" maxlength="6" placeholder="ABC123" required autocomplete="off">
+          <input type="text" id="join-monitor-code" class="input input-short-code" maxlength="6" placeholder="ABC123" required autocomplete="off">
         </div>
 
         <div class="form-group">
@@ -38,18 +44,18 @@
 
         <div id="join-error" class="badge badge-amber hidden" style="margin-bottom: 1rem; width: 100%; justify-content: center;"></div>
 
-        <button type="submit" class="btn btn-primary btn-block" style="min-height: 60px; font-size: 1.25rem;">
+        <button type="submit" class="btn btn-primary btn-block" style="min-height: 56px; font-size: var(--text-20);">
           Start Door Shift
         </button>
       </form>
 
-      <div style="text-align: center; margin-top: 1.5rem;">
-        <a href="/dashboard" class="text-muted" style="font-size: 0.95rem;">Go to Dashboard →</a>
+      <div style="margin-top: 1.5rem; text-align: center;">
+        <a href="../dashboard/" class="text-muted" style="font-size: var(--text-14);">Go to Dashboard &rarr;</a>
       </div>
     </div>
   </div>
 
-  <!-- Active Door Shift Screen -->
+  <!-- Active Door Shift Screen (Full-height) -->
   <div id="door-view" class="door-app hidden">
     <!-- Top Header -->
     <header class="door-header">
@@ -58,215 +64,216 @@
         <span id="door-monitor-name" class="door-monitor-name">Monitor</span>
       </div>
       <div style="display: flex; gap: 0.5rem; align-items: center;">
-        <a href="/dashboard" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: 0.9rem;">
-          📊 Dashboard
+        <a href="../dashboard/" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: var(--text-14);">
+          Dashboard
         </a>
-        <button id="btn-leave-shift" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: 0.9rem;" title="Leave Shift">
+        <button id="btn-leave-shift" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: var(--text-14);" title="Leave Shift">
           Exit
         </button>
       </div>
     </header>
 
-    <!-- Huge Mode Switch (IN / OUT) -->
-    <div class="mode-switch-container">
-      <div class="mode-switch">
-        <button id="btn-mode-in" class="mode-btn active-in" type="button">
-          <span>IN</span>
-          <span class="mode-subtext">Check-in</span>
-        </button>
-        <button id="btn-mode-out" class="mode-btn" type="button">
-          <span>OUT</span>
-          <span class="mode-subtext">Departure</span>
-        </button>
-      </div>
-    </div>
-
     <!-- Web NFC Status Bar -->
     <div id="nfc-bar" class="nfc-status-bar">
-      <span id="nfc-label">⚡ NFC Reader active</span>
       <div id="nfc-dot" class="nfc-status-dot"></div>
+      <span id="nfc-label">NFC reader active</span>
     </div>
 
     <!-- Offline Queue Status Bar -->
     <div id="offline-bar" class="offline-status-bar hidden" role="status" aria-live="polite">
-      <div class="offline-status-info">
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
         <div id="offline-dot" class="offline-status-dot"></div>
         <span id="offline-text">Saved offline (0 waiting)</span>
       </div>
       <button id="btn-sync-now" class="btn-sync-now" type="button" title="Retry queued scans">
-        ↻ Retry
+        Retry
       </button>
     </div>
 
-    <!-- MAIN BODY: IN MODE -->
-    <main id="in-mode-container" class="door-actions-grid">
-      <!-- ID Scanning action -->
-      <button id="btn-open-id-scanner" class="btn btn-scan-id btn-block" type="button">
-        🪪 Scan ID
-      </button>
-
-      <!-- ID Scan Result Card (Shown after scanning an ID) -->
-      <div id="id-result-container" class="id-result-card hidden">
-        <div id="id-badge-wrap" class="id-badge-container">
-          <!-- Giant Age Badge rendered by JS: 21+ or UNDER 21 or EXPIRED -->
-        </div>
-        <div id="id-guest-name" class="id-guest-name"></div>
-        <div id="id-meta-line" class="id-meta-line"></div>
-        <div id="id-duplicate-warning" class="badge badge-amber hidden" style="width: 100%; justify-content: center; margin-bottom: 0.75rem; font-size: 1rem;">
-          ⚠️ Duplicate: ID already scanned tonight
-        </div>
-        
-        <!-- Candidate Picker if Ambiguous Match -->
-        <div id="id-candidates-container" class="hidden">
-          <p class="text-muted" style="margin-bottom: 0.5rem; font-size: 0.9rem;">Select matching guest:</p>
-          <div id="id-candidates-list" class="flex-col gap-sm"></div>
-        </div>
-
-        <div id="id-tap-prompt" class="tap-band-prompt">
-          👉 Now tap their wristband
-        </div>
-        <button id="btn-cancel-id" class="btn btn-secondary btn-block mt-md" type="button">
-          Cancel ID Check
+    <!-- MIDDLE SCROLLABLE CONTENT (Top Half of Phone) -->
+    <div class="door-content-scroll">
+      <!-- IN MODE CONTENT -->
+      <main id="in-mode-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <!-- ID Scanning action -->
+        <button id="btn-open-id-scanner" class="btn btn-scan-id btn-block" type="button">
+          Scan ID
         </button>
-      </div>
 
-      <!-- Quick Search Guest list fallback -->
-      <button id="btn-open-guest-search" class="btn btn-secondary btn-block" type="button">
-        🔍 No ID? Search Guest List
-      </button>
+        <!-- ID Scan Result Card (Shown after scanning an ID) -->
+        <div id="id-result-container" class="id-result-card hidden">
+          <div id="id-badge-wrap">
+            <!-- Full-width age band rendered by JS: 21+ or UNDER 21 or EXPIRED -->
+          </div>
+          <div id="id-guest-name" class="id-guest-name"></div>
+          <div id="id-meta-line" class="id-meta-line"></div>
+          
+          <div id="id-duplicate-warning" class="badge badge-amber hidden" style="width: 100%; justify-content: center;">
+            Duplicate: ID already scanned tonight
+          </div>
+          
+          <!-- Candidate Picker if Ambiguous Match -->
+          <div id="id-candidates-container" class="hidden">
+            <p class="text-muted" style="margin-bottom: 0.5rem; font-size: var(--text-14);">Select matching guest:</p>
+            <div id="id-candidates-list" class="flex-col gap-sm"></div>
+          </div>
 
-      <!-- Camera QR Scanner button for bands -->
-      <button id="btn-open-qr-scanner" class="btn btn-secondary btn-block" type="button">
-        📷 Scan Band QR
-      </button>
-
-      <!-- Manual 4-character code entry -->
-      <form id="manual-code-form" class="manual-code-form">
-        <input type="text" id="manual-code-input" class="input input-short-code" maxlength="4" placeholder="CODE" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
-        <button type="submit" class="btn btn-primary" style="min-width: 90px;">
-          Check In
-        </button>
-      </form>
-    </main>
-
-    <!-- MAIN BODY: OUT MODE (Leaving Tray) -->
-    <main id="out-mode-container" class="leaving-tray-section hidden">
-      <div class="leaving-tray-card">
-        <div class="leaving-tray-header">
-          <span style="font-weight: 700; font-size: 1.15rem; color: var(--accent-amber);">
-            Leaving Tray (<span id="tray-count">0</span>)
-          </span>
-          <span id="tray-countdown-text" class="badge badge-amber">30s</span>
-        </div>
-
-        <div class="leaving-timer-bar">
-          <div id="tray-timer-bar" class="leaving-timer-progress"></div>
-        </div>
-
-        <div id="leaving-guest-list" class="leaving-guest-list">
-          <p id="tray-empty-msg" class="text-muted text-center" style="padding: 1.5rem 0;">
-            Tap wristbands of guests leaving now
-          </p>
-        </div>
-
-        <div class="leaving-buttons-grid">
-          <button id="btn-leave-alone" class="btn btn-secondary btn-leaving-alone" type="button" disabled>
-            Leaving alone
-          </button>
-          <button id="btn-leave-together" class="btn btn-leaving-together" type="button" disabled>
-            Leaving together
+          <div id="id-tap-prompt" class="tap-band-prompt">
+            &rarr; Tap wristband to link
+          </div>
+          <button id="btn-cancel-id" class="btn btn-secondary btn-block" type="button">
+            Cancel ID Check
           </button>
         </div>
-      </div>
 
-      <!-- Manual Code & Camera QR for OUT mode -->
-      <div style="display: flex; gap: 0.5rem;">
-        <button id="btn-open-qr-scanner-out" class="btn btn-secondary" style="flex: 1;" type="button">
-          📷 Camera QR
-        </button>
-      </div>
-
-      <form id="manual-code-form-out" class="manual-code-form">
-        <input type="text" id="manual-code-input-out" class="input input-short-code" maxlength="4" placeholder="CODE" autocomplete="off" autocorrect="off" autocapitalize="characters">
-        <button type="submit" class="btn btn-primary" style="min-width: 90px;">
-          Add to Tray
-        </button>
-      </form>
-    </main>
-
-    <!-- Camera Scanner Overlay Modal (for ID PDF417 and QR) -->
-    <div id="camera-modal" class="modal-overlay">
-      <div class="modal-content" style="max-width: 500px; padding: 0.5rem; background: #000;">
-        <div class="scanner-viewport-container">
-          <video id="scanner-video" class="scanner-video" autoplay playsinline muted></video>
-          <div class="scanner-guide-overlay">
-            <div id="scanner-reticle" class="scanner-reticle-box"></div>
-            <div id="scanner-guide-text" class="scanner-guide-text">
-              Point camera at barcode
-            </div>
-          </div>
-          <div class="scanner-controls">
-            <button id="btn-torch" class="btn-scanner-ctrl hidden" type="button" title="Toggle Flash">🔦</button>
-            <button id="btn-close-camera" class="btn-scanner-ctrl" type="button">✕ Close</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Search & Link Guest Modal -->
-    <div id="guest-search-modal" class="modal-overlay">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 id="guest-search-title">Guest List</h2>
-          <button id="btn-close-guest-search" class="btn btn-secondary" style="min-height: 40px; min-width: 40px; padding: 0;">✕</button>
-        </div>
-        <div class="modal-body">
-          <input type="search" id="guest-search-input" class="input" placeholder="Search by name..." autocomplete="off">
-          <button id="btn-open-add-walkin" class="btn btn-secondary btn-block" type="button">
-            ＋ Add Walk-in Guest
+        <!-- Secondary Actions Row: Search Guest & Camera QR -->
+        <div class="door-secondary-actions">
+          <button id="btn-open-guest-search" class="btn btn-secondary" type="button">
+            Search Guest
           </button>
-          <div id="guest-search-results" class="guest-search-list"></div>
+          <button id="btn-open-qr-scanner" class="btn btn-secondary" type="button">
+            Camera QR
+          </button>
         </div>
-      </div>
-    </div>
 
-    <!-- Add Walk-in Guest Modal -->
-    <div id="walkin-modal" class="modal-overlay">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>Add Walk-in Guest</h2>
-          <button id="btn-close-walkin" class="btn btn-secondary" style="min-height: 40px; min-width: 40px; padding: 0;">✕</button>
-        </div>
-        <form id="walkin-form">
-          <div class="modal-body">
-            <div class="form-group">
-              <label class="form-label" for="walkin-name">Full Name *</label>
-              <input type="text" id="walkin-name" class="input" placeholder="Guest name" required>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="walkin-email">Email (optional)</label>
-              <input type="email" id="walkin-email" class="input" placeholder="guest@example.com">
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="walkin-phone">Phone (optional)</label>
-              <input type="tel" id="walkin-phone" class="input" placeholder="+1 ...">
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" id="btn-cancel-walkin" class="btn btn-secondary">Cancel</button>
-            <button type="submit" class="btn btn-primary">Save &amp; Link Band</button>
-          </div>
+        <!-- Manual 4-character code entry -->
+        <form id="manual-code-form" class="manual-code-form">
+          <input type="text" id="manual-code-input" class="input input-short-code" maxlength="4" placeholder="CODE" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+          <button type="submit" class="btn btn-primary" style="min-width: 100px;">
+            Check In
+          </button>
         </form>
-      </div>
+      </main>
+
+      <!-- OUT MODE CONTENT (Leaving Tray) -->
+      <main id="out-mode-container" class="hidden" style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <div class="leaving-tray-card">
+          <div class="leaving-tray-header">
+            <span class="tray-title">Leaving Together (<span id="tray-count">0</span>)</span>
+            <span id="tray-countdown-text" class="badge badge-pink">30s</span>
+          </div>
+
+          <div class="leaving-timer-bar">
+            <div id="tray-timer-bar" class="leaving-timer-progress"></div>
+          </div>
+
+          <div id="leaving-guest-list" class="leaving-bands-stack">
+            <p id="tray-empty-msg" class="leaving-tray-empty">
+              Tap wristbands of guests leaving together
+            </p>
+          </div>
+
+          <!-- Single One-Touch Action Button -->
+          <button id="btn-leave-together" class="btn btn-done-leaving btn-block" type="button" disabled>
+            Done, 0 leaving
+          </button>
+          <button id="btn-leave-alone" class="hidden" type="button"></button>
+        </div>
+
+        <!-- Manual Code & Camera QR for OUT mode -->
+        <div class="door-secondary-actions">
+          <button id="btn-open-qr-scanner-out" class="btn btn-secondary btn-block" type="button">
+            Camera QR
+          </button>
+        </div>
+
+        <form id="manual-code-form-out" class="manual-code-form">
+          <input type="text" id="manual-code-input-out" class="input input-short-code" maxlength="4" placeholder="CODE" autocomplete="off" autocorrect="off" autocapitalize="characters">
+          <button type="submit" class="btn btn-pink" style="min-width: 100px;">
+            Add Out
+          </button>
+        </form>
+      </main>
     </div>
 
-    <!-- Pinned Consent Line -->
-    <footer class="door-consent">
-      We log check-in/out and who you leave with for safety; deleted after 30 days.
-    </footer>
+    <!-- BOTTOM HALF: HUGE IN | OUT TOGGLE THUMB TARGETS -->
+    <div class="door-bottom-controls">
+      <div class="mode-switch-wrapper">
+        <div class="mode-switch" role="tablist" aria-label="Door Mode">
+          <button id="btn-mode-in" class="mode-btn active-in" type="button" role="tab" aria-selected="true">
+            <span class="mode-title font-condensed">IN</span>
+            <span class="mode-sub">Check in</span>
+          </button>
+          <button id="btn-mode-out" class="mode-btn" type="button" role="tab" aria-selected="false">
+            <span class="mode-title font-condensed">OUT</span>
+            <span class="mode-sub">Leaving</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Pinned Consent Line -->
+      <footer class="door-consent">
+        We log check-in/out and who you leave with for safety; deleted after 30 days.
+      </footer>
+    </div>
   </div>
 
-  <script src="/shared/vendor/zxing/zxing.min.js"></script>
-  <script type="module" src="/door/door.js"></script>
+  <!-- Camera Scanner Overlay Modal (for ID PDF417 and QR) -->
+  <div id="camera-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px; padding: 0.5rem; background: #000;">
+      <div class="scanner-viewport-container">
+        <video id="scanner-video" class="scanner-video" autoplay playsinline muted></video>
+        <div class="scanner-guide-overlay">
+          <div id="scanner-reticle" class="scanner-reticle-box"></div>
+          <div id="scanner-guide-text" class="scanner-guide-text">
+            Point camera at barcode
+          </div>
+        </div>
+        <div class="scanner-controls">
+          <button id="btn-torch" class="btn-scanner-ctrl hidden" type="button" title="Toggle Flash">Light</button>
+          <button id="btn-close-camera" class="btn-scanner-ctrl" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Link Guest Modal -->
+  <div id="guest-search-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="guest-search-title">Guest List</h2>
+        <button id="btn-close-guest-search" class="btn btn-secondary" style="min-height: 40px; min-width: 40px; padding: 0;">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="search" id="guest-search-input" class="input" placeholder="Search by name..." autocomplete="off">
+        <button id="btn-open-add-walkin" class="btn btn-secondary btn-block" type="button">
+          + Add Walk-in Guest
+        </button>
+        <div id="guest-search-results" class="flex-col gap-sm" style="max-height: 300px; overflow-y: auto;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Walk-in Guest Modal -->
+  <div id="walkin-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add Walk-in Guest</h2>
+        <button id="btn-close-walkin" class="btn btn-secondary" style="min-height: 40px; min-width: 40px; padding: 0;">&times;</button>
+      </div>
+      <form id="walkin-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="walkin-name">Full Name *</label>
+            <input type="text" id="walkin-name" class="input" placeholder="Guest name" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="walkin-email">Email (optional)</label>
+            <input type="email" id="walkin-email" class="input" placeholder="guest@example.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="walkin-phone">Phone (optional)</label>
+            <input type="tel" id="walkin-phone" class="input" placeholder="+1 ...">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="btn-cancel-walkin" class="btn btn-secondary">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save &amp; Link Band</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="../shared/vendor/zxing/zxing.min.js"></script>
+  <script type="module" src="door.js"></script>
 </body>
 </html>

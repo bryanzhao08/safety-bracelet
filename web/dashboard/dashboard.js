@@ -1,5 +1,5 @@
-// web/dashboard/dashboard.js - Live Monitor & Organizer Dashboard
-import * as api from '/shared/api.js';
+// web/dashboard/dashboard.js - Left-Aligned Live Monitor & Organizer Dashboard
+import * as api from '../shared/api.js';
 
 // DOM Elements
 const eventTitle = document.getElementById('event-title');
@@ -39,8 +39,8 @@ const statLeft = document.getElementById('stat-left');
 const departuresList = document.getElementById('departures-list');
 const departuresEmpty = document.getElementById('departures-empty');
 const rosterSearch = document.getElementById('roster-search');
-const rosterTbody = document.getElementById('roster-tbody');
-const filterTabs = document.querySelectorAll('.filter-tab');
+const rosterList = document.getElementById('roster-list');
+const filterPills = document.querySelectorAll('.filter-pill');
 
 const countAll = document.getElementById('count-all');
 const countInside = document.getElementById('count-inside');
@@ -74,12 +74,17 @@ let currentCapacity = null;
 let reconnectTimeout = null;
 let reconnectDelay = 1000;
 
-// --- Sound & Vibration Alerts ---
+function escapeHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, (m) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[m]));
+}
 
+// --- Sound & Vibration Alerts ---
 function updateSoundButtonUI() {
   if (btnToggleSound) {
-    btnToggleSound.textContent = isMuted ? '🔕 Muted' : '🔔 Sound';
-    btnToggleSound.title = isMuted ? 'Sound and vibration alerts muted (click to enable)' : 'Sound and vibration alerts active (click to mute)';
+    btnToggleSound.textContent = isMuted ? 'Muted' : 'Sound';
+    btnToggleSound.title = isMuted ? 'Alerts muted (click to enable)' : 'Alerts active (click to mute)';
   }
 }
 
@@ -92,14 +97,12 @@ btnToggleSound?.addEventListener('click', () => {
 function playDepartureAlert() {
   if (isMuted) return;
 
-  // Web Audio 2-tone melodic chime
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (AudioCtx) {
       const ctx = new AudioCtx();
       const now = ctx.currentTime;
 
-      // Tone 1: E5 (659 Hz)
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
       osc1.type = 'sine';
@@ -111,7 +114,6 @@ function playDepartureAlert() {
       osc1.start(now);
       osc1.stop(now + 0.22);
 
-      // Tone 2: B5 (987 Hz)
       const osc2 = ctx.createOscillator();
       const gain2 = ctx.createGain();
       osc2.type = 'sine';
@@ -123,11 +125,8 @@ function playDepartureAlert() {
       osc2.start(now + 0.12);
       osc2.stop(now + 0.4);
     }
-  } catch (err) {
-    // Handled if browser restricts audio autoplay before user interaction
-  }
+  } catch {}
 
-  // Device vibration
   if ('vibrate' in navigator) {
     try {
       navigator.vibrate([120, 60, 120]);
@@ -136,7 +135,6 @@ function playDepartureAlert() {
 }
 
 // --- Capacity Limit Management ---
-
 function getActiveEventId() {
   return dashboardData.event?.id ||
     api.getMonitorSession()?.eventId ||
@@ -148,14 +146,9 @@ function getActiveEventId() {
 function updateCapacityUI() {
   const eventId = getActiveEventId();
   currentCapacity = dashboardData.event?.capacity || api.getEventCapacity(eventId);
-
   const inside = dashboardData.inside ?? 0;
 
   if (!currentCapacity || currentCapacity <= 0) {
-    if (capacityBadge) {
-      capacityBadge.className = 'badge badge-muted';
-      capacityBadge.textContent = 'No limit set';
-    }
     if (capacityCounter) capacityCounter.textContent = `${inside} inside`;
     if (capacityFill) {
       capacityFill.style.width = '0%';
@@ -177,31 +170,18 @@ function updateCapacityUI() {
 
   if (pct >= 100) {
     if (capacityFill) capacityFill.className = 'capacity-fill capacity-red';
-    if (capacityBadge) {
-      capacityBadge.className = 'badge badge-red';
-      capacityBadge.textContent = `🚨 AT CAPACITY (${pct}%)`;
-    }
     if (capacityWarningText) {
       capacityWarningText.className = 'capacity-warning warning-red';
-      capacityWarningText.textContent = `⚠️ Venue is at or above capacity (${inside} of ${currentCapacity}). Restrict further admissions.`;
+      capacityWarningText.textContent = `At capacity (${inside} of ${currentCapacity}). Restrict further admissions.`;
     }
   } else if (pct >= 90) {
     if (capacityFill) capacityFill.className = 'capacity-fill capacity-amber';
-    if (capacityBadge) {
-      capacityBadge.className = 'badge badge-amber';
-      capacityBadge.textContent = `⚠️ NEAR CAPACITY (${pct}%)`;
-    }
     if (capacityWarningText) {
       capacityWarningText.className = 'capacity-warning warning-amber';
-      capacityWarningText.textContent = `⚠️ Approaching venue capacity (${inside} of ${currentCapacity} guests · ${currentCapacity - inside} spots remaining).`;
+      capacityWarningText.textContent = `Approaching capacity (${inside} of ${currentCapacity} · ${currentCapacity - inside} spots left).`;
     }
   } else {
     if (capacityFill) capacityFill.className = 'capacity-fill';
-    if (capacityBadge) {
-      capacityBadge.className = 'badge badge-green';
-      const remaining = currentCapacity - inside;
-      capacityBadge.textContent = `${remaining} spots available`;
-    }
     if (capacityWarningText) capacityWarningText.className = 'capacity-warning hidden';
   }
 }
@@ -241,7 +221,6 @@ capacityForm?.addEventListener('submit', async (e) => {
 });
 
 // --- Closing Time Mode ---
-
 function toggleClosingMode(enable) {
   isClosingMode = enable;
   if (isClosingMode) {
@@ -289,16 +268,14 @@ function renderClosingChecklist() {
 
   if (insideGuests.length === 0) {
     closingChecklistContainer.innerHTML = `
-      <div class="card text-center text-muted" style="padding: 3rem 1.5rem;">
-        <span style="font-size: 3rem;">🎉</span>
-        <h3 style="margin-top: 0.5rem; color: var(--text);">Venue Is Completely Cleared!</h3>
-        <p style="font-size: 1rem; margin-top: 0.5rem;">Zero guests are recorded inside. All wristbands have exited.</p>
+      <div class="card text-center text-muted" style="padding: 2.5rem 1.5rem; width: 100%;">
+        <h3>Venue is cleared</h3>
+        <p style="font-size: var(--text-14); margin-top: 0.5rem;">Zero guests are recorded inside. All wristbands have exited.</p>
       </div>
     `;
     return;
   }
 
-  // Alphabetical sort for security sweep
   const sorted = [...insideGuests].sort((a, b) => a.name.localeCompare(b.name));
 
   sorted.forEach(guest => {
@@ -309,10 +286,10 @@ function renderClosingChecklist() {
 
     item.innerHTML = `
       <div class="closing-checkbox">${isChecked ? '✓' : ''}</div>
-      <div class="closing-item-info">
-        <span class="closing-guest-name">${guest.name}</span>
-        <div class="closing-meta">
-          ${guest.band ? `<span class="band-chip">${guest.band}</span>` : '<span class="text-dim">—</span>'}
+      <div style="display: flex; flex-direction: column; gap: 0.2rem; min-width: 0;">
+        <span style="font-weight: 700; font-size: var(--text-16);">${escapeHtml(guest.name)}</span>
+        <div style="font-size: var(--text-14); color: var(--slate); display: flex; gap: 0.5rem; align-items: center;">
+          ${guest.band ? `<span class="wristband-chip band-orange" style="font-size: 12px; padding: 2px 10px 2px 8px;">${escapeHtml(guest.band)}</span>` : ''}
           <span>In at ${api.formatTime(guest.inAt)}</span>
         </div>
       </div>
@@ -332,7 +309,6 @@ function renderClosingChecklist() {
 }
 
 // --- Auth & Session ---
-
 async function init() {
   updateSoundButtonUI();
 
@@ -381,7 +357,6 @@ btnLogout.addEventListener('click', () => {
 });
 
 // --- Data Fetching & Rendering ---
-
 async function loadDashboard() {
   try {
     const data = await api.getDashboard();
@@ -397,11 +372,10 @@ async function loadDashboard() {
 
 function renderAll() {
   if (dashboardData.event) {
-    eventTitle.textContent = dashboardData.event.name || 'Event Dashboard';
-    document.title = `${dashboardData.event.name || 'Live'} - Homebound Dashboard`;
+    eventTitle.textContent = dashboardData.event.name || 'Live Dashboard';
+    document.title = `${dashboardData.event.name || 'Live'} - Homebound`;
   }
 
-  // Stats Counters
   statInside.textContent = dashboardData.inside ?? 0;
   statCheckedIn.textContent = dashboardData.checkedIn ?? 0;
   statLeft.textContent = dashboardData.left ?? 0;
@@ -415,6 +389,7 @@ function renderAll() {
   }
 }
 
+// Departures as grouped pink band chips
 function renderDepartures() {
   departuresList.innerHTML = '';
   const deps = dashboardData.recentDepartures || [];
@@ -425,28 +400,33 @@ function renderDepartures() {
   }
 
   deps.forEach(dep => {
-    const div = document.createElement('div');
-    div.className = 'departure-item';
-    const names = Array.isArray(dep.people) ? dep.people.join(' + ') : 'Guest';
-    const isGroup = Array.isArray(dep.people) && dep.people.length > 1;
+    const chip = document.createElement('div');
+    chip.className = 'wristband-banner';
+    chip.style.backgroundColor = 'var(--band-pink)';
+    chip.style.color = '#1B2340';
+    chip.style.marginBottom = '0.65rem';
 
-    div.innerHTML = `
-      <div class="departure-names">${names}</div>
-      <div class="departure-meta">
-        <span>${api.formatTime(dep.at)}</span>
-        <span class="badge ${isGroup ? 'badge-amber' : 'badge-muted'}" style="font-size: 0.75rem;">
-          ${isGroup ? `${dep.people.length} together` : 'alone'}
+    const peopleList = Array.isArray(dep.people) ? dep.people : [];
+    const names = peopleList.join(', ') || 'Guest';
+    const isGroup = peopleList.length > 1;
+    const timeStr = api.formatTime(dep.at);
+
+    chip.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; padding-right: 14px;">
+        <span style="font-family: var(--font-display); font-size: var(--text-16); font-weight: 700; word-break: break-word;">${escapeHtml(names)}</span>
+        <span style="font-family: var(--font-sans); font-size: var(--text-14); font-weight: 500; opacity: 0.85;">
+          ${isGroup ? 'left together' : 'left'} · ${timeStr}
         </span>
       </div>
     `;
-    departuresList.appendChild(div);
+    departuresList.appendChild(chip);
   });
 }
 
+// Searchable roster as rows of band chips
 function renderRoster() {
   const roster = dashboardData.roster || [];
 
-  // Update tab counts
   const total = roster.length;
   const inside = roster.filter(r => r.status === 'inside').length;
   const left = roster.filter(r => r.status === 'left').length;
@@ -457,7 +437,6 @@ function renderRoster() {
   countLeft.textContent = left;
   countNotArrived.textContent = notArrived;
 
-  // Filter roster
   const q = searchQuery.toLowerCase().trim();
   const filtered = roster.filter(item => {
     if (activeFilter !== 'all' && item.status !== activeFilter) {
@@ -471,53 +450,51 @@ function renderRoster() {
     return true;
   });
 
-  rosterTbody.innerHTML = '';
+  if (!rosterList) return;
+  rosterList.innerHTML = '';
+
   if (filtered.length === 0) {
-    rosterTbody.innerHTML = `
-      <tr>
-        <td colspan="6" class="text-center text-muted" style="padding: 2rem;">
-          No guests match this filter
-        </td>
-      </tr>
-    `;
+    rosterList.innerHTML = '<p class="text-muted" style="padding: 1.5rem 0; font-size: var(--text-14);">No guests match this filter</p>';
     return;
   }
 
   filtered.forEach(guest => {
-    const tr = document.createElement('tr');
+    const row = document.createElement('div');
+    row.className = 'roster-item';
 
-    let badgeClass = 'badge-muted';
-    let statusLabel = 'Not Arrived';
+    let chipHtml = '';
     if (guest.status === 'inside') {
-      badgeClass = 'badge-green';
-      statusLabel = 'Inside';
+      const timeStr = guest.inAt ? ` · ${api.formatTime(guest.inAt)}` : '';
+      chipHtml = `<span class="wristband-chip band-orange">Inside${timeStr}</span>`;
     } else if (guest.status === 'left') {
-      badgeClass = 'badge-amber';
-      statusLabel = 'Left';
+      const companions = Array.isArray(guest.leftWith) && guest.leftWith.length > 0
+        ? ` with ${escapeHtml(guest.leftWith.join(', '))}`
+        : '';
+      const timeStr = guest.outAt ? ` · ${api.formatTime(guest.outAt)}` : '';
+      chipHtml = `<span class="wristband-chip band-pink">Left${companions}${timeStr}</span>`;
+    } else {
+      chipHtml = `<span class="wristband-chip band-outline">Not arrived</span>`;
     }
 
-    const mates = Array.isArray(guest.leftWith) && guest.leftWith.length > 0
-      ? guest.leftWith.join(', ')
-      : '—';
-
-    tr.innerHTML = `
-      <td style="font-weight: 700;">${guest.name}</td>
-      <td>${guest.band ? `<span class="band-chip">${guest.band}</span>` : '<span class="text-dim">—</span>'}</td>
-      <td><span class="badge ${badgeClass}">${statusLabel}</span></td>
-      <td class="text-muted">${api.formatTime(guest.inAt)}</td>
-      <td class="text-muted">${api.formatTime(guest.outAt)}</td>
-      <td><span class="group-mates-tag">${mates}</span></td>
+    row.innerHTML = `
+      <div class="roster-guest-info">
+        <span class="roster-guest-name">${escapeHtml(guest.name)}</span>
+        ${guest.band ? `<span class="roster-guest-meta">Band [${escapeHtml(guest.band)}]</span>` : ''}
+      </div>
+      <div>
+        ${chipHtml}
+      </div>
     `;
-    rosterTbody.appendChild(tr);
+    rosterList.appendChild(row);
   });
 }
 
-// Filter tab handlers
-filterTabs.forEach(tab => {
-  tab.addEventListener('click', () => {
-    filterTabs.forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    activeFilter = tab.dataset.filter;
+// Filter pills
+filterPills.forEach(pill => {
+  pill.addEventListener('click', () => {
+    filterPills.forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    activeFilter = pill.dataset.filter;
     renderRoster();
   });
 });
@@ -528,7 +505,6 @@ rosterSearch.addEventListener('input', (e) => {
 });
 
 // --- SSE Real-time Updates & Auto-Reconnect ---
-
 function updateLiveStatus(state) {
   if (state === 'live') {
     liveBadge.className = 'live-indicator';
@@ -549,10 +525,10 @@ function scheduleReconnect() {
 
   reconnectTimeout = setTimeout(async () => {
     reconnectTimeout = null;
+    reconnectDelay = Math.min(reconnectDelay * 1.5, 15000);
     try {
       await loadDashboard();
       connectSse();
-      reconnectDelay = Math.min(reconnectDelay * 1.5, 8000);
     } catch {
       scheduleReconnect();
     }
@@ -561,7 +537,7 @@ function scheduleReconnect() {
 
 function connectSse() {
   if (streamSource) {
-    streamSource.close();
+    try { streamSource.close(); } catch {}
     streamSource = null;
   }
 
@@ -571,71 +547,76 @@ function connectSse() {
         updateLiveStatus('live');
       },
       onStats: (stats) => {
-        updateLiveStatus('live');
-        dashboardData.inside = stats.inside;
-        dashboardData.checkedIn = stats.checkedIn;
-        dashboardData.left = stats.left;
-        statInside.textContent = stats.inside;
-        statCheckedIn.textContent = stats.checkedIn;
-        statLeft.textContent = stats.left;
+        dashboardData.inside = stats.inside ?? dashboardData.inside;
+        dashboardData.checkedIn = stats.checkedIn ?? dashboardData.checkedIn;
+        dashboardData.left = stats.left ?? dashboardData.left;
+        statInside.textContent = dashboardData.inside;
+        statCheckedIn.textContent = dashboardData.checkedIn;
+        statLeft.textContent = dashboardData.left;
         updateCapacityUI();
-        if (isClosingMode) renderClosingChecklist();
       },
       onScan: (scan) => {
-        updateLiveStatus('live');
-        const guestName = scan.guest?.name;
-        if (guestName) {
-          const item = dashboardData.roster.find(r => r.name === guestName);
-          if (item) {
-            item.status = scan.direction === 'in' ? 'inside' : 'left';
-            if (scan.direction === 'in') item.inAt = scan.at;
-            else item.outAt = scan.at;
-            if (scan.band) item.band = scan.band;
-            renderRoster();
-            if (isClosingMode) renderClosingChecklist();
+        const guestName = scan.guest?.name || scan.guestName || 'Guest';
+        const bandKey = scan.shortCode || scan.bandToken;
+
+        let guestEntry = (dashboardData.roster || []).find(r =>
+          (scan.guestId && r.id === scan.guestId) ||
+          r.name.toLowerCase() === guestName.toLowerCase() ||
+          (bandKey && r.band === bandKey)
+        );
+
+        if (guestEntry) {
+          guestEntry.status = scan.direction === 'in' ? 'inside' : 'left';
+          if (scan.direction === 'in') {
+            guestEntry.inAt = scan.at || new Date().toISOString();
           } else {
-            loadDashboard();
+            guestEntry.outAt = scan.at || new Date().toISOString();
           }
+          if (bandKey && !guestEntry.band) guestEntry.band = bandKey;
+        } else {
+          dashboardData.roster = dashboardData.roster || [];
+          dashboardData.roster.unshift({
+            name: guestName,
+            band: bandKey,
+            status: scan.direction === 'in' ? 'inside' : 'left',
+            inAt: scan.direction === 'in' ? (scan.at || new Date().toISOString()) : null,
+            outAt: scan.direction === 'out' ? (scan.at || new Date().toISOString()) : null,
+          });
         }
+        renderRoster();
+        if (isClosingMode) renderClosingChecklist();
       },
       onDeparture: (dep) => {
-        updateLiveStatus('live');
-        playDepartureAlert();
-
-        const names = Array.isArray(dep.people) ? dep.people.map(p => p.name || p) : [];
-        if (!dashboardData.recentDepartures) dashboardData.recentDepartures = [];
-        dashboardData.recentDepartures.unshift({
-          at: dep.at,
-          people: names,
-        });
-        if (dashboardData.recentDepartures.length > 20) {
+        dashboardData.recentDepartures = dashboardData.recentDepartures || [];
+        dashboardData.recentDepartures.unshift(dep);
+        if (dashboardData.recentDepartures.length > 50) {
           dashboardData.recentDepartures.pop();
         }
-        renderDepartures();
 
-        names.forEach(name => {
-          const item = dashboardData.roster.find(r => r.name === name);
-          if (item) {
-            item.status = 'left';
-            item.outAt = dep.at;
-            item.leftWith = names.filter(n => n !== name);
+        const people = Array.isArray(dep.people) ? dep.people : [];
+        people.forEach(name => {
+          const entry = (dashboardData.roster || []).find(r => r.name.toLowerCase() === name.toLowerCase());
+          if (entry) {
+            entry.status = 'left';
+            entry.outAt = dep.at || new Date().toISOString();
+            if (people.length > 1) {
+              entry.leftWith = people.filter(p => p.toLowerCase() !== name.toLowerCase());
+            }
           }
         });
+
+        playDepartureAlert();
+        renderDepartures();
         renderRoster();
         if (isClosingMode) renderClosingChecklist();
       },
       onError: () => {
-        if (streamSource) {
-          streamSource.close();
-          streamSource = null;
-        }
         scheduleReconnect();
       },
     });
-  } catch (err) {
+  } catch {
     scheduleReconnect();
   }
 }
 
-// Initialize
 init();

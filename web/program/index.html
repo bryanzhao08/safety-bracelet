@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
   <title>Homebound Band Programmer</title>
-  <link rel="stylesheet" href="/shared/base.css">
-  <link rel="stylesheet" href="/program/program.css">
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="program.css">
 </head>
 <body class="program-app">
   <!-- Flash Banner -->
@@ -13,54 +13,47 @@
 
   <!-- Header -->
   <header class="program-header">
-    <div class="program-brand">
-      <span class="brand-icon">H</span>
-      <span>Band Programmer</span>
+    <div style="display: flex; align-items: center; gap: 0.6rem;">
+      <span class="wristband-chip band-orange">Homebound</span>
+      <span style="font-family: var(--font-display); font-weight: 700; font-size: var(--text-16);">Programmer</span>
     </div>
     <div style="display: flex; gap: 0.5rem; align-items: center;">
-      <a href="/door" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: 0.9rem;">
-        🚪 Door
+      <a href="../door/" class="btn btn-secondary" style="min-height: 40px; padding: 0.35rem 0.8rem; font-size: var(--text-14);">
+        Door
       </a>
-      <a href="/admin" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: 0.9rem;">
-        ⚙️ Admin
+      <a href="../admin/" class="btn btn-secondary" style="min-height: 40px; padding: 0.35rem 0.8rem; font-size: var(--text-14);">
+        Admin
       </a>
     </div>
   </header>
 
-  <main class="container" style="flex: 1; padding: 1.5rem 1rem 3rem 1rem;">
+  <main class="container" style="flex: 1; padding: 1.5rem 1rem 3rem 1rem; max-width: 680px;">
     <!-- iPhone / Unsupported Device Card (shown when Web NFC is not available) -->
     <div id="device-warning" class="incompatible-card hidden">
       <div class="incompatible-title">
-        <span>📱</span>
         <span>iPhone or Browser Without Web NFC</span>
       </div>
-      <p class="text-muted">
-        Web pages cannot write NFC tags on iOS or non-Chrome browsers.
+      <p class="text-muted" style="font-size: var(--text-14);">
+        Web browsers cannot write NFC tags on iOS.
       </p>
       <div class="incompatible-quote">
         Use an Android phone or an NFC writer app (e.g. NFC Tools) with the CSV
       </div>
-      <p style="font-size: 0.95rem; margin-top: 0.75rem; color: var(--text-muted);">
-        <strong>To batch write tags on iPhone:</strong><br>
-        1. Download the bands CSV below.<br>
-        2. Open the free <strong>NFC Tools</strong> app on your iPhone.<br>
-        3. Go to <em>Write</em> → <em>More options</em> → <em>Import CSV</em> to program tags in sequence.
-      </p>
       <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-        <button id="btn-download-csv-warning" class="btn btn-primary" type="button" style="min-height: 48px;">
-          ⬇ Download bands.csv
+        <button id="btn-download-csv-warning" class="btn btn-primary" type="button" style="min-height: 44px;">
+          Download bands.csv
         </button>
-        <button id="btn-copy-csv-warning" class="btn btn-secondary" type="button" style="min-height: 48px;">
-          📋 Copy CSV Data
+        <button id="btn-copy-csv-warning" class="btn btn-secondary" type="button" style="min-height: 44px;">
+          Copy CSV Data
         </button>
       </div>
     </div>
 
     <!-- Step 1: Load Bands Section -->
     <div id="load-section" class="card load-card">
-      <div style="text-align: center; margin-bottom: 1.5rem;">
-        <h1>Load Wristbands</h1>
-        <p class="text-muted mt-sm">Fetch bands from your event or upload a bands CSV</p>
+      <div style="margin-bottom: 1.25rem;">
+        <h1 style="font-size: var(--text-20);">Load Wristbands</h1>
+        <p class="text-muted" style="font-size: var(--text-14);">Fetch bands from your event or upload a bands CSV</p>
       </div>
 
       <!-- Option A: Fetch from Event -->
@@ -72,25 +65,25 @@
 
         <div class="form-group">
           <label class="form-label" for="prog-admin-pin">Admin PIN (8 digits)</label>
-          <input type="password" id="prog-admin-pin" class="input input-code" maxlength="8" placeholder="••••••••" required autocomplete="off">
+          <input type="password" id="prog-admin-pin" class="input input-short-code" maxlength="8" placeholder="••••••••" required autocomplete="off">
         </div>
 
         <div id="fetch-error" class="badge badge-amber hidden" style="width: 100%; justify-content: center; margin-bottom: 1rem;"></div>
 
-        <button type="submit" id="btn-fetch-bands" class="btn btn-primary btn-block btn-large">
-          ⚡ Fetch Bands from Server
+        <button type="submit" id="btn-fetch-bands" class="btn btn-primary btn-block" style="min-height: 48px;">
+          Fetch Bands from Event
         </button>
       </form>
 
-      <div class="divider">OR</div>
+      <div class="divider" style="margin: 1.5rem 0; text-align: center; color: var(--slate); font-size: var(--text-14);">OR</div>
 
       <!-- Option B: Upload CSV File -->
       <div id="drop-zone" class="drop-zone">
-        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📄</div>
-        <p style="font-weight: 700; margin-bottom: 0.25rem;">Drop bands.csv here</p>
-        <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">or select from your device</p>
+        <div style="font-size: 24px; margin-bottom: 0.25rem;">📄</div>
+        <p style="font-weight: 700; font-size: var(--text-16); margin-bottom: 0.25rem;">Drop bands.csv here</p>
+        <p class="text-muted" style="font-size: var(--text-14); margin-bottom: 0.75rem;">or select from your device</p>
         <input type="file" id="csv-file-input" accept=".csv,text/csv" class="hidden">
-        <button type="button" id="btn-browse-csv" class="btn btn-secondary" style="min-height: 48px;">
+        <button type="button" id="btn-browse-csv" class="btn btn-secondary" style="min-height: 44px;">
           Choose CSV File
         </button>
       </div>
@@ -98,80 +91,66 @@
 
     <!-- Step 2: Active Tag Programmer Section -->
     <div id="programmer-section" class="programmer-card hidden">
-      <!-- Progress Bar & Stats -->
-      <div class="progress-card">
-        <div class="progress-header">
-          <span id="prog-title" class="progress-title">Sticker 1 of 100</span>
-          <span id="prog-percent" class="badge badge-amber">0%</span>
+      <div class="prog-stats-bar">
+        <div class="prog-progress-wrap">
+          <div id="progress-bar" class="prog-progress-fill" style="width: 0%;"></div>
         </div>
-        <div class="progress-track">
-          <div id="prog-fill" class="progress-fill"></div>
-        </div>
-        <div class="progress-stats-chips">
-          <span id="chip-written" class="stat-chip chip-green">✓ 0 written</span>
-          <span id="chip-skipped" class="stat-chip">⏭ 0 skipped</span>
-          <span id="chip-remaining" class="stat-chip chip-amber">⏳ 0 remaining</span>
+        <div class="prog-stats-text">
+          <span id="written-count-text">0 of 0 programmed</span>
+          <span id="percent-text" class="text-slate">0%</span>
         </div>
       </div>
 
-      <!-- Giant Tag Programming Stage -->
-      <div id="stage-card" class="stage-card stage-ready">
-        <div id="stage-visual" class="stage-status-visual">
-          ⚡
+      <!-- Target Sticker Display -->
+      <div id="target-sticker-card" class="target-sticker-box">
+        <div class="target-header">
+          <span class="wristband-chip band-orange">Current wristband</span>
+          <span id="target-index-badge" class="badge badge-muted">#1</span>
         </div>
-        <div id="stage-prompt" class="stage-prompt">
-          Hold sticker to phone
-        </div>
-        <div id="stage-code" class="stage-sticker-code">
-          #----
-        </div>
-        <div id="stage-url" class="stage-url">
-          https://...
-        </div>
-        <div id="stage-status-msg" class="mt-md" style="font-weight: 700; font-size: 0.95rem; min-height: 24px; color: var(--text-muted);">
-          Ready to program tag
+
+        <div class="target-code-display font-condensed" id="target-code">----</div>
+        <div class="target-url-display" id="target-url">Ready to program</div>
+
+        <!-- Success Animation Overlay -->
+        <div id="success-overlay" class="success-overlay hidden">
+          <div class="success-checkmark">✓</div>
+          <div class="success-text">WRITTEN</div>
         </div>
       </div>
 
-      <!-- Controls -->
-      <div class="controls-grid">
-        <button id="btn-skip" class="btn btn-secondary btn-large" type="button">
-          ⏭ Skip
+      <!-- Live NFC Status Banner -->
+      <div id="nfc-live-status" class="nfc-live-bar waiting">
+        <div id="nfc-pulse-dot" class="nfc-live-dot"></div>
+        <span id="nfc-live-msg">Hold NFC sticker to the back of the phone</span>
+      </div>
+
+      <!-- Manual Action Buttons -->
+      <div class="programmer-actions">
+        <button id="btn-skip" class="btn btn-secondary" type="button" style="min-height: 48px;">
+          Skip &rarr;
         </button>
-        <button id="btn-rewrite" class="btn btn-primary btn-large" type="button">
-          ↻ Rewrite
+        <button id="btn-rewrite" class="btn btn-secondary" type="button" style="min-height: 48px;">
+          Rewrite Last
         </button>
       </div>
 
-      <!-- Navigation & Options -->
-      <div class="card" style="padding: 1rem;">
-        <div class="nav-buttons-row">
-          <button id="btn-prev" class="btn btn-secondary" style="min-height: 44px; flex: 1;" type="button">
-            ◀ Previous
-          </button>
-          <button id="btn-next" class="btn btn-secondary" style="min-height: 44px; flex: 1;" type="button">
-            Next ▶
-          </button>
-        </div>
-
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border);">
-          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; user-select: none;">
-            <input type="checkbox" id="check-auto-advance" checked style="width: 20px; height: 20px;">
-            <span style="font-size: 0.95rem; font-weight: 600;">Auto-advance after write</span>
-          </label>
-          <button id="btn-reload-csv" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.3rem 0.6rem; min-height: 36px;" type="button">
-            Load New File
-          </button>
-        </div>
+      <div class="programmer-options">
+        <label class="toggle-wrap">
+          <input type="checkbox" id="check-auto-advance" checked>
+          <span style="font-size: var(--text-14); font-weight: 600;">Auto-advance after write</span>
+        </label>
+        <button id="btn-reload-csv" class="btn btn-secondary" style="font-size: var(--text-14); padding: 0.3rem 0.6rem; min-height: 38px;" type="button">
+          Load New File
+        </button>
       </div>
 
       <!-- Full Sticker Sheet List -->
-      <div class="stickers-list-card">
+      <div class="stickers-list-card card mt-md">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-          <h3 style="font-size: 1.05rem;">All Wristbands (<span id="total-bands-count">0</span>)</h3>
+          <h3 style="font-size: var(--text-16);">All Wristbands (<span id="total-bands-count">0</span>)</h3>
           <div style="display: flex; gap: 0.25rem;">
-            <button id="filter-all" class="btn btn-secondary" style="min-height: 32px; font-size: 0.75rem; padding: 0.2rem 0.5rem;">All</button>
-            <button id="filter-pending" class="btn btn-secondary" style="min-height: 32px; font-size: 0.75rem; padding: 0.2rem 0.5rem;">Pending</button>
+            <button id="filter-all" class="btn btn-secondary" style="min-height: 32px; font-size: 12px; padding: 0.2rem 0.5rem;" type="button">All</button>
+            <button id="filter-pending" class="btn btn-secondary" style="min-height: 32px; font-size: 12px; padding: 0.2rem 0.5rem;" type="button">Pending</button>
           </div>
         </div>
         <div id="stickers-grid" class="stickers-grid"></div>
@@ -179,6 +158,6 @@
     </div>
   </main>
 
-  <script type="module" src="/program/program.js"></script>
+  <script type="module" src="program.js"></script>
 </body>
 </html>

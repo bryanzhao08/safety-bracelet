@@ -17,3 +17,7 @@ agy_c.log
 __pycache__/
 agy_csv.log
 agy_testids.log
+agy_*.log
+.DS_Store
+*.kicad_prl
+web/_screens/

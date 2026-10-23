@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Homebound Safety Band</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <style>
+    .band-page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .band-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: rgba(255, 180, 76, 0.15);
+      border: 2px solid var(--accent-amber);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+    }
+    .band-id-box {
+      margin: 1.5rem 0;
+      padding: 0.75rem 1.25rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      color: var(--accent-amber);
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <div class="band-page">
+    <div class="card" style="max-width: 480px; width: 100%; padding: 2rem 1.5rem;">
+      <div style="display: flex; justify-content: center;">
+        <div class="band-icon">🎗️</div>
+      </div>
+      <h1 style="font-size: 1.5rem; margin-bottom: 0.75rem;">This is a Homebound safety band.</h1>
+      <p class="text-muted" style="margin-bottom: 1rem; line-height: 1.6;">
+        This band is worn by an attendee at a private event to help guests look out for one another and leave safely together.
+      </p>
+
+      <div id="bandIdContainer" style="display: none;">
+        <p class="text-dim" style="font-size: 0.85rem; margin-bottom: 0.25rem;">Band Token</p>
+        <div id="bandIdDisplay" class="band-id-box"></div>
+      </div>
+
+      <div style="margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--border);">
+        <p class="text-dim" style="font-size: 0.9rem; margin-bottom: 1rem;">Are you working the event door?</p>
+        <a id="doorStaffLink" href="../door/" class="btn btn-secondary btn-block">
+          Open Door Check-In
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { getMonitorToken } from '../shared/api.js';
+
+    const params = new URLSearchParams(window.location.search);
+    const bandToken = params.get('b');
+    const monitorToken = getMonitorToken();
+
+    // If an active monitor session exists, jump straight to the door scanner
+    if (monitorToken && bandToken) {
+      window.location.replace(`../door/?band=${encodeURIComponent(bandToken)}`);
+    } else {
+      if (bandToken) {
+        const bandIdContainer = document.getElementById('bandIdContainer');
+        const bandIdDisplay = document.getElementById('bandIdDisplay');
+        const doorStaffLink = document.getElementById('doorStaffLink');
+
+        bandIdDisplay.textContent = bandToken;
+        bandIdContainer.style.display = 'block';
+        doorStaffLink.href = `../door/?band=${encodeURIComponent(bandToken)}`;
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 // web/program/program.js - Homebound Band Programmer Controller
+import * as api from '../shared/api.js';
 
 const hasWebNfc = 'NDEFReader' in window;
 
@@ -153,26 +154,15 @@ fetchBandsForm.addEventListener('submit', async (e) => {
   btnFetchBands.textContent = 'Fetching bands...';
 
   try {
-    const response = await fetch(`/api/events/${encodeURIComponent(eventId)}/bands.csv`, {
-      headers: {
-        'Accept': 'text/csv, text/plain',
-        'X-Admin-Pin': pin,
-      },
-    });
-
-    if (!response.ok) {
-      const data = await response.json().catch(() => null);
-      throw new Error(data?.message || `HTTP ${response.status}: Failed to fetch bands CSV`);
-    }
-
-    const csvText = await response.text();
+    api.saveAdminSession({ eventId, adminPin: pin });
+    const csvText = await api.getBandsCsv(eventId);
     loadCsvText(csvText, `bands-${eventId.slice(0, 8)}.csv`);
   } catch (err) {
     fetchError.textContent = err.message || 'Failed to fetch bands CSV. Check Event ID and Admin PIN.';
     fetchError.classList.remove('hidden');
   } finally {
     btnFetchBands.disabled = false;
-    btnFetchBands.textContent = '⚡ Fetch Bands from Server';
+    btnFetchBands.textContent = 'Fetch Bands from Event';
   }
 });
 

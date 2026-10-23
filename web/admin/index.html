@@ -4,503 +4,403 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Homebound Admin</title>
-  <link rel="stylesheet" href="/shared/base.css">
-  <link rel="stylesheet" href="/admin/admin.css">
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="admin.css">
 </head>
 <body class="admin-app">
   <!-- Flash Banner -->
   <div id="flash-banner" class="flash-banner" role="alert"></div>
 
   <!-- Header -->
-  <header class="app-header no-print">
-    <div class="app-brand">
-      <span class="brand-icon">H</span>
-      <span>Homebound Admin</span>
+  <header class="admin-header no-print">
+    <div style="display: flex; align-items: center; gap: 0.6rem;">
+      <span class="wristband-chip band-orange">Homebound</span>
+      <span style="font-family: var(--font-display); font-weight: 700; font-size: var(--text-16);">Admin</span>
     </div>
     <div style="display: flex; gap: 0.5rem; align-items: center;">
-      <a href="/door" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: 0.9rem;">
-        🚪 Door Scanner
+      <a href="../door/" class="btn btn-secondary" style="min-height: 40px; padding: 0.35rem 0.8rem; font-size: var(--text-14);">
+        Door Scanner
       </a>
-      <a href="/dashboard" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: 0.9rem;">
-        📊 Dashboard
+      <a href="../dashboard/" class="btn btn-secondary" style="min-height: 40px; padding: 0.35rem 0.8rem; font-size: var(--text-14);">
+        Dashboard
       </a>
-      <button id="btn-switch-event" class="btn btn-secondary hidden" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: 0.9rem;" type="button">
+      <button id="btn-switch-event" class="btn btn-secondary hidden" style="min-height: 40px; padding: 0.35rem 0.8rem; font-size: var(--text-14);" type="button">
         Switch Event
       </button>
     </div>
   </header>
 
-  <!-- Main Container -->
-  <main class="container" style="flex: 1; padding-top: 1.5rem; padding-bottom: 3rem;">
-    <!-- Welcome & Create/Login View (shown when no event is loaded) -->
-    <div id="auth-view" class="card" style="max-width: 580px; margin: 2rem auto;">
-      <div style="text-align: center; margin-bottom: 2rem;">
-        <h1>Organizer Portal</h1>
-        <p class="text-muted mt-sm">Create a new safety event or log in with your Admin PIN</p>
+  <!-- Single Column Sequence (max 680 px) -->
+  <main class="admin-container">
+    <!-- STEP 1: CREATE OR CONNECT EVENT -->
+    <section id="step-1-card" class="step-card active-step">
+      <div class="step-header">
+        <div class="step-title-group">
+          <span class="step-number">1</span>
+          <h2 class="step-title">Create or connect event</h2>
+          <p class="step-desc">Set up your safety check-in for tonight</p>
+        </div>
+        <span id="step-1-badge" class="badge badge-muted">Step 1</span>
       </div>
 
-      <!-- Create New Event -->
-      <section style="margin-bottom: 2rem;">
-        <h2>Create New Event</h2>
-        <form id="create-event-form" class="mt-md">
-          <div class="form-group">
+      <!-- Google Sheets setup notice (shown when createEvent returns use_sheet_setup) -->
+      <div id="sheets-setup-notice" class="sheets-setup-box hidden">
+        <div style="font-weight: 700; color: var(--band-orange); font-size: var(--text-16);">
+          This site saves to a Google Sheet.
+        </div>
+        <p style="font-size: var(--text-14); margin: 0; color: var(--tyvek);">
+          Set up your Google Sheet backend first. It takes about two minutes.
+        </p>
+        <div>
+          <a href="../setup/" class="btn btn-primary" style="min-height: 44px; display: inline-flex;">
+            Connect a Google Sheet &rarr;
+          </a>
+        </div>
+      </div>
+
+      <!-- If no event loaded: Show Create or Login forms -->
+      <div id="event-setup-forms">
+        <form id="create-event-form" style="display: flex; flex-direction: column; gap: 0.85rem;">
+          <div class="form-group" style="margin-bottom: 0;">
             <label class="form-label" for="create-name">Event Name *</label>
-            <input type="text" id="create-name" class="input" placeholder="e.g. Neon Nights Warehouse Party" required>
+            <input type="text" id="create-name" class="input" placeholder="e.g. Chapter Formal" required>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div class="form-group">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group" style="margin-bottom: 0;">
               <label class="form-label" for="create-starts">Starts At *</label>
               <input type="datetime-local" id="create-starts" class="input" required>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom: 0;">
               <label class="form-label" for="create-ends">Ends At *</label>
               <input type="datetime-local" id="create-ends" class="input" required>
             </div>
           </div>
-          <button type="submit" class="btn btn-primary btn-block mt-sm">
-            Create Event &amp; Generate PIN
+          <button type="submit" class="btn btn-primary btn-block" style="margin-top: 0.5rem;">
+            Create Event &amp; Get PIN
           </button>
         </form>
-      </section>
 
-      <div style="border-top: 1px solid var(--border); margin: 2rem 0;"></div>
+        <div style="border-top: 1px solid var(--border); margin: 1.5rem 0 1rem 0;"></div>
 
-      <!-- Manage Existing Event -->
-      <section>
-        <h2>Log Into Existing Event</h2>
-        <form id="login-event-form" class="mt-md">
-          <div class="form-group">
-            <label class="form-label" for="admin-event-id">Event ID</label>
-            <input type="text" id="admin-event-id" class="input" placeholder="e.g. 8f2a1b9c..." required>
+        <form id="login-event-form" style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <div style="font-weight: 600; font-size: var(--text-14); color: var(--slate);">Or log into existing event:</div>
+          <div style="display: grid; grid-template-columns: 1fr 140px; gap: 0.5rem;">
+            <input type="text" id="admin-event-id" class="input" placeholder="Event ID" required>
+            <input type="password" id="admin-pin" class="input input-short-code" maxlength="8" placeholder="PIN" required>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="admin-pin">8-digit Admin PIN</label>
-            <input type="password" id="admin-pin" class="input input-code" maxlength="8" placeholder="••••••••" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="admin-monitor-code">6-character Door Monitor Code (optional)</label>
-            <input type="text" id="admin-monitor-code" class="input input-code" maxlength="6" placeholder="e.g. ABC123">
-            <p class="text-muted" style="font-size: 0.8rem; margin-top: 0.25rem;">
-              Enables guest roster lookup for incident timelines
-            </p>
-          </div>
-          <button type="submit" class="btn btn-secondary btn-block mt-sm">
-            Access Event Admin
+          <input type="text" id="admin-monitor-code" class="input input-short-code" maxlength="6" placeholder="Door code (optional)">
+          <button type="submit" class="btn btn-secondary btn-block">
+            Connect Existing Event
           </button>
         </form>
-      </section>
-    </div>
+      </div>
 
-    <!-- Active Event Admin View -->
-    <div id="event-admin-view" class="hidden">
-      <!-- Event Header & Stats -->
-      <div class="card mb-lg" style="margin-bottom: 1.5rem;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+      <!-- If event is loaded: Show Active Event Summary -->
+      <div id="event-loaded-summary" class="hidden" style="display: flex; flex-direction: column; gap: 0.85rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
           <div>
-            <h1 id="event-name-display">Event Name</h1>
-            <p id="event-dates-display" class="text-muted mt-sm">Starts ... · Ends ...</p>
-            <p class="text-dim" style="font-size: 0.85rem; margin-top: 0.25rem;">
-              Retention: data auto-deleted 30 days after event ends
-            </p>
+            <h1 id="event-name-display" style="font-size: var(--text-20); margin-bottom: 0.25rem;">Event Name</h1>
+            <p id="event-dates-display" class="text-muted" style="font-size: var(--text-14);">Starts ... &middot; Ends ...</p>
+            <!-- Open Google Sheet Link (in sheets mode) -->
+            <a id="sheet-external-link" href="#" target="_blank" rel="noopener" class="sheet-external-link hidden">
+              Open the Google Sheet &rarr;
+            </a>
           </div>
-          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;">
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem;">
             <span id="event-status-badge" class="badge badge-green">Active</span>
-            <span id="display-monitor-code" class="badge badge-muted" style="font-size: 0.85rem;">
-              Door Code: —
-            </span>
+            <span id="display-monitor-code" class="badge badge-muted">Door Code: &mdash;</span>
           </div>
         </div>
 
-        <div class="admin-stats-grid mt-lg">
-          <div class="stat-card">
-            <span class="stat-label">Total Guests</span>
-            <span id="admin-stat-guests" class="stat-value">0</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">Bands Ready</span>
-            <span id="admin-stat-bands" class="stat-value">0</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">Currently Inside</span>
-            <span id="admin-stat-inside" class="stat-value inside-highlight">0</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">Checked In</span>
-            <span id="admin-stat-checked" class="stat-value">0</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">Departed</span>
-            <span id="admin-stat-left" class="stat-value">0</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">Leaving Groups</span>
-            <span id="admin-stat-groups" class="stat-value">0</span>
-          </div>
-        </div>
-
-        <!-- Venue Capacity Setting -->
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+        <!-- Venue Capacity Limit Setting -->
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; padding-top: 0.75rem; border-top: 1px solid var(--border);">
           <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-            <label class="form-label" for="admin-event-capacity" style="margin-bottom: 0; font-weight: 700;">Venue Capacity:</label>
-            <input type="number" id="admin-event-capacity" class="input" style="max-width: 140px; min-height: 40px; padding: 0.3rem 0.75rem;" min="1" max="10000" placeholder="e.g. 150">
-            <button id="btn-save-capacity" class="btn btn-secondary" style="min-height: 40px; padding: 0.3rem 0.9rem; font-size: 0.9rem;" type="button">Save Limit</button>
-            <span id="capacity-save-status" class="text-muted" style="font-size: 0.85rem;">(Warns dashboard at 90% and 100%)</span>
+            <label class="form-label" for="admin-event-capacity" style="margin-bottom: 0;">Venue Capacity:</label>
+            <input type="number" id="admin-event-capacity" class="input" style="max-width: 120px; min-height: 38px; padding: 0.25rem 0.6rem;" min="1" max="10000" placeholder="150">
+            <button id="btn-save-capacity" class="btn btn-secondary" style="min-height: 38px; padding: 0.25rem 0.75rem; font-size: var(--text-14);" type="button">Save</button>
           </div>
           <span id="capacity-badge-admin" class="badge badge-muted">No limit</span>
         </div>
+
+        <!-- Mini Stats Summary -->
+        <div class="admin-stats-summary">
+          <div class="admin-stat-box">
+            <span class="form-label">Guests</span>
+            <span id="admin-stat-guests" class="admin-stat-num">0</span>
+          </div>
+          <div class="admin-stat-box">
+            <span class="form-label">Bands Made</span>
+            <span id="admin-stat-bands" class="admin-stat-num">0</span>
+          </div>
+          <div class="admin-stat-box">
+            <span class="form-label">Inside Now</span>
+            <span id="admin-stat-inside" class="admin-stat-num" style="color: var(--band-orange);">0</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 2: IMPORT GUESTS -->
+    <section id="step-2-card" class="step-card">
+      <div class="step-header">
+        <div class="step-title-group">
+          <span class="step-number">2</span>
+          <h2 class="step-title">Import guests</h2>
+          <p class="step-desc">Upload RSVPs from Luma or Partiful (CSV)</p>
+        </div>
+        <span class="badge badge-muted">Step 2</span>
       </div>
 
-      <!-- Navigation Tabs -->
-      <nav class="admin-tabs no-print">
-        <button class="admin-tab active" data-tab="guests" type="button">👥 Guest Import</button>
-        <button class="admin-tab" data-tab="bands" type="button">🏷️ Wristbands</button>
-        <button class="admin-tab" data-tab="timeline" type="button">⏱️ Incident Timeline</button>
-        <button class="admin-tab" data-tab="export" type="button">📥 Data &amp; Close</button>
-      </nav>
+      <div class="csv-howtos">
+        <div><strong>Luma:</strong> Event &rarr; Manage &rarr; Guests &rarr; Export CSV</div>
+        <div><strong>Partiful:</strong> Event &rarr; Guest list &rarr; Export (CSV)</div>
+      </div>
 
-      <!-- TAB 1: Guest Import -->
-      <section id="tab-guests" class="admin-section active">
-        <!-- Upload guest list (CSV) -->
-        <div class="card">
-          <h2>Upload guest list (CSV)</h2>
-          <p class="text-muted mt-sm">Upload exported guest list from Luma or Partiful (CSV columns auto-detected)</p>
+      <div id="csv-dropzone" class="dropzone">
+        <span style="font-size: 24px;">📄</span>
+        <div style="font-weight: 700; font-size: var(--text-16);">Drop guest list CSV here, or click to browse</div>
+        <div style="font-size: var(--text-14); color: var(--slate);">Auto-detects name, email, phone, and RSVP status</div>
+        <input type="file" id="csv-file-input" accept=".csv,text/csv" style="display: none;">
+      </div>
 
-          <!-- Short how-tos -->
-          <div class="csv-howtos mt-md">
-            <div class="csv-howto-item">
-              <span class="csv-howto-bullet">•</span>
-              <span><strong>Luma (free):</strong> your event &rarr; Manage &rarr; Guests &rarr; Download / Export CSV.</span>
-            </div>
-            <div class="csv-howto-item">
-              <span class="csv-howto-bullet">•</span>
-              <span><strong>Partiful:</strong> your event &rarr; Guest list &rarr; Export (CSV).</span>
-            </div>
-          </div>
+      <div id="csv-preview" class="hidden" style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <div class="badge badge-green" id="csv-status"></div>
+        <button id="btn-upload-csv" class="btn btn-primary" type="button">
+          Import Guests from CSV
+        </button>
+      </div>
+      <div id="csv-result" class="hidden"></div>
 
-          <div id="csv-dropzone" class="dropzone mt-md">
-            <span style="font-size: 2rem;">📄</span>
-            <p style="font-weight: 600;">Drag &amp; drop guest list CSV here, or click to browse</p>
-            <p class="text-dim text-sm" style="margin: 0;">Auto-detects name, email, phone, and RSVP status columns</p>
-            <input type="file" id="csv-file-input" accept=".csv,text/csv" style="display: none;">
-          </div>
-          <div id="csv-preview" class="hidden mt-md">
-            <div class="badge badge-green" id="csv-status"></div>
-            <button id="btn-upload-csv" class="btn btn-primary mt-sm" type="button">
-              Upload &amp; Import CSV
-            </button>
-          </div>
-          <div id="csv-result" class="hidden mt-md"></div>
+      <!-- Collapsible Luma API option -->
+      <details style="border-top: 1px solid var(--border); padding-top: 0.75rem;">
+        <summary style="cursor: pointer; font-size: var(--text-14); font-weight: 600; color: var(--slate);">
+          Or sync via Luma API (Luma Plus)
+        </summary>
+        <form id="luma-form" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem;">
+          <input type="password" id="luma-api-key" class="input" placeholder="Luma API Key (luma_api_...)" required>
+          <input type="text" id="luma-event-id" class="input" placeholder="Luma Event API ID (evt-...)" required>
+          <button type="submit" class="btn btn-secondary">Sync from Luma</button>
+        </form>
+      </details>
+
+      <!-- Walk-in guest manual addition -->
+      <details style="border-top: 1px solid var(--border); padding-top: 0.75rem;">
+        <summary style="cursor: pointer; font-size: var(--text-14); font-weight: 600; color: var(--slate);">
+          + Add single walk-in guest
+        </summary>
+        <form id="admin-guest-form" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem;">
+          <input type="text" id="guest-name" class="input" placeholder="Full name *" required>
+          <input type="email" id="guest-email" class="input" placeholder="Email (optional)">
+          <input type="tel" id="guest-phone" class="input" placeholder="Phone (optional)">
+          <button type="submit" class="btn btn-secondary">Add Guest</button>
+        </form>
+      </details>
+    </section>
+
+    <!-- STEP 3: MAKE BANDS -->
+    <section id="step-3-card" class="step-card">
+      <div class="step-header">
+        <div class="step-title-group">
+          <span class="step-number">3</span>
+          <h2 class="step-title">Make bands</h2>
+          <p class="step-desc">Generate wristband short codes &amp; print sheets</p>
         </div>
+        <span class="badge badge-muted">Step 3</span>
+      </div>
 
-        <!-- Luma API (Luma Plus only) -->
-        <details class="card luma-collapse">
-          <summary class="luma-summary">
-            <div class="luma-summary-title">
-              <span class="luma-summary-icon">⚡</span>
-              <span>Luma API (Luma Plus only)</span>
-            </div>
-            <span class="badge badge-muted" style="font-size: 0.75rem;">Luma Plus Required</span>
-          </summary>
+      <form id="generate-bands-form" style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
+        <div class="form-group" style="margin-bottom: 0; min-width: 140px;">
+          <label class="form-label" for="band-count">Number of bands</label>
+          <input type="number" id="band-count" class="input" min="1" max="2000" value="50" required>
+        </div>
+        <button type="submit" class="btn btn-primary">
+          Generate Bands
+        </button>
+      </form>
 
-          <div class="luma-collapse-content mt-md">
-            <p class="text-muted">Sync guest list directly via Luma's public API (requires a paid Luma Plus subscription with API access).</p>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+        <button id="btn-view-sheet" class="btn btn-secondary" type="button">
+          Print Wristband Cards
+        </button>
+        <button id="btn-view-avery" class="btn btn-secondary" type="button">
+          Print Avery 2"&times;1" Labels
+        </button>
+        <button id="btn-download-nfc-csv" class="btn btn-secondary" type="button">
+          Download NFC CSV
+        </button>
+      </div>
 
-            <!-- Help Guide -->
-            <div class="luma-guide-box mt-md">
-              <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-amber); display: flex; align-items: center; gap: 0.4rem;">
-                <span>ℹ️</span> Where to find your Luma API Key &amp; Event ID
-              </h3>
-              <ol style="margin: 0.5rem 0 0 1.25rem; padding: 0; line-height: 1.6; font-size: 0.88rem; color: var(--text-muted);">
-                <li>Log into your host account on <a href="https://lu.ma" target="_blank" rel="noopener" style="color: var(--accent-amber); text-decoration: underline;">lu.ma</a>.</li>
-                <li>Go to <strong>Settings</strong> (click your avatar at top-right) &rarr; <strong>API</strong> (or visit <a href="https://lu.ma/settings/api" target="_blank" rel="noopener" style="color: var(--accent-amber); text-decoration: underline;">lu.ma/settings/api</a>).</li>
-                <li>Click <strong>Create API Key</strong>, choose a label (e.g. <em>Homebound</em>), and copy the key (begins with <code>luma_api_...</code>).</li>
-                <li>Open your event's management page: the <strong>Event API ID</strong> is in the URL or under <strong>Event Settings &rarr; API</strong> (format: <code>evt-...</code>).</li>
-              </ol>
-              <p class="text-dim mt-sm" style="font-size: 0.8rem; margin-bottom: 0;">
-                🔒 Encrypted: Your API key is encrypted with AES-256 on the server and is never stored in plaintext.
-              </p>
-            </div>
-
-            <form id="luma-form" class="mt-md">
-              <div class="form-group">
-                <label class="form-label" for="luma-api-key">Luma API Key</label>
-                <input type="password" id="luma-api-key" class="input" placeholder="luma_api_..." required>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="luma-event-id">Luma Event API ID</label>
-                <input type="text" id="luma-event-id" class="input" placeholder="evt-..." required>
-              </div>
-              <button type="submit" class="btn btn-primary">
-                Sync Guests from Luma
-              </button>
-            </form>
+      <!-- Printable sheet preview container -->
+      <div id="print-sheet-area" class="printable-sheet-container card">
+        <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <h3 id="sheet-preview-title" style="color: #000;">Print Preview</h3>
+            <p id="sheet-preview-desc" style="color: #666; font-size: 13px;">Letter size format</p>
           </div>
-        </details>
-
-        <!-- Walk-in Guest Addition -->
-        <div class="card">
-          <h2>Add Walk-in Guest</h2>
-          <form id="admin-guest-form" class="mt-md">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
-              <div class="form-group">
-                <label class="form-label" for="guest-name">Full Name *</label>
-                <input type="text" id="guest-name" class="input" placeholder="Maya Angelou" required>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="guest-email">Email (optional)</label>
-                <input type="email" id="guest-email" class="input" placeholder="maya@example.com">
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="guest-phone">Phone (optional)</label>
-                <input type="tel" id="guest-phone" class="input" placeholder="+1 ...">
-              </div>
-            </div>
-            <button type="submit" class="btn btn-secondary mt-sm">
-              Add Guest to Roster
-            </button>
-          </form>
+          <div style="display: flex; gap: 0.5rem;">
+            <button id="btn-trigger-print" class="btn btn-primary" type="button">Print Now</button>
+            <button id="btn-close-print-sheet" class="btn btn-secondary" type="button">Close</button>
+          </div>
         </div>
-      </section>
+        <div id="bands-grid" class="band-grid"></div>
+      </div>
+    </section>
 
-      <!-- TAB 2: Wristbands -->
-      <section id="tab-bands" class="admin-section">
-        <!-- Generate Bands -->
-        <div class="card">
-          <h2>Generate Wristbands</h2>
-          <p class="text-muted mt-sm">Creates unique tokens and 4-character codes for NFC and QR bands (up to 2,000)</p>
-          <form id="generate-bands-form" class="mt-md" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
-            <div class="form-group" style="margin-bottom: 0; min-width: 160px;">
-              <label class="form-label" for="band-count">Number of Bands</label>
-              <input type="number" id="band-count" class="input" min="1" max="2000" value="50" required>
-            </div>
-            <button type="submit" class="btn btn-primary">
-              Generate Bands
-            </button>
-          </form>
+    <!-- STEP 4: SHARE DOOR LINK -->
+    <section id="step-4-card" class="step-card">
+      <div class="step-header">
+        <div class="step-title-group">
+          <span class="step-number">4</span>
+          <h2 class="step-title">Share door link</h2>
+          <p class="step-desc">Send to your sober monitors &amp; volunteers</p>
         </div>
+        <span class="badge badge-muted">Step 4</span>
+      </div>
 
-        <!-- Printable Band Sheet View -->
-        <div class="card">
-          <h2>Printable Band Sheets</h2>
-          <p class="text-muted mt-sm">Generate printable sheets with QR codes and 4-letter short codes</p>
-          <div style="display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap;">
-            <button id="btn-view-sheet" class="btn btn-secondary" type="button">
-              🖨️ View Standard Cards
-            </button>
-            <button id="btn-view-avery" class="btn btn-secondary" type="button">
-              🏷️ View Avery 2"×1" Labels
-            </button>
-            <a id="btn-download-nfc-csv" class="btn btn-secondary" href="#" download="bands.csv">
-              📥 Download NFC Tag CSV
-            </a>
+      <div class="secret-box">
+        <div>
+          <span class="form-label">Door Monitor Code</span>
+          <div class="secret-row">
+            <span id="active-monitor-code-val" class="secret-value">&mdash;</span>
+            <button class="btn btn-secondary btn-copy" data-target="active-monitor-code-val" type="button" style="min-height: 38px;">Copy</button>
           </div>
         </div>
 
-        <!-- Rendered Printable Grid Area -->
-        <div id="print-sheet-area" class="printable-sheet-container card">
-          <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;">
-            <div>
-              <h2 id="sheet-preview-title">Print Preview (Standard Wristband Cards)</h2>
-              <p id="sheet-preview-desc" class="text-muted" style="font-size: 0.85rem;">Formatted for letter size sheets</p>
-            </div>
-            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-              <div class="filter-tabs" style="padding: 0.2rem;">
-                <button id="btn-format-standard" class="filter-tab active" type="button">Standard Cards</button>
-                <button id="btn-format-avery" class="filter-tab" type="button">Avery 2"×1"</button>
-              </div>
-              <button id="btn-trigger-print" class="btn btn-primary" type="button">Print Sheet</button>
-              <button id="btn-close-print-sheet" class="btn btn-secondary" type="button">Close</button>
-            </div>
-          </div>
-          <div id="bands-grid" class="band-grid"></div>
-        </div>
-      </section>
-
-      <!-- TAB 3: Incident Timeline -->
-      <section id="tab-timeline" class="admin-section">
-        <div class="card no-print">
-          <h2>Incident Timeline &amp; Follow-up</h2>
-          <p class="text-muted mt-sm">Search any guest to reconstruct their chronological timeline, entries, exits, and companions.</p>
-
-          <!-- Audit Log Notice -->
-          <div class="badge badge-amber mt-md" style="width: 100%; justify-content: center; font-size: 0.9rem; padding: 0.65rem;">
-            🔒 Notice: Every guest timeline lookup is permanently recorded in the event audit log.
-          </div>
-
-          <!-- Monitor session check for search -->
-          <div id="timeline-auth-helper" class="mt-md hidden" style="background-color: var(--bg-surface); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border);">
-            <p style="font-size: 0.9rem; margin-bottom: 0.5rem;"><strong>Door Monitor Code Required for Live Search:</strong></p>
-            <div style="display: flex; gap: 0.5rem;">
-              <input type="text" id="timeline-monitor-code-input" class="input input-code" maxlength="6" placeholder="ABC123" style="max-width: 140px;">
-              <button id="btn-connect-timeline-monitor" class="btn btn-secondary" type="button">Connect Roster Search</button>
-            </div>
-          </div>
-
-          <!-- Guest Search Input -->
-          <div class="mt-md" style="position: relative;">
-            <label class="form-label" for="timeline-search-input">Search Guest</label>
-            <input type="search" id="timeline-search-input" class="input" placeholder="Type guest name (e.g. Maya) or band code..." autocomplete="off">
-            <div id="timeline-search-results" class="search-dropdown hidden"></div>
+        <div>
+          <span class="form-label">Direct Door Scanner Link</span>
+          <div class="secret-row">
+            <span id="active-door-link-val" style="font-size: var(--text-14); word-break: break-all; color: var(--slate);">&mdash;</span>
+            <button class="btn btn-secondary btn-copy" data-target="active-door-link-val" type="button" style="min-height: 38px;">Copy</button>
           </div>
         </div>
 
-        <!-- Rendered Guest Timeline Card -->
-        <div id="timeline-card" class="card hidden">
-          <div class="timeline-header">
-            <div>
-              <span class="badge badge-amber" style="font-size: 0.75rem; margin-bottom: 0.35rem;">Audit Trailed Incident Report</span>
-              <h2 id="tl-guest-name" style="font-size: 2rem; margin: 0.2rem 0;">Guest Name</h2>
-              <div id="tl-guest-meta" class="text-muted" style="font-size: 0.95rem;">
-                Email: — · Phone: —
-              </div>
-            </div>
-            <div class="no-print" style="display: flex; gap: 0.5rem; align-items: flex-start;">
-              <button id="btn-print-timeline" class="btn btn-primary" type="button" style="min-height: 44px;">
-                🖨️ Print Report
-              </button>
-              <button id="btn-close-timeline" class="btn btn-secondary" type="button" style="min-height: 44px;">
-                ✕ Close
-              </button>
-            </div>
-          </div>
-
-          <!-- Summary Chips & Last Seen Inside Line -->
-          <div class="tl-summary-box mt-md">
-            <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
-              <span id="tl-band-chip" class="band-chip" style="font-size: 1rem; padding: 0.3rem 0.7rem;">Band: —</span>
-              <span id="tl-age-badge" class="badge badge-muted">Age: —</span>
-              <span id="tl-state-badge" class="badge badge-muted">ID State: —</span>
-            </div>
-
-            <!-- Prominent "Last seen inside" Line -->
-            <div class="tl-last-seen-banner mt-md">
-              <span style="font-size: 1.4rem;">📍</span>
-              <div>
-                <div style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700;">Location Status</div>
-                <div style="font-size: 1.15rem; font-weight: 800; color: var(--text);">
-                  Last seen inside: <span id="tl-last-seen-val" style="color: var(--accent-amber);">—</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Companions Banner (Latest Left With) -->
-          <div id="tl-companions-card" class="tl-companions-box mt-md hidden">
-            <div style="font-weight: 700; margin-bottom: 0.25rem;">Left Together With:</div>
-            <div id="tl-companions-list" style="color: var(--accent-amber); font-weight: 600;"></div>
-          </div>
-
-          <!-- Vertical Timeline Events -->
-          <div class="mt-lg">
-            <h3 style="font-size: 1.15rem; font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 0.6rem; margin-bottom: 1.25rem;">
-              Chronological Timeline
-            </h3>
-            <div id="tl-events-container" class="vertical-timeline">
-              <!-- Rendered vertical timeline steps -->
-            </div>
-          </div>
-
-          <!-- Print Footer -->
-          <div class="print-timeline-footer print-only mt-lg">
-            <div style="border-top: 2px solid #000; padding-top: 0.5rem; font-size: 0.85rem; color: #444; display: flex; justify-content: space-between;">
-              <span>Homebound Safety Record · Confidential Incident Follow-up</span>
-              <span id="tl-print-meta">Generated: ...</span>
-            </div>
+        <div>
+          <span class="form-label">Live Dashboard Link</span>
+          <div class="secret-row">
+            <span id="active-dash-link-val" style="font-size: var(--text-14); word-break: break-all; color: var(--slate);">&mdash;</span>
+            <button class="btn btn-secondary btn-copy" data-target="active-dash-link-val" type="button" style="min-height: 38px;">Copy</button>
           </div>
         </div>
-      </section>
+      </div>
 
-      <!-- TAB 4: Data Export & End Event -->
-      <section id="tab-export" class="admin-section">
-        <!-- CSV Export -->
-        <div class="card">
-          <h2>Safety Roster Export</h2>
-          <p class="text-muted mt-sm">
-            Download full audit-trailed CSV with: name, email, phone, band, first in, last out, and companions left with.
-          </p>
-          <div class="mt-md">
-            <button id="btn-download-export-csv" class="btn btn-primary" type="button">
-              📥 Download export.csv
-            </button>
+      <button id="btn-copy-all-credentials" class="btn btn-primary btn-block" type="button">
+        Copy All Details for Volunteers
+      </button>
+    </section>
+
+    <!-- INCIDENT TIMELINE & RECORDS -->
+    <section class="step-card no-print">
+      <div class="step-header">
+        <div class="step-title-group">
+          <h2 class="step-title">Incident follow-up</h2>
+          <p class="step-desc">Audit-trailed guest lookup for safety checks</p>
+        </div>
+        <span class="badge badge-muted">Follow-up</span>
+      </div>
+
+      <p class="text-muted" style="font-size: var(--text-14); margin: 0;">
+        Look up who a guest arrived with, when they left, and who they left with.
+      </p>
+
+      <div style="position: relative;">
+        <input type="search" id="timeline-search-input" class="input" placeholder="Type guest name or band code..." autocomplete="off">
+        <div id="timeline-search-results" class="card hidden" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 50; margin-top: 4px; max-height: 240px; overflow-y: auto; padding: 0.5rem;"></div>
+      </div>
+
+      <div id="timeline-card" class="card hidden" style="background-color: var(--night);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
+          <div>
+            <h3 id="tl-guest-name" style="font-size: var(--text-20);">Guest Name</h3>
+            <p id="tl-guest-meta" class="text-muted" style="font-size: var(--text-14);">Contact: &mdash;</p>
+          </div>
+          <button id="btn-close-timeline" class="btn btn-secondary" style="min-height: 38px;" type="button">Close</button>
+        </div>
+
+        <div style="margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;">
+          <div style="font-weight: 700; color: var(--band-orange); font-size: var(--text-16);">
+            Last seen inside: <span id="tl-last-seen-val" style="color: var(--tyvek);">&mdash;</span>
+          </div>
+          <div id="tl-companions-card" class="hidden" style="font-size: var(--text-14);">
+            Left together with: <strong id="tl-companions-list" style="color: var(--band-pink);"></strong>
           </div>
         </div>
 
-        <!-- End Event Danger Zone -->
-        <div class="card" style="border-color: rgba(231, 76, 60, 0.4);">
-          <h2 style="color: var(--accent-red);">Danger Zone: End Event</h2>
-          <p class="text-muted mt-sm">
-            Closing the event stops new check-ins and schedules permanent deletion of all guest and scan records in 30 days.
-          </p>
-          <div class="mt-md">
-            <button id="btn-end-event" class="btn btn-danger" type="button">
-              End Event Now
-            </button>
-          </div>
+        <div id="tl-events-container" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem; font-size: var(--text-14);"></div>
+      </div>
+    </section>
+
+    <!-- EXPORT & END EVENT -->
+    <section class="step-card no-print">
+      <div class="step-header">
+        <div class="step-title-group">
+          <h2 class="step-title">Safety record &amp; close</h2>
+          <p class="step-desc">Export audit-trailed CSV or end event</p>
         </div>
-      </section>
-    </div>
+      </div>
+
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <button id="btn-download-export-csv" class="btn btn-secondary" type="button">
+          Export Safety Record (CSV)
+        </button>
+        <button id="btn-end-event" class="btn btn-danger" type="button">
+          End Event Now
+        </button>
+      </div>
+    </section>
   </main>
 
-  <!-- Show Secrets Once Modal -->
+  <!-- Secrets Modal (shown once on event creation) -->
   <div id="secrets-modal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 600px;">
+    <div class="modal-content" style="max-width: 540px;">
       <div class="modal-header">
-        <h2 style="color: var(--accent-amber);">Event Created Successfully!</h2>
+        <h2 style="color: var(--band-orange);">Event Created!</h2>
       </div>
       <div class="modal-body">
-        <div class="badge badge-amber" style="width: 100%; justify-content: center; font-size: 0.95rem; padding: 0.6rem;">
-          ⚠️ Save this Admin PIN now. For privacy, it is hashed on the server and will NEVER be shown again!
+        <div class="badge badge-amber" style="width: 100%; justify-content: center; padding: 0.6rem;">
+          Save this Admin PIN now. It will never be shown again.
         </div>
 
-        <!-- Single Copy All Details Button -->
-        <div class="mt-md">
-          <button id="btn-copy-all" class="btn btn-primary btn-block" style="font-size: 1.05rem; padding: 0.75rem;" type="button">
-            📋 Copy All Details (PIN, Monitor Code, Door Link)
-          </button>
-          <div id="copy-all-feedback" class="badge badge-green hidden mt-xs" style="width: 100%; justify-content: center;">
-            ✓ All event details copied to clipboard!
-          </div>
-        </div>
-
-        <div class="secret-box mt-md">
+        <div class="secret-box mt-sm">
           <div>
-            <span class="form-label">8-Digit Admin PIN (Keep Safe)</span>
+            <span class="form-label">8-Digit Admin PIN</span>
             <div class="secret-row">
               <span id="secret-pin" class="secret-value"></span>
-              <button class="btn btn-secondary btn-copy" data-target="secret-pin" type="button" style="min-height: 40px; padding: 0.3rem 0.8rem;">Copy</button>
+              <button class="btn btn-secondary btn-copy" data-target="secret-pin" type="button" style="min-height: 38px;">Copy</button>
             </div>
           </div>
 
           <div>
-            <span class="form-label">Monitor Code (Give to Door Volunteers)</span>
+            <span class="form-label">Door Monitor Code</span>
             <div class="secret-row">
               <span id="secret-monitor-code" class="secret-value"></span>
-              <button class="btn btn-secondary btn-copy" data-target="secret-monitor-code" type="button" style="min-height: 40px; padding: 0.3rem 0.8rem;">Copy</button>
+              <button class="btn btn-secondary btn-copy" data-target="secret-monitor-code" type="button" style="min-height: 38px;">Copy</button>
             </div>
           </div>
 
           <div>
             <span class="form-label">Event ID</span>
             <div class="secret-row">
-              <span id="secret-event-id" style="font-family: var(--font-mono); font-size: 1rem; word-break: break-all;"></span>
-              <button class="btn btn-secondary btn-copy" data-target="secret-event-id" type="button" style="min-height: 40px; padding: 0.3rem 0.8rem;">Copy</button>
+              <span id="secret-event-id" style="font-family: var(--font-display); font-size: var(--text-14); word-break: break-all;"></span>
+              <button class="btn btn-secondary btn-copy" data-target="secret-event-id" type="button" style="min-height: 38px;">Copy</button>
             </div>
           </div>
         </div>
 
-        <div class="mt-md" style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.95rem;">
-          <p><strong>Quick Door Link:</strong> <a id="door-link" href="#" target="_blank"></a></p>
-          <p><strong>Quick Dashboard Link:</strong> <a id="dashboard-link" href="#" target="_blank"></a></p>
+        <button id="btn-copy-all" class="btn btn-primary btn-block mt-sm" type="button">
+          Copy All Details
+        </button>
+        <div id="copy-all-feedback" class="badge badge-green hidden" style="width: 100%; justify-content: center;">
+          Copied to clipboard
         </div>
       </div>
       <div class="modal-footer">
-        <button id="btn-dismiss-secrets" class="btn btn-primary" type="button">
-          I Have Saved the PIN → Continue
+        <button id="btn-dismiss-secrets" class="btn btn-secondary" type="button">
+          I Have Saved the PIN &rarr; Proceed
         </button>
       </div>
     </div>
   </div>
 
-  <script type="module" src="/admin/admin.js"></script>
+  <script type="module" src="admin.js"></script>
 </body>
 </html>

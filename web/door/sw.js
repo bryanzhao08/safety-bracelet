@@ -1,34 +1,34 @@
 // web/door/sw.js - Service Worker for Homebound Door Scanner
-const CACHE_NAME = 'hb-door-v1';
+const CACHE_NAME = 'hb-door-v2';
 
-const PRECACHE_URLS = [
-  '/door/',
-  '/door/index.html',
-  '/door/door.css',
-  '/door/door.js',
-  '/door/offline.js',
-  '/shared/base.css',
-  '/shared/api.js',
-  '/shared/aamva.js',
-  '/shared/qr-scanner.js',
-  '/shared/qr.js',
-  '/shared/vendor/zxing/zxing.min.js',
+const PRECACHE_PATHS = [
+  './',
+  './index.html',
+  './door.css',
+  './door.js',
+  './offline.js',
+  '../shared/base.css',
+  '../shared/api.js',
+  '../shared/aamva.js',
+  '../shared/qr-scanner.js',
+  '../shared/qr.js',
+  '../shared/vendor/zxing/zxing.min.js',
 ];
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
-      // Cache assets individually so one failure does not abort the whole install
       await Promise.allSettled(
-        PRECACHE_URLS.map(async (url) => {
+        PRECACHE_PATHS.map(async (path) => {
           try {
+            const url = new URL(path, self.location).href;
             const res = await fetch(url, { cache: 'no-cache' });
             if (res.ok) {
               await cache.put(url, res);
             }
           } catch (e) {
-            console.warn('[SW] Precache failed for:', url, e);
+            console.warn('[SW] Precache failed for:', path, e);
           }
         })
       );
@@ -53,25 +53,26 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Never intercept or cache API requests
-  if (url.pathname.startsWith('/api/')) {
+  // Never intercept API requests
+  if (url.pathname.includes('/api/')) {
     return;
   }
 
-  // Handle HTML navigation (/door, /door/, etc.)
-  if (event.request.mode === 'navigate' || url.pathname === '/door' || url.pathname === '/door/') {
+  // Handle HTML navigation
+  if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
           if (response && response.ok) {
             const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put('/door/index.html', clone));
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           }
           return response;
         })
         .catch(async () => {
           const cache = await caches.open(CACHE_NAME);
-          const cached = (await cache.match('/door/index.html')) || (await cache.match('/door/'));
+          const cached = (await cache.match(new URL('./index.html', self.location).href)) ||
+                         (await cache.match(new URL('./', self.location).href));
           if (cached) return cached;
           return new Response('Homebound Door is offline', {
             status: 503,
@@ -82,7 +83,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For static assets: Stale-While-Revalidate
+  // Static assets: Stale-While-Revalidate
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request)

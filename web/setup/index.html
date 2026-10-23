@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connect Google Sheet - Homebound</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <style>
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+    .step-item {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+    .step-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border);
+      color: var(--accent-amber);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .step-content {
+      flex: 1;
+      padding-top: 2px;
+    }
+    .qr-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #ffffff;
+      padding: 1.25rem;
+      border-radius: var(--radius-md);
+      margin: 1.25rem 0;
+      width: fit-content;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .creds-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .cred-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .cred-row:last-child {
+      border-bottom: none;
+    }
+    .cred-value {
+      font-family: var(--font-mono);
+      font-size: 1.25rem;
+      letter-spacing: 0.1em;
+      color: var(--accent-amber);
+      font-weight: 700;
+    }
+    .alert-banner {
+      padding: 1rem;
+      border-radius: var(--radius-md);
+      margin-bottom: 1rem;
+      display: none;
+    }
+    .alert-error {
+      background: rgba(231, 76, 60, 0.15);
+      border: 1px solid var(--accent-red);
+      color: #ff9990;
+    }
+    .alert-success {
+      background: var(--accent-green-bg);
+      border: 1px solid var(--accent-green);
+      color: #a7f3d0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" style="max-width: 680px; margin-top: 2rem; margin-bottom: 3rem;">
+    <header style="margin-bottom: 2rem; text-align: center;">
+      <h1 style="margin-bottom: 0.5rem;">Connect a Google Sheet</h1>
+      <p class="text-muted">Run Homebound serverless using your own Google Sheet as the database.</p>
+    </header>
+
+    <div id="alertBox" class="alert-banner"></div>
+
+    <!-- Step 1-5 Instructions Card -->
+    <div class="card" id="instructionsCard" style="margin-bottom: 1.5rem;">
+      <h2>5-Step Setup</h2>
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <strong>Make a new Google Sheet</strong>
+            <p class="text-dim">Open Google Sheets and create a blank spreadsheet for your event.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <strong>Open Apps Script & Paste Code</strong>
+            <p class="text-dim">In your Sheet, click <em>Extensions → Apps Script</em>, replace any existing code with the Homebound backend script, and save.</p>
+            <div style="margin-top: 0.5rem;">
+              <button id="copyCodeBtn" class="btn btn-secondary" style="min-height: 44px; padding: 0.5rem 1rem;">
+                📋 Copy Apps Script Code
+              </button>
+              <span id="copyFeedback" class="text-green" style="margin-left: 0.75rem; display: none;">Copied to clipboard!</span>
+            </div>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <strong>Run setup</strong>
+            <p class="text-dim">Select <code>setup</code> in the function dropdown and click <strong>Run</strong> (grant permissions when asked). An alert will show your Admin PIN and Monitor Code.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <strong>Deploy as Web App</strong>
+            <p class="text-dim">Click <em>Deploy → New deployment</em>. Select type <em>Web app</em>, set <strong>Execute as: Me</strong> and <strong>Who has access: Anyone</strong>. Copy the Web app URL.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <strong>Paste the URL below</strong>
+            <p class="text-dim">Connect your sheet to this web app.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Connection Form Card -->
+    <div class="card" id="connectionCard" style="margin-bottom: 1.5rem;">
+      <h2 style="margin-bottom: 1rem;">Connect Web App</h2>
+      <form id="connectForm">
+        <div class="form-group">
+          <label class="form-label" for="sheetUrlInput">Apps Script Web App URL</label>
+          <input
+            id="sheetUrlInput"
+            class="input"
+            type="url"
+            placeholder="https://script.google.com/macros/s/.../exec"
+            required
+            autocomplete="off"
+            spellcheck="false"
+          >
+        </div>
+        <button id="connectBtn" class="btn btn-primary btn-block" type="submit">
+          Connect & Test Connection
+        </button>
+      </form>
+    </div>
+
+    <!-- PIN Verification Card (hidden until ping succeeds) -->
+    <div class="card" id="pinCard" style="display: none; margin-bottom: 1.5rem;">
+      <h2 style="margin-bottom: 0.5rem;">Organizer Verification</h2>
+      <p class="text-muted" style="margin-bottom: 1.25rem;">
+        Enter the 8-digit Admin PIN shown when you ran <code>setup</code> in Apps Script.
+      </p>
+      <form id="pinForm">
+        <div class="form-group">
+          <label class="form-label" for="adminPinInput">8-digit Admin PIN</label>
+          <input
+            id="adminPinInput"
+            class="input input-code"
+            type="password"
+            inputmode="numeric"
+            maxlength="8"
+            placeholder="••••••••"
+            required
+          >
+        </div>
+        <button id="verifyPinBtn" class="btn btn-primary btn-block" type="submit">
+          Verify & Unlock Event
+        </button>
+      </form>
+    </div>
+
+    <!-- Event Ready Card (hidden until PIN verified) -->
+    <div class="card" id="readyCard" style="display: none;">
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <span class="badge badge-green" style="margin-bottom: 0.5rem;">Connected to Google Sheets</span>
+        <h2 id="readyEventName" style="margin-top: 0.25rem;">Event Connected</h2>
+      </div>
+
+      <div class="creds-box">
+        <div class="cred-row">
+          <span class="text-muted">Admin PIN</span>
+          <span id="displayAdminPin" class="cred-value">—</span>
+        </div>
+        <div class="cred-row">
+          <span class="text-muted">Monitor Code</span>
+          <span id="displayMonitorCode" class="cred-value">—</span>
+        </div>
+      </div>
+
+      <div style="margin: 1.5rem 0; text-align: center;">
+        <h3 style="margin-bottom: 0.25rem;">Door Staff Access</h3>
+        <p class="text-dim" style="font-size: 0.95rem;">Door monitors can scan this QR code or use the link below:</p>
+        
+        <div id="qrCodeContainer" class="qr-container"></div>
+
+        <div class="form-group" style="margin-top: 0.75rem;">
+          <input id="monitorLinkInput" class="input" type="text" readonly style="font-size: 0.9rem;">
+        </div>
+        <button id="copyMonitorLinkBtn" class="btn btn-secondary btn-block" type="button">
+          📋 Copy Door Monitor Link
+        </button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.5rem;">
+        <a id="doorLink" href="../door/" class="btn btn-green btn-block">
+          Open Door Scanner
+        </a>
+        <a id="adminLink" href="../admin/" class="btn btn-primary btn-block">
+          Open Organizer Admin
+        </a>
+        <a id="dashLink" href="../dashboard/" class="btn btn-secondary btn-block">
+          Open Live Dashboard
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./setup.js"></script>
+</body>
+</html>

@@ -1,11 +1,10 @@
-// web/door/door.js - Door Scanner Controller for Homebound v2
-import * as api from '/shared/api.js';
-import * as offline from '/door/offline.js';
-import { parseAamva } from '/shared/aamva.js';
-import { parseScannedValue } from '/shared/qr-scanner.js';
+// web/door/door.js - Redesigned Door Scanner Controller
+import * as api from '../shared/api.js';
+import * as offline from './offline.js';
+import { parseAamva } from '../shared/aamva.js';
+import { parseScannedValue } from '../shared/qr-scanner.js';
 
 // DOM Elements
-const flashBanner = document.getElementById('flash-banner');
 const joinView = document.getElementById('join-view');
 const doorView = document.getElementById('door-view');
 const joinForm = document.getElementById('join-form');
@@ -56,15 +55,15 @@ const trayCountdownText = document.getElementById('tray-countdown-text');
 const trayTimerBar = document.getElementById('tray-timer-bar');
 const leavingGuestList = document.getElementById('leaving-guest-list');
 const trayEmptyMsg = document.getElementById('tray-empty-msg');
-const btnLeaveAlone = document.getElementById('btn-leave-alone');
 const btnLeaveTogether = document.getElementById('btn-leave-together');
 
 // Camera Modal Elements
 const cameraModal = document.getElementById('camera-modal');
 const scannerVideo = document.getElementById('scanner-video');
+const scannerReticle = document.getElementById('scanner-reticle');
 const scannerGuideText = document.getElementById('scanner-guide-text');
-const btnTorch = document.getElementById('btn-torch');
 const btnCloseCamera = document.getElementById('btn-close-camera');
+const btnTorch = document.getElementById('btn-torch');
 
 // Guest Search Modal Elements
 const guestSearchModal = document.getElementById('guest-search-modal');
@@ -95,13 +94,13 @@ let trayTimeLeft = 30;
 const localInsideBands = new Set();
 const localGuestMap = new Map();
 
-// Register Service Worker for offline door page availability
+// Register Service Worker
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/door/sw.js')
+  navigator.serviceWorker.register('sw.js')
     .catch(err => console.warn('SW registration failed', err));
 }
 
-// Initialize offline queue & subscribe to queue changes
+// Initialize offline queue & subscribe
 offline.initOfflineQueue();
 offline.onQueueChange(({ count, isSyncing }) => {
   if (!offlineBar) return;
@@ -132,51 +131,66 @@ let cameraMode = 'id'; // 'id' (pdf417) or 'band' (qr)
 let zxingReader = null;
 let animFrameId = null;
 
-// --- Flash Messages & Feedback ---
+// --- Orchestrated Verdict Flood (1.2 s) ---
+let floodTimer = null;
+function triggerVerdictFlood({ name, verdict, detail, type = 'orange' }) {
+  const flood = document.getElementById('verdict-flood');
+  const floodName = document.getElementById('flood-name');
+  const floodBadge = document.getElementById('flood-badge');
+  const floodDetail = document.getElementById('flood-detail');
+  if (!flood) return;
 
-function showFlash(message, type = 'green', duration = 2500) {
-  flashBanner.textContent = message;
-  flashBanner.className = `flash-banner flash-${type} show`;
+  floodName.textContent = name || 'GUEST';
+  floodBadge.textContent = verdict || '';
+  floodDetail.textContent = detail || '';
+  flood.className = `verdict-flood flood-${type} active`;
+
   if (navigator.vibrate) {
-    if (type === 'green') navigator.vibrate([40, 30, 40]);
-    else if (type === 'amber') navigator.vibrate([60, 40, 60]);
-    else navigator.vibrate([100, 50, 100]);
+    try {
+      if (type === 'orange' || type === 'lime') navigator.vibrate(60);
+      else if (type === 'pink') navigator.vibrate([60, 40, 60]);
+      else navigator.vibrate([100, 50, 100]);
+    } catch {}
   }
-  setTimeout(() => {
-    flashBanner.className = `flash-banner flash-${type}`;
-  }, duration);
+
+  clearTimeout(floodTimer);
+  floodTimer = setTimeout(() => {
+    flood.classList.remove('active');
+  }, 1200);
 }
 
-// --- Mode Switching ---
-
-function setMode(mode) {
-  currentMode = mode;
-  if (mode === 'in') {
-    btnModeIn.className = 'mode-btn active-in';
-    btnModeOut.className = 'mode-btn';
-    inModeContainer.classList.remove('hidden');
-    outModeContainer.classList.add('hidden');
-  } else {
-    btnModeIn.className = 'mode-btn';
-    btnModeOut.className = 'mode-btn active-out';
-    inModeContainer.classList.add('hidden');
-    outModeContainer.classList.remove('hidden');
-  }
+function escapeHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, (m) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[m]));
 }
 
-btnModeIn.addEventListener('click', () => setMode('in'));
-btnModeOut.addEventListener('click', () => setMode('out'));
+// --- Mode Switch (IN / OUT) ---
+btnModeIn.addEventListener('click', () => {
+  currentMode = 'in';
+  btnModeIn.className = 'mode-btn active-in';
+  btnModeIn.setAttribute('aria-selected', 'true');
+  btnModeOut.className = 'mode-btn';
+  btnModeOut.setAttribute('aria-selected', 'false');
+  inModeContainer.classList.remove('hidden');
+  outModeContainer.classList.add('hidden');
+});
+
+btnModeOut.addEventListener('click', () => {
+  currentMode = 'out';
+  btnModeOut.className = 'mode-btn active-out';
+  btnModeOut.setAttribute('aria-selected', 'true');
+  btnModeIn.className = 'mode-btn';
+  btnModeIn.setAttribute('aria-selected', 'false');
+  outModeContainer.classList.remove('hidden');
+  inModeContainer.classList.add('hidden');
+  renderLeavingTray();
+});
 
 // --- Shift Join & Session Management ---
-
 async function initSession() {
-  // Normalize /door to /door/ so service worker scope covers it
-  if (window.location.pathname === '/door') {
-    window.history.replaceState({}, '', '/door/' + window.location.search);
-  }
-
   const urlParams = new URLSearchParams(window.location.search);
-  const prefillToken = urlParams.get('bandToken');
+  const prefillToken = urlParams.get('band') || urlParams.get('bandToken');
   const urlEventId = urlParams.get('event') || urlParams.get('eventId');
   const urlCode = urlParams.get('code');
 
@@ -194,7 +208,7 @@ async function initSession() {
 
     if (prefillToken) {
       handleBandScanned({ bandToken: prefillToken });
-      window.history.replaceState({}, '', '/door/');
+      window.history.replaceState({}, '', window.location.pathname);
     }
   } else {
     joinView.classList.remove('hidden');
@@ -216,6 +230,13 @@ joinForm.addEventListener('submit', async (e) => {
     joinView.classList.add('hidden');
     doorView.classList.remove('hidden');
     initNfc();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const prefillToken = urlParams.get('band') || urlParams.get('bandToken');
+    if (prefillToken) {
+      handleBandScanned({ bandToken: prefillToken });
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   } catch (err) {
     joinError.textContent = err.message || 'Failed to join shift. Check Event ID and Monitor Code.';
     joinError.classList.remove('hidden');
@@ -223,54 +244,66 @@ joinForm.addEventListener('submit', async (e) => {
 });
 
 btnLeaveShift.addEventListener('click', () => {
-  if (confirm('Leave door shift?')) {
+  if (confirm('Leave door shift? You can re-enter with the Monitor Code.')) {
     api.clearMonitorSession();
     window.location.reload();
   }
 });
 
 // --- Web NFC Integration ---
-
 async function initNfc() {
   if (!('NDEFReader' in window)) {
-    nfcLabel.textContent = '📷 Camera QR & Short Codes Active';
-    nfcDot.style.backgroundColor = 'var(--text-muted)';
-    nfcDot.style.animation = 'none';
+    if (nfcBar) {
+      nfcLabel.textContent = 'Camera QR & code entry ready';
+      nfcDot.style.backgroundColor = 'var(--slate)';
+      nfcDot.style.boxShadow = 'none';
+    }
     return;
   }
 
   try {
     const ndef = new window.NDEFReader();
     await ndef.scan();
-    nfcLabel.textContent = '⚡ Web NFC Active — Tap tag to phone';
-    nfcDot.style.backgroundColor = 'var(--accent-green)';
+    if (nfcBar) {
+      nfcLabel.textContent = 'NFC reader active';
+      nfcDot.style.backgroundColor = 'var(--band-orange)';
+    }
 
     ndef.addEventListener('reading', ({ message }) => {
       for (const record of message.records) {
-        let text = '';
-        if (record.recordType === 'url' || record.recordType === 'text') {
-          const decoder = new TextDecoder(record.encoding || 'utf-8');
-          text = decoder.decode(record.data);
+        if (record.recordType === 'url') {
+          const textDecoder = new TextDecoder();
+          const urlString = textDecoder.decode(record.data);
+          const parsed = parseScannedValue(urlString);
+          if (parsed) {
+            handleBandScanned(parsed);
+            return;
+          }
+        } else if (record.recordType === 'text') {
+          const textDecoder = new TextDecoder();
+          const text = textDecoder.decode(record.data);
           const parsed = parseScannedValue(text);
           if (parsed) {
             handleBandScanned(parsed);
-            break;
+            return;
           }
         }
       }
     });
 
     ndef.addEventListener('readingerror', () => {
-      showFlash('NFC read error. Try tapping again.', 'amber');
+      triggerVerdictFlood({ name: 'NFC Error', verdict: 'RETRY', detail: 'Hold wristband steady to phone', type: 'stop' });
     });
   } catch (err) {
-    nfcLabel.textContent = 'NFC Permission Required or Unavailable';
-    nfcDot.style.backgroundColor = 'var(--text-muted)';
+    if (nfcBar) {
+      nfcLabel.textContent = 'NFC tap disabled (use Camera QR or code)';
+      nfcDot.style.backgroundColor = 'var(--slate)';
+      nfcDot.style.boxShadow = 'none';
+    }
   }
 }
 
-// --- Universal Band Scan Handler (NFC, QR, Manual Code) ---
-
+// --- Universal Band Scan Handler ---
 async function handleBandScanned({ bandToken, shortCode }) {
   if (currentMode === 'in') {
     await handleCheckInBand({ bandToken, shortCode });
@@ -280,21 +313,19 @@ async function handleBandScanned({ bandToken, shortCode }) {
 }
 
 // --- Check-in Handler (IN Mode) ---
-
 async function handleCheckInBand({ bandToken, shortCode }) {
   const session = api.getMonitorSession();
   const token = session?.token;
   const key = shortCode || bandToken;
 
-  // Case A: ID was scanned first, guest is pending link
+  // Case A: ID was scanned first, guest pending link
   if (pendingIdGuest) {
     if (!pendingIdGuest.id) {
-      showFlash('Please select a matching guest from the list first', 'amber');
+      triggerVerdictFlood({ name: 'Select Guest', verdict: 'CHOOSE', detail: 'Pick a matching guest from list', type: 'stop' });
       return;
     }
     const guest = pendingIdGuest;
-    // Instant local UI feedback
-    showFlash(`✓ ${guest.name} in`, 'green');
+    triggerVerdictFlood({ name: guest.name, verdict: 'IN', detail: 'Checked in & band linked', type: 'orange' });
     clearPendingId();
     if (key) {
       localInsideBands.add(key);
@@ -310,22 +341,22 @@ async function handleCheckInBand({ bandToken, shortCode }) {
 
     if (!res.queued && res.error) {
       if (res.status === 409 && res.error === 'band_already_linked') {
-        showFlash('Band already linked to another guest', 'amber');
+        triggerVerdictFlood({ name: 'Already Linked', verdict: 'ERROR', detail: 'Band already linked to another guest', type: 'stop' });
       } else {
-        showFlash(res.message || 'Failed to link band', 'red');
+        triggerVerdictFlood({ name: 'Error', verdict: 'FAILED', detail: res.message || 'Failed to link band', type: 'stop' });
       }
     }
     return;
   }
 
-  // Case B: Direct band scan without prior ID
+  // Case B: Direct band scan
   const knownName = localGuestMap.get(key);
   const alreadyInsideLocally = key && localInsideBands.has(key);
 
   if (alreadyInsideLocally) {
-    showFlash(`⚠️ Already inside: ${knownName || key}`, 'amber');
+    triggerVerdictFlood({ name: knownName || key, verdict: 'ALREADY IN', detail: 'Already checked in', type: 'stop' });
   } else {
-    showFlash(`✓ ${knownName || key || 'Guest'} in`, 'green');
+    triggerVerdictFlood({ name: knownName || key || 'Guest', verdict: 'IN', detail: 'Checked in', type: 'orange' });
   }
 
   const res = await offline.executeOrQueueScan({
@@ -340,7 +371,6 @@ async function handleCheckInBand({ bandToken, shortCode }) {
   }
 
   if (res.data?.needsGuest) {
-    // Unlinked band! Open guest list to link.
     if (key) localInsideBands.delete(key);
     unlinkedBand = { bandToken, shortCode: res.data.band?.shortCode || shortCode };
     openGuestSearch(`Link Band ${unlinkedBand.shortCode || ''}`);
@@ -349,94 +379,85 @@ async function handleCheckInBand({ bandToken, shortCode }) {
 
   if (res.data?.warning === 'already_inside') {
     if (key) localInsideBands.add(key);
-    showFlash(`⚠️ Already inside: ${res.data.guest?.name || 'Guest'}`, 'amber');
+    triggerVerdictFlood({ name: res.data.guest?.name || 'Guest', verdict: 'ALREADY IN', detail: 'Already checked in', type: 'stop' });
     return;
   }
 
   if (res.error) {
     if (key && !alreadyInsideLocally) localInsideBands.delete(key);
     if (res.status === 409 && res.error === 'band_already_linked') {
-      showFlash('Band already linked to another guest', 'amber');
+      triggerVerdictFlood({ name: 'Already Linked', verdict: 'ERROR', detail: 'Band already linked to another guest', type: 'stop' });
     } else {
-      showFlash(res.message || 'Check-in failed', 'red');
+      triggerVerdictFlood({ name: 'Scan Error', verdict: 'FAILED', detail: res.message || 'Failed to scan band', type: 'stop' });
     }
     return;
   }
 
-  if (res.data?.guest?.name) {
+  if (res.data?.guest) {
     if (key) {
       localInsideBands.add(key);
       localGuestMap.set(key, res.data.guest.name);
     }
-    showFlash(`✓ ${res.data.guest.name} in`, 'green');
+    triggerVerdictFlood({ name: res.data.guest.name, verdict: 'IN', detail: 'Checked in', type: 'orange' });
   }
 }
 
-// --- ID Scanning Flow (AAMVA PDF417) ---
+// Manual Short Code check-in
+manualCodeForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const code = manualCodeInput.value.trim().toUpperCase();
+  if (!code) return;
+  manualCodeInput.value = '';
+  await handleCheckInBand({ shortCode: code });
+});
 
+// --- ID Check-in Flow ---
 btnOpenIdScanner.addEventListener('click', () => {
-  openCameraScanner('id');
+  startCamera('id');
 });
 
 function calculateAge(dobStr) {
   if (!dobStr) return null;
-  const parts = dobStr.split('-').map(Number);
-  if (parts.length !== 3 || parts.some(isNaN)) return null;
-  const [y, m, d] = parts;
+  const match = dobStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const birthYear = parseInt(match[1], 10);
+  const birthMonth = parseInt(match[2], 10) - 1;
+  const birthDay = parseInt(match[3], 10);
+  const birthDate = new Date(birthYear, birthMonth, birthDay);
   const today = new Date();
-  let age = today.getFullYear() - y;
-  const mDiff = (today.getMonth() + 1) - m;
-  if (mDiff < 0 || (mDiff === 0 && today.getDate() < d)) {
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
     age--;
   }
-  return age >= 0 ? age : null;
+  return age;
 }
 
-function handleIdBarcodeDecoded(rawText) {
+async function handleIdBarcodeDecoded(barcodeText) {
   closeCameraModal();
-
-  const parsed = parseAamva(rawText);
-  if (!parsed || (!parsed.firstName && !parsed.lastName)) {
-    showFlash('Could not parse driver license barcode', 'amber');
+  const parsed = parseAamva(barcodeText);
+  if (!parsed || (!parsed.lastName && !parsed.firstName)) {
+    triggerVerdictFlood({ name: 'Invalid ID', verdict: 'RETRY', detail: 'Could not parse license barcode', type: 'stop' });
     return;
   }
 
-  // Never store raw barcode or license number in UI or logs
-  sendIdCheckin(parsed);
-}
-
-async function sendIdCheckin(parsed) {
   try {
-    const res = await api.idCheckin(parsed);
+    const res = await api.idCheckin({
+      firstName: parsed.firstName,
+      lastName: parsed.lastName,
+      dob: parsed.dob,
+      idState: parsed.idState,
+      idExpires: parsed.idExpires,
+      licenseNumber: parsed.licenseNumber,
+    });
     renderIdResult(parsed, res);
   } catch (err) {
-    if (err.status === 409) {
-      showFlash('⚠️ ID already verified for this guest', 'amber', 4000);
-    } else if (err.status === 400) {
-      showFlash(err.message || 'Invalid ID barcode fields', 'amber', 4000);
-    } else {
-      showFlash(err.message || 'ID check-in failed', 'red', 4000);
-    }
+    triggerVerdictFlood({ name: 'ID Check Failed', verdict: 'ERROR', detail: err.message, type: 'stop' });
   }
 }
 
 function renderIdResult(parsed, res) {
   idResultContainer.classList.remove('hidden');
-
-  // Giant Age Badge: 21+ (green), UNDER 21 (red), EXPIRED (amber)
-  idBadgeWrap.innerHTML = '';
-  const badge = document.createElement('div');
-  if (res.expired) {
-    badge.className = 'age-badge badge-expired';
-    badge.textContent = 'EXPIRED';
-  } else if (res.over21) {
-    badge.className = 'age-badge badge-21plus';
-    badge.textContent = '21+';
-  } else {
-    badge.className = 'age-badge badge-under21';
-    badge.textContent = 'UNDER 21';
-  }
-  idBadgeWrap.appendChild(badge);
 
   const displayName = res.guest?.name || [parsed.firstName, parsed.lastName].filter(Boolean).join(' ') || 'Guest';
   idGuestName.textContent = displayName;
@@ -448,16 +469,34 @@ function renderIdResult(parsed, res) {
   if (parsed.idState) metaParts.push(`State: ${parsed.idState}`);
   idMetaLine.textContent = metaParts.join(' · ');
 
+  idBadgeWrap.innerHTML = '';
+  const badge = document.createElement('div');
+
+  if (res.expired) {
+    badge.className = 'id-age-band band-stop';
+    badge.innerHTML = `<span>EXPIRED</span><span style="font-size: var(--text-16); font-family: var(--font-sans); font-weight: 600;">ID Expired</span>`;
+    triggerVerdictFlood({ name: displayName, verdict: 'EXPIRED', detail: 'ID Expired', type: 'stop' });
+  } else if (res.over21) {
+    badge.className = 'id-age-band band-lime';
+    badge.innerHTML = `<span>21+</span><span style="font-size: var(--text-16); font-family: var(--font-sans); font-weight: 600;">${age ? 'Age ' + age : 'Verified'}</span>`;
+    triggerVerdictFlood({ name: displayName, verdict: '21+', detail: age ? `Age ${age}` : 'Verified', type: 'lime' });
+  } else {
+    badge.className = 'id-age-band band-stop';
+    badge.innerHTML = `<span>UNDER 21</span><span style="font-size: var(--text-16); font-family: var(--font-sans); font-weight: 600;">${age ? 'Age ' + age : 'Under 21'}</span>`;
+    triggerVerdictFlood({ name: displayName, verdict: 'UNDER 21', detail: age ? `Age ${age}` : 'Under 21', type: 'stop' });
+  }
+  idBadgeWrap.appendChild(badge);
+
   if (res.duplicate) {
     const timeStr = res.duplicate.at ? ` at ${api.formatTime(res.duplicate.at)}` : '';
-    idDuplicateWarning.textContent = `⚠️ Duplicate: ID already scanned tonight${timeStr}`;
+    idDuplicateWarning.textContent = `Duplicate: ID already scanned tonight${timeStr}`;
     idDuplicateWarning.classList.remove('hidden');
   } else {
     idDuplicateWarning.classList.add('hidden');
   }
 
   if (res.candidates && res.candidates.length > 0) {
-    pendingIdGuest = null; // require explicit candidate selection
+    pendingIdGuest = null;
     idCandidatesContainer.classList.remove('hidden');
     idCandidatesList.innerHTML = '';
 
@@ -470,7 +509,7 @@ function renderIdResult(parsed, res) {
         pendingIdGuest = cand;
         idGuestName.textContent = cand.name;
         idCandidatesContainer.classList.add('hidden');
-        showFlash(`Selected: ${cand.name}. Tap band now.`, 'green');
+        triggerVerdictFlood({ name: cand.name, verdict: 'SELECTED', detail: 'Tap wristband now', type: 'orange' });
       });
       idCandidatesList.appendChild(btn);
     });
@@ -478,8 +517,7 @@ function renderIdResult(parsed, res) {
     const walkinBtn = document.createElement('button');
     walkinBtn.type = 'button';
     walkinBtn.className = 'btn btn-secondary';
-    walkinBtn.style.borderColor = 'var(--accent-amber)';
-    walkinBtn.textContent = `＋ Not listed? Add as walk-in ("${displayName}")`;
+    walkinBtn.textContent = `+ Add walk-in ("${displayName}")`;
     walkinBtn.addEventListener('click', async () => {
       const session = api.getMonitorSession();
       if (!session?.eventId) return;
@@ -488,9 +526,9 @@ function renderIdResult(parsed, res) {
         pendingIdGuest = added.guest;
         idGuestName.textContent = added.guest.name;
         idCandidatesContainer.classList.add('hidden');
-        showFlash(`Created walk-in: ${added.guest.name}. Tap band now.`, 'green');
+        triggerVerdictFlood({ name: added.guest.name, verdict: 'WALK-IN', detail: 'Tap wristband now', type: 'orange' });
       } catch (err) {
-        showFlash(err.message || 'Failed to create walk-in', 'red');
+        triggerVerdictFlood({ name: 'Error', verdict: 'FAILED', detail: err.message, type: 'stop' });
       }
     });
     idCandidatesList.appendChild(walkinBtn);
@@ -510,63 +548,80 @@ function clearPendingId() {
 btnCancelId.addEventListener('click', clearPendingId);
 
 // --- Departure Handler (OUT Mode - Leaving Tray) ---
-
 async function handleDepartureBand({ bandToken, shortCode }) {
   const existing = leavingTray.find(item =>
     (bandToken && item.bandToken === bandToken) ||
     (shortCode && item.shortCode === shortCode.toUpperCase())
   );
   if (existing) {
-    showFlash(`${existing.name || 'Guest'} already in leaving tray`, 'amber');
+    triggerVerdictFlood({ name: existing.name || 'Guest', verdict: 'IN TRAY', detail: 'Already added to tray', type: 'pink' });
     return;
   }
 
-  // Lookup guest name
-  let name = shortCode || 'Guest';
-  try {
-    const guests = await api.searchGuests(shortCode || '');
-    const match = guests.find(g => g.band === shortCode?.toUpperCase());
-    if (match) name = match.name;
-  } catch {
-    // Fallback to code
+  const key = shortCode || bandToken;
+  let guestName = localGuestMap.get(key) || (shortCode ? `Band [${shortCode}]` : 'Guest');
+
+  if (!localGuestMap.has(key)) {
+    try {
+      const results = await api.searchGuests(shortCode || '');
+      const match = results?.find(g => g.band === shortCode);
+      if (match) {
+        guestName = match.name;
+        localGuestMap.set(key, match.name);
+      }
+    } catch {}
   }
 
-  leavingTray.push({ bandToken, shortCode: shortCode?.toUpperCase(), name });
+  leavingTray.push({ bandToken, shortCode, name: guestName });
   renderLeavingTray();
   resetTrayTimer();
+
+  triggerVerdictFlood({
+    name: guestName,
+    verdict: 'OUT TRAY',
+    detail: `${leavingTray.length} in leaving group`,
+    type: 'pink'
+  });
 }
 
 function renderLeavingTray() {
-  trayCount.textContent = leavingTray.length;
   leavingGuestList.innerHTML = '';
+  trayCount.textContent = String(leavingTray.length);
 
   if (leavingTray.length === 0) {
+    trayEmptyMsg.classList.remove('hidden');
     leavingGuestList.appendChild(trayEmptyMsg);
-    btnLeaveAlone.disabled = true;
     btnLeaveTogether.disabled = true;
+    btnLeaveTogether.textContent = 'Done, 0 leaving';
     stopTrayTimer();
     return;
   }
 
-  btnLeaveAlone.disabled = false;
-  btnLeaveTogether.disabled = leavingTray.length < 2;
+  trayEmptyMsg.classList.add('hidden');
+  btnLeaveTogether.disabled = false;
+  if (leavingTray.length === 1) {
+    btnLeaveTogether.textContent = 'Done, 1 leaving alone';
+  } else {
+    btnLeaveTogether.textContent = `Done, ${leavingTray.length} leaving together`;
+  }
 
   leavingTray.forEach((item, index) => {
-    const div = document.createElement('div');
-    div.className = 'leaving-guest-item';
-    div.innerHTML = `
-      <div>
-        <span class="leaving-guest-name">${item.name}</span>
-        ${item.shortCode ? `<span class="leaving-guest-band">[${item.shortCode}]</span>` : ''}
-      </div>
-      <button class="btn-remove-tray" title="Remove" type="button">✕</button>
+    const chip = document.createElement('div');
+    chip.className = 'wristband-chip band-pink';
+    chip.style.cursor = 'pointer';
+    chip.title = 'Click to remove';
+    chip.innerHTML = `
+      <span>${escapeHtml(item.name || item.shortCode || 'Guest')}</span>
+      ${item.shortCode ? `<span style="opacity: 0.7; font-size: 12px;">(${escapeHtml(item.shortCode)})</span>` : ''}
+      <button class="btn-remove-chip" style="background: none; border: none; color: inherit; cursor: pointer; padding: 0 0 0 4px; font-weight: bold;" type="button" aria-label="Remove">&times;</button>
     `;
-    div.querySelector('.btn-remove-tray').addEventListener('click', () => {
+    chip.querySelector('.btn-remove-chip').addEventListener('click', (e) => {
+      e.stopPropagation();
       leavingTray.splice(index, 1);
       renderLeavingTray();
       if (leavingTray.length > 0) resetTrayTimer();
     });
-    leavingGuestList.appendChild(div);
+    leavingGuestList.appendChild(chip);
   });
 }
 
@@ -581,12 +636,7 @@ function resetTrayTimer() {
 
     if (trayTimeLeft <= 0) {
       stopTrayTimer();
-      // Auto-submit: 1 guest -> alone, 2+ guests -> together
-      if (leavingTray.length === 1) {
-        submitDepartures(false);
-      } else if (leavingTray.length >= 2) {
-        submitDepartures(true);
-      }
+      submitDepartures(leavingTray.length > 1);
     }
   }, 1000);
 }
@@ -615,173 +665,120 @@ async function submitDepartures(together = true) {
   const session = api.getMonitorSession();
   const token = session?.token;
 
-  // Mark departing bands locally
   for (const item of items) {
     const key = item.shortCode || item.bandToken;
     if (key) localInsideBands.delete(key);
   }
 
-  if (together || items.length === 1) {
-    // Single group departure
-    const bandTokens = items.map(i => i.bandToken).filter(Boolean);
-    const shortCodes = items.map(i => i.shortCode).filter(Boolean);
+  const bandTokens = items.map(i => i.bandToken).filter(Boolean);
+  const shortCodes = items.map(i => i.shortCode).filter(Boolean);
+  const names = items.map(i => i.name).join(', ');
 
-    const names = items.map(i => i.name).join(' + ');
-    const suffix = items.length > 1 ? 'left together' : 'left';
-    showFlash(`${names} ${suffix}`, 'amber', 3000);
+  const verdict = together && items.length > 1 ? 'LEFT TOGETHER' : 'LEFT';
+  const detail = items.length > 1 ? `${items.length} leaving together` : 'Left alone';
+  triggerVerdictFlood({ name: names, verdict, detail, type: 'pink' });
 
-    const res = await offline.executeOrQueueDeparture({ bandTokens, shortCodes }, token);
-    if (!res.queued && res.error) {
-      showFlash(res.message || 'Failed to record departures', 'red');
-    }
-  } else {
-    // Each person leaves alone separately
-    const names = items.map(i => i.name).join(', ');
-    showFlash(`${names} left alone`, 'amber', 3000);
-
-    for (const item of items) {
-      const res = await offline.executeOrQueueDeparture({
-        bandTokens: item.bandToken ? [item.bandToken] : undefined,
-        shortCodes: item.shortCode ? [item.shortCode] : undefined,
-      }, token);
-      if (!res.queued && res.error) {
-        showFlash(res.message || 'Failed to record departure', 'red');
-      }
-    }
+  const res = await offline.executeOrQueueDeparture({ bandTokens, shortCodes }, token);
+  if (!res.queued && res.error) {
+    triggerVerdictFlood({ name: 'Error', verdict: 'FAILED', detail: res.message || 'Failed to record departures', type: 'stop' });
   }
 }
 
-btnLeaveAlone.addEventListener('click', () => submitDepartures(false));
-btnLeaveTogether.addEventListener('click', () => submitDepartures(true));
-
-// --- Manual 4-Character Code Submission ---
-
-manualCodeForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const code = manualCodeInput.value.trim().toUpperCase();
-  if (code.length === 4) {
-    manualCodeInput.value = '';
-    handleBandScanned({ shortCode: code });
-  }
+btnLeaveTogether.addEventListener('click', () => {
+  submitDepartures(leavingTray.length > 1);
 });
 
-manualCodeFormOut.addEventListener('submit', (e) => {
+manualCodeFormOut.addEventListener('submit', async (e) => {
   e.preventDefault();
   const code = manualCodeInputOut.value.trim().toUpperCase();
-  if (code.length === 4) {
-    manualCodeInputOut.value = '';
-    handleBandScanned({ shortCode: code });
-  }
+  if (!code) return;
+  manualCodeInputOut.value = '';
+  await handleDepartureBand({ shortCode: code });
 });
 
-// --- Camera Scanner Implementation (PDF417 and QR) ---
+// --- Camera QR / Barcode Scanner ---
+btnOpenQrScanner.addEventListener('click', () => {
+  startCamera('band');
+});
 
-btnOpenQrScanner.addEventListener('click', () => openCameraScanner('band'));
-btnOpenQrScannerOut.addEventListener('click', () => openCameraScanner('band'));
+btnOpenQrScannerOut.addEventListener('click', () => {
+  startCamera('band');
+});
 
-async function openCameraScanner(mode = 'id') {
+btnCloseCamera.addEventListener('click', closeCameraModal);
+
+async function startCamera(mode = 'id') {
   cameraMode = mode;
-  cameraModal.classList.add('open');
-  scannerGuideText.textContent = mode === 'id' ? 'Back of license, barcode in the box' : 'Point camera at band QR';
-
-  const reticle = document.getElementById('scanner-reticle');
-  if (reticle) {
-    reticle.className = mode === 'id' ? 'scanner-reticle-box reticle-id' : 'scanner-reticle-box reticle-qr';
-  }
+  scannerGuideText.textContent = mode === 'id' ? 'Point camera at license barcode' : 'Point camera at wristband QR';
+  scannerReticle.style.width = mode === 'id' ? '82%' : '65%';
+  scannerReticle.style.height = mode === 'id' ? '46%' : '65%';
 
   try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({
+    const stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: { ideal: 'environment' },
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
       },
-      audio: false,
     });
 
-    scannerVideo.srcObject = cameraStream;
-    scannerVideo.setAttribute('playsinline', 'true');
+    cameraStream = stream;
+    cameraTrack = stream.getVideoTracks()[0];
+    scannerVideo.srcObject = stream;
     await scannerVideo.play();
+
+    cameraModal.classList.add('open');
     cameraActive = true;
 
-    cameraTrack = cameraStream.getVideoTracks()[0];
-    const capabilities = cameraTrack.getCapabilities?.() || {};
-    if (capabilities.torch) {
-      btnTorch.classList.remove('hidden');
-    } else {
-      btnTorch.classList.add('hidden');
+    if (cameraTrack && typeof cameraTrack.getCapabilities === 'function') {
+      const caps = cameraTrack.getCapabilities();
+      if (caps.torch) btnTorch.classList.remove('hidden');
     }
 
-    startBarcodeDetectionLoop();
+    startFrameDetection();
   } catch (err) {
-    closeCameraModal();
-    showFlash('Camera permission denied or camera unavailable', 'red');
+    triggerVerdictFlood({ name: 'Camera Error', verdict: 'DENIED', detail: 'Camera permission denied or unavailable', type: 'stop' });
   }
 }
 
 btnTorch.addEventListener('click', async () => {
-  if (cameraTrack) {
-    try {
-      const current = cameraTrack.getSettings()?.torch || false;
-      await cameraTrack.applyConstraints({
-        advanced: [{ torch: !current }],
-      });
-    } catch (e) {
-      console.warn('Torch toggle failed', e);
-    }
-  }
+  if (!cameraTrack) return;
+  try {
+    const current = cameraTrack.getSettings().torch || false;
+    await cameraTrack.applyConstraints({ advanced: [{ torch: !current }] });
+  } catch {}
 });
 
 function closeCameraModal() {
   cameraActive = false;
-  cameraModal.classList.remove('open');
-  if (animFrameId) {
-    cancelAnimationFrame(animFrameId);
-    animFrameId = null;
-  }
-  if (zxingReader) {
-    try {
-      zxingReader.reset();
-    } catch (e) {
-      // Ignore
-    }
-    zxingReader = null;
-  }
+  if (animFrameId) cancelAnimationFrame(animFrameId);
   if (cameraStream) {
-    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream.getTracks().forEach(track => track.stop());
     cameraStream = null;
     cameraTrack = null;
   }
-  scannerVideo.srcObject = null;
+  cameraModal.classList.remove('open');
+  btnTorch.classList.add('hidden');
 }
 
-btnCloseCamera.addEventListener('click', closeCameraModal);
-
-async function startBarcodeDetectionLoop() {
-  const format = cameraMode === 'id' ? 'pdf417' : 'qr_code';
+function startFrameDetection() {
+  const hasNativeBarcode = 'BarcodeDetector' in window;
   let nativeDetector = null;
 
-  if ('BarcodeDetector' in window) {
+  if (hasNativeBarcode) {
     try {
-      const supported = await window.BarcodeDetector.getSupportedFormats();
-      if (supported.includes(format)) {
-        nativeDetector = new window.BarcodeDetector({ formats: [format] });
-      }
-    } catch (e) {
-      // Fallback
+      const formats = cameraMode === 'id' ? ['pdf417'] : ['qr_code'];
+      nativeDetector = new window.BarcodeDetector({ formats });
+    } catch {
+      nativeDetector = null;
     }
   }
 
-  // If native detector not available, initialize ZXing fallback
-  if (!nativeDetector && window.ZXing) {
-    try {
-      if (cameraMode === 'id') {
-        zxingReader = new window.ZXing.BrowserPDF417Reader();
-      } else {
-        zxingReader = new window.ZXing.BrowserQRCodeReader();
-      }
-    } catch (e) {
-      console.warn('ZXing fallback failed to initialize', e);
+  if (!nativeDetector && typeof ZXing !== 'undefined') {
+    if (cameraMode === 'id') {
+      zxingReader = new ZXing.BrowserPDF417Reader();
+    } else {
+      zxingReader = new ZXing.BrowserQRCodeReader();
     }
   }
 
@@ -790,12 +787,12 @@ async function startBarcodeDetectionLoop() {
   const checkFrame = async () => {
     if (!cameraActive) return;
 
-    if (scannerVideo.readyState >= 2 && scannerVideo.videoWidth > 0) {
+    if (scannerVideo.readyState === scannerVideo.HAVE_ENOUGH_DATA) {
       if (nativeDetector) {
         try {
-          const codes = await nativeDetector.detect(scannerVideo);
-          if (codes && codes.length > 0) {
-            const raw = codes[0].rawValue;
+          const barcodes = await nativeDetector.detect(scannerVideo);
+          if (barcodes && barcodes.length > 0) {
+            const raw = barcodes[0].rawValue;
             if (cameraMode === 'id') {
               handleIdBarcodeDecoded(raw);
               return;
@@ -808,9 +805,7 @@ async function startBarcodeDetectionLoop() {
               }
             }
           }
-        } catch (e) {
-          // Ignore detection errors per frame
-        }
+        } catch {}
       } else if (zxingReader) {
         const now = performance.now();
         if (now - lastZxingAttempt >= 120) {
@@ -833,9 +828,7 @@ async function startBarcodeDetectionLoop() {
                 }
               }
             }
-          } catch (e) {
-            // Barcode not found in this frame; continue
-          }
+          } catch {}
         }
       }
     }
@@ -847,7 +840,6 @@ async function startBarcodeDetectionLoop() {
 }
 
 // --- Guest Search & Walk-in Modal ---
-
 btnOpenGuestSearch.addEventListener('click', () => {
   openGuestSearch('Search Guest List');
 });
@@ -872,7 +864,7 @@ async function executeGuestSearch(q) {
   try {
     const guests = await api.searchGuests(q);
     renderGuestSearchResults(guests);
-  } catch (err) {
+  } catch {
     guestSearchResults.innerHTML = '<p class="text-muted text-center">Failed to load guests</p>';
   }
 }
@@ -891,13 +883,19 @@ function renderGuestSearchResults(guests) {
     }
 
     const item = document.createElement('div');
-    item.className = 'guest-search-item';
+    item.className = 'card';
+    item.style.padding = '0.75rem 1rem';
+    item.style.cursor = 'pointer';
+    item.style.display = 'flex';
+    item.style.alignItems = 'center';
+    item.style.justifyContent = 'space-between';
+
     item.innerHTML = `
       <div>
-        <span class="guest-item-name">${guest.name}</span>
-        ${guest.band ? `<span class="badge badge-muted" style="margin-left: 0.5rem;">[${guest.band}]</span>` : ''}
+        <span style="font-weight: 700; font-size: var(--text-16);">${escapeHtml(guest.name)}</span>
+        ${guest.band ? `<span class="badge badge-muted" style="margin-left: 0.5rem;">[${escapeHtml(guest.band)}]</span>` : ''}
       </div>
-      <span class="badge ${guest.inside ? 'badge-green' : 'badge-muted'}">
+      <span class="badge ${guest.inside ? 'badge-orange' : 'badge-muted'}">
         ${guest.inside ? 'Inside' : guest.band ? 'Linked' : 'Tap to Link'}
       </span>
     `;
@@ -907,10 +905,9 @@ function renderGuestSearchResults(guests) {
       const token = session?.token;
 
       if (unlinkedBand) {
-        // Link this guest to the unlinked band
         const band = unlinkedBand;
         const key = band.shortCode || band.bandToken;
-        showFlash(`✓ ${guest.name} in`, 'green');
+        triggerVerdictFlood({ name: guest.name, verdict: 'IN', detail: 'Band linked', type: 'orange' });
         guestSearchModal.classList.remove('open');
         unlinkedBand = null;
         if (key) {
@@ -926,22 +923,21 @@ function renderGuestSearchResults(guests) {
         }, token);
 
         if (!res.queued && res.error) {
-          showFlash(res.message || 'Failed to link guest', 'red');
+          triggerVerdictFlood({ name: 'Error', verdict: 'FAILED', detail: res.message || 'Failed to link guest', type: 'stop' });
         }
       } else {
-        // ID check pending link
         if (pendingIdGuest) {
           pendingIdGuest.id = guest.id;
           pendingIdGuest.name = guest.name;
           idGuestName.textContent = guest.name;
           guestSearchModal.classList.remove('open');
         } else {
-          showFlash(`Selected: ${guest.name}. Tap band to check in.`, 'amber');
           pendingIdGuest = guest;
           idGuestName.textContent = guest.name;
-          idBadgeWrap.innerHTML = '<div class="age-badge badge-21plus">GUEST</div>';
+          idBadgeWrap.innerHTML = '<div class="id-age-band band-lime"><span>GUEST</span></div>';
           idResultContainer.classList.remove('hidden');
           guestSearchModal.classList.remove('open');
+          triggerVerdictFlood({ name: guest.name, verdict: 'SELECTED', detail: 'Tap band to check in', type: 'orange' });
         }
       }
     });
@@ -951,7 +947,6 @@ function renderGuestSearchResults(guests) {
 }
 
 // --- Walk-in Guest Creation ---
-
 btnOpenAddWalkin.addEventListener('click', () => {
   guestSearchModal.classList.remove('open');
   walkinModal.classList.add('open');
@@ -983,7 +978,7 @@ walkinForm.addEventListener('submit', async (e) => {
     if (unlinkedBand) {
       const band = unlinkedBand;
       const key = band.shortCode || band.bandToken;
-      showFlash(`✓ ${res.guest.name} in`, 'green');
+      triggerVerdictFlood({ name: res.guest.name, verdict: 'IN', detail: 'Walk-in linked', type: 'orange' });
       unlinkedBand = null;
       if (key) {
         localInsideBands.add(key);
@@ -998,17 +993,17 @@ walkinForm.addEventListener('submit', async (e) => {
       }, session.token);
 
       if (!scanRes.queued && scanRes.error) {
-        showFlash(scanRes.message || 'Failed to link walk-in band', 'red');
+        triggerVerdictFlood({ name: 'Error', verdict: 'FAILED', detail: scanRes.message || 'Failed to link walk-in', type: 'stop' });
       }
     } else {
-      showFlash(`Created walk-in: ${res.guest.name}. Tap band now.`, 'green');
       pendingIdGuest = res.guest;
       idGuestName.textContent = res.guest.name;
-      idBadgeWrap.innerHTML = '<div class="age-badge badge-21plus">WALK-IN</div>';
+      idBadgeWrap.innerHTML = '<div class="id-age-band band-lime"><span>WALK-IN</span></div>';
       idResultContainer.classList.remove('hidden');
+      triggerVerdictFlood({ name: res.guest.name, verdict: 'WALK-IN', detail: 'Tap wristband now', type: 'orange' });
     }
   } catch (err) {
-    showFlash(err.message || 'Failed to add walk-in guest', 'red');
+    triggerVerdictFlood({ name: 'Error', verdict: 'FAILED', detail: err.message || 'Failed to add walk-in', type: 'stop' });
   }
 });
 

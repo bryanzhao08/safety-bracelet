@@ -4,22 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Homebound Dashboard</title>
-  <link rel="stylesheet" href="/shared/base.css">
-  <link rel="stylesheet" href="/dashboard/dashboard.css">
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="dashboard.css">
 </head>
 <body class="dashboard-app">
-  <!-- Flash Banner -->
-  <div id="flash-banner" class="flash-banner" role="alert"></div>
-
   <!-- Header -->
-  <header class="dashboard-header">
+  <header class="dashboard-header no-print">
     <div class="dashboard-brand">
-      <a href="/" class="app-brand">
-        <span class="brand-icon">H</span>
-        <span>Homebound</span>
-      </a>
-      <span class="text-dim">/</span>
-      <h1 id="event-title" style="font-size: 1.15rem; font-weight: 700; margin: 0;">Live Dashboard</h1>
+      <span class="wristband-chip band-orange">Homebound</span>
+      <h1 id="event-title" style="font-size: var(--text-20); font-weight: 700; margin: 0;">Live Dashboard</h1>
       <span id="live-badge" class="live-indicator">
         <span class="live-dot"></span>
         <span id="live-text">Live</span>
@@ -27,119 +20,91 @@
     </div>
 
     <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-      <button id="btn-toggle-sound" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: 0.9rem;" type="button" title="Toggle audio and vibration on departures">
-        🔔 Sound
+      <button id="btn-toggle-sound" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: var(--text-14);" type="button" title="Toggle audio and vibration on departures">
+        Sound
       </button>
-      <button id="btn-closing-mode" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: 0.9rem;" type="button">
-        🌙 Closing Mode
+      <button id="btn-closing-mode" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: var(--text-14);" type="button">
+        Closing Mode
       </button>
-      <a href="/door" class="btn btn-primary" style="min-height: 44px; padding: 0.4rem 1rem; font-size: 0.95rem;">
-        🚪 Door Scanner
+      <a href="../door/" class="btn btn-primary" style="min-height: 44px; padding: 0.4rem 1rem; font-size: var(--text-14);">
+        Door Scanner
       </a>
-      <a href="/admin" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: 0.9rem;">
+      <a href="../admin/" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: var(--text-14);">
         Admin
       </a>
-      <button id="btn-logout" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: 0.9rem;">
+      <button id="btn-logout" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: var(--text-14);" type="button">
         Exit
       </button>
     </div>
   </header>
 
-  <!-- Main Dashboard Container -->
+  <!-- Main Container (Left-aligned throughout) -->
   <main class="container" style="flex: 1; padding-top: 1.5rem; padding-bottom: 3rem;">
-    <!-- Normal Dashboard View -->
+    <!-- Live Dashboard View -->
     <div id="live-dashboard-view">
-      <!-- Venue Capacity Bar -->
-      <div id="capacity-section" class="capacity-card">
-        <div class="capacity-header">
-          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-            <span class="capacity-title">Venue Capacity</span>
-            <span id="capacity-badge" class="badge badge-muted">No limit set</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <span id="capacity-counter" class="capacity-counter">0 / —</span>
-            <button id="btn-set-capacity" class="btn btn-secondary" style="min-height: 36px; padding: 0.2rem 0.75rem; font-size: 0.82rem;" type="button">
-              Set Limit
-            </button>
-          </div>
+      <!-- Huge Inside Count at Left/Top -->
+      <section class="hero-stats-section">
+        <div id="stat-inside" class="hero-inside-count font-condensed">0</div>
+        <div class="hero-inside-label">Inside now</div>
+        <div class="hero-meta-row">
+          <span><strong id="stat-checked-in" style="color: var(--tyvek);">0</strong> checked in</span>
+          <span>&middot;</span>
+          <span><strong id="stat-left" style="color: var(--tyvek);">0</strong> departed</span>
         </div>
-        <div class="capacity-track">
-          <div id="capacity-fill" class="capacity-fill" style="width: 0%;"></div>
-        </div>
-        <div id="capacity-warning-text" class="capacity-warning hidden"></div>
-      </div>
 
-      <!-- Top Stats Cards -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <span class="stat-label">Currently Inside</span>
-          <span id="stat-inside" class="stat-value inside-highlight">0</span>
+        <!-- Venue Capacity Bar -->
+        <div id="capacity-section" class="capacity-card">
+          <div class="capacity-header">
+            <span class="form-label" style="margin-bottom: 0;">Venue Capacity</span>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span id="capacity-counter" class="text-slate" style="font-size: var(--text-14); font-weight: 600;">0 inside</span>
+              <button id="btn-set-capacity" class="btn btn-secondary" style="min-height: 36px; padding: 0.2rem 0.7rem; font-size: var(--text-14);" type="button">
+                Set Limit
+              </button>
+            </div>
+          </div>
+          <div class="capacity-track">
+            <div id="capacity-fill" class="capacity-fill" style="width: 0%;"></div>
+          </div>
+          <div id="capacity-warning-text" class="capacity-warning hidden"></div>
         </div>
-        <div class="stat-card">
-          <span class="stat-label">Total Checked In</span>
-          <span id="stat-checked-in" class="stat-value">0</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-label">Departed / Left</span>
-          <span id="stat-left" class="stat-value">0</span>
-        </div>
-      </div>
+      </section>
 
       <!-- Main Two-Column Layout -->
-      <div class="dashboard-layout">
-        <!-- Left Column: Recent Departures -->
+      <div class="dashboard-grid">
+        <!-- Departures Feed as Grouped Pink Band Chips -->
         <section class="departures-card">
-          <div style="display: flex; align-items: center; justify-content: space-between;">
-            <h2>Recent Departures</h2>
-            <span class="badge badge-amber" style="font-size: 0.75rem;">Groups</span>
+          <div>
+            <h2>Departures</h2>
+            <p class="text-muted" style="font-size: var(--text-14); margin-top: 0.25rem;">
+              Recent exits and groups who left together
+            </p>
           </div>
-          <p class="text-muted" style="font-size: 0.85rem; margin-top: -0.5rem;">
-            Guests who left together or alone
-          </p>
           <div id="departures-list" class="departures-list">
-            <p id="departures-empty" class="text-muted text-center" style="padding: 2rem 0;">No departures yet</p>
+            <p id="departures-empty" class="text-muted" style="padding: 1.5rem 0; font-size: var(--text-14);">No departures yet</p>
           </div>
         </section>
 
-        <!-- Right Column: Roster & Closing Time Filter -->
+        <!-- Searchable Roster as Rows of Band Chips -->
         <section class="roster-card">
           <div class="roster-controls">
             <div>
               <h2>Guest Roster</h2>
-              <p class="text-muted" style="font-size: 0.85rem;">Names and departure records</p>
+              <p class="text-muted" style="font-size: var(--text-14); margin-top: 0.25rem;">Live status for every guest</p>
             </div>
-            <div class="filter-tabs">
-              <button class="filter-tab active" data-filter="all" type="button">All (<span id="count-all">0</span>)</button>
-              <button class="filter-tab" data-filter="inside" type="button">
-                Still Inside (<span id="count-inside">0</span>)
-              </button>
-              <button class="filter-tab" data-filter="left" type="button">Left (<span id="count-left">0</span>)</button>
-              <button class="filter-tab" data-filter="not_arrived" type="button">Not Arrived (<span id="count-not-arrived">0</span>)</button>
-            </div>
-          </div>
 
-          <div>
+            <div class="filter-pills">
+              <button class="filter-pill active" data-filter="all" type="button">All (<span id="count-all">0</span>)</button>
+              <button class="filter-pill" data-filter="inside" type="button">Inside (<span id="count-inside">0</span>)</button>
+              <button class="filter-pill" data-filter="left" type="button">Left (<span id="count-left">0</span>)</button>
+              <button class="filter-pill" data-filter="not_arrived" type="button">Not Arrived (<span id="count-not-arrived">0</span>)</button>
+            </div>
+
             <input type="search" id="roster-search" class="input" placeholder="Search guests by name or band code..." autocomplete="off">
           </div>
 
-          <div class="table-responsive">
-            <table class="roster-table">
-              <thead>
-                <tr>
-                  <th>Guest</th>
-                  <th>Band</th>
-                  <th>Status</th>
-                  <th>Arrived</th>
-                  <th>Departed</th>
-                  <th>Left With</th>
-                </tr>
-              </thead>
-              <tbody id="roster-tbody">
-                <tr>
-                  <td colspan="6" class="text-center text-muted" style="padding: 2rem;">Loading roster...</td>
-                </tr>
-              </tbody>
-            </table>
+          <div id="roster-list" class="roster-list">
+            <p class="text-muted" style="padding: 1.5rem 0; font-size: var(--text-14);">Loading roster...</p>
           </div>
         </section>
       </div>
@@ -149,54 +114,36 @@
     <div id="closing-time-view" class="closing-view hidden">
       <div class="closing-header no-print">
         <div>
-          <h2 style="font-size: 1.6rem; margin-bottom: 0.25rem;">🌙 Closing Time Sweep</h2>
-          <p class="text-muted">High-visibility list of everyone still inside. Check off guests as they are located or exit.</p>
+          <h2>Closing Time Sweep</h2>
+          <p class="text-muted" style="margin-top: 0.25rem;">Check off guests as they are located or exit the building.</p>
         </div>
         <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
-          <button id="btn-print-closing" class="btn btn-primary" type="button" style="min-height: 48px;">
-            🖨️ Print Checklist
+          <button id="btn-print-closing" class="btn btn-primary" type="button" style="min-height: 44px;">
+            Print Checklist
           </button>
-          <button id="btn-exit-closing" class="btn btn-secondary" type="button" style="min-height: 48px;">
-            ✕ Exit Closing Mode
+          <button id="btn-exit-closing" class="btn btn-secondary" type="button" style="min-height: 44px;">
+            Exit Closing Mode
           </button>
         </div>
       </div>
 
-      <div class="closing-stats-banner">
-        <div class="closing-count-box">
-          <span class="closing-count-label">GUESTS STILL INSIDE</span>
-          <span id="closing-inside-count" class="closing-count-value">0</span>
-        </div>
-        <div class="closing-info-box">
-          <p style="font-weight: 700; margin-bottom: 0.25rem;">Security &amp; Venue Closing Protocol</p>
-          <p class="text-muted" style="margin: 0; font-size: 0.95rem;">
-            Physically clear bathrooms, lounges, outdoors, and back areas. When guests exit through the door, monitors must tap them OUT.
-          </p>
-        </div>
+      <div class="closing-count-box">
+        <span class="form-label">Guests still inside</span>
+        <span id="closing-inside-count" class="closing-count-value font-condensed">0</span>
       </div>
 
-      <!-- Printable Checklist Header (print-only) -->
-      <div class="print-checklist-header print-only">
-        <h1 id="print-event-title" style="font-size: 1.5rem; margin-bottom: 0.25rem;">Homebound Closing Checklist</h1>
-        <p id="print-checklist-meta" style="font-size: 0.9rem; margin-bottom: 1rem; color: #555;">Generated at ...</p>
+      <div class="print-checklist-header print-only hidden">
+        <h1 id="print-event-title" style="font-size: var(--text-20); margin-bottom: 0.25rem;">Homebound Closing Checklist</h1>
+        <p id="print-checklist-meta" style="font-size: var(--text-14); margin-bottom: 1rem; color: #555;">Generated at ...</p>
       </div>
 
-      <div id="closing-checklist-container" class="closing-checklist">
-        <!-- Generated checklist cards -->
-      </div>
-
-      <div class="print-checklist-footer print-only">
-        <div style="display: flex; justify-content: space-between; margin-top: 2rem; border-top: 1px solid #000; padding-top: 0.5rem; font-size: 0.9rem;">
-          <span>Closing Supervisor Signature: _________________________________</span>
-          <span>Time Cleared: ____________</span>
-        </div>
-      </div>
+      <div id="closing-checklist-container" class="closing-checklist"></div>
     </div>
   </main>
 
   <!-- Capacity Edit Modal -->
   <div id="capacity-modal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 400px;">
+    <div class="modal-content" style="max-width: 420px;">
       <div class="modal-header">
         <h2>Venue Capacity Limit</h2>
       </div>
@@ -205,12 +152,12 @@
           <div class="form-group">
             <label class="form-label" for="input-capacity">Capacity Limit (Number of Guests)</label>
             <input type="number" id="input-capacity" class="input" min="1" max="10000" placeholder="e.g. 150">
-            <p class="text-muted" style="font-size: 0.85rem; margin-top: 0.4rem;">
-              Dashboard capacity bar turns amber at 90% and red at 100%. Leave empty to remove limit.
+            <p class="text-muted" style="font-size: var(--text-14); margin-top: 0.4rem;">
+              Warns at 90% and red alert at 100%. Leave empty to remove limit.
             </p>
           </div>
         </div>
-        <div class="modal-footer" style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+        <div class="modal-footer">
           <button type="button" id="btn-cancel-capacity" class="btn btn-secondary">Cancel</button>
           <button type="submit" class="btn btn-primary">Save Capacity</button>
         </div>
@@ -218,7 +165,7 @@
     </div>
   </div>
 
-  <!-- Login Modal (if no session active) -->
+  <!-- Login Modal -->
   <div id="login-modal" class="modal-overlay">
     <div class="modal-content" style="max-width: 440px;">
       <div class="modal-header">
@@ -232,7 +179,7 @@
           </div>
           <div class="form-group">
             <label class="form-label" for="login-code">Monitor Code</label>
-            <input type="text" id="login-code" class="input input-code" maxlength="6" required>
+            <input type="text" id="login-code" class="input input-short-code" maxlength="6" required>
           </div>
           <div class="form-group">
             <label class="form-label" for="login-name">Your Name</label>
@@ -247,6 +194,6 @@
     </div>
   </div>
 
-  <script type="module" src="/dashboard/dashboard.js"></script>
+  <script type="module" src="dashboard.js"></script>
 </body>
 </html>
