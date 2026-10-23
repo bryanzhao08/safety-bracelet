@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Homebound &mdash; Request a Free Pilot Kit</title>
+  <meta name="description" content="Request 100 free NFC wristbands, phone door scanner setup, and live dashboard tracking for your chapter's next event.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Atkinson+Hyperlegible+Next:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="pilot.css">
+</head>
+<body class="pilot-body">
+  <!-- Header -->
+  <header class="pilot-header">
+    <div class="pilot-container">
+      <nav class="pilot-nav" aria-label="Main navigation">
+        <a href="../site/" class="pilot-brand" title="Back to Homebound overview">
+          <span class="wristband-chip band-orange">Homebound</span>
+        </a>
+
+        <ul class="pilot-nav-links">
+          <li><a href="../site/#how-it-works">How it works</a></li>
+          <li><a href="../site/#privacy">Privacy</a></li>
+          <li><a href="../dashboard/">Dashboard</a></li>
+        </ul>
+
+        <div class="pilot-nav-actions">
+          <a href="../door/" class="btn btn-secondary nav-btn-secondary">
+            Open door scanner
+          </a>
+          <a href="#pilot-form" class="btn btn-primary nav-btn-primary">
+            Apply now
+          </a>
+        </div>
+
+        <button type="button" class="mobile-menu-btn glass" id="mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="mobile-nav-sheet">
+          <span class="menu-icon-bars" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Mobile Navigation Sheet -->
+    <div class="mobile-nav-backdrop" id="mobile-nav-backdrop" aria-hidden="true"></div>
+    <div class="mobile-nav-sheet glass" id="mobile-nav-sheet" aria-hidden="true">
+      <div class="mobile-sheet-header">
+        <span class="wristband-chip band-orange">Homebound</span>
+        <button type="button" class="mobile-close-btn glass" id="mobile-close-btn" aria-label="Close menu">&times;</button>
+      </div>
+      <ul class="mobile-nav-list">
+        <li><a href="../site/" class="mobile-nav-link">Home overview</a></li>
+        <li><a href="../site/#how-it-works" class="mobile-nav-link">How it works</a></li>
+        <li><a href="../site/#privacy" class="mobile-nav-link">Privacy</a></li>
+        <li><a href="../dashboard/" class="mobile-nav-link">Live dashboard</a></li>
+      </ul>
+      <div class="mobile-sheet-actions">
+        <a href="#pilot-form" class="btn btn-primary btn-block">Apply now</a>
+        <a href="../door/" class="btn btn-secondary btn-block">Open door scanner</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="pilot-container">
+    <!-- Hero / Headline -->
+    <section class="pilot-hero">
+      <div class="pilot-badge-wrap">
+        <span class="wristband-chip band-pink">Free Event Pilot</span>
+      </div>
+
+      <h1 class="pilot-headline">
+        Get a free pilot kit for your chapter.
+      </h1>
+
+      <p class="pilot-subhead">
+        Run Homebound at your next event at no cost. Get wristbands in the mail, set up monitors on any smartphone, and track departure groups in real time.
+      </p>
+    </section>
+
+    <!-- Pilot Details Grid -->
+    <section class="pilot-details-grid">
+      <div class="card glass pilot-info-card">
+        <div class="info-card-header">
+          <h2 class="info-card-title">Who it's for</h2>
+        </div>
+        <p class="info-card-text">
+          Greek chapters, student orgs and event hosts planning an upcoming social or formal. Designed for risk chairs and event managers who want verified exit safety.
+        </p>
+      </div>
+
+      <div class="card glass pilot-info-card">
+        <div class="info-card-header">
+          <h2 class="info-card-title">What the free pilot includes</h2>
+        </div>
+        <p class="info-card-text">
+          <strong>100 NFC wristbands</strong> mailed to you, door setup on your phones (no app downloads needed), and full live dashboard tracking for one complete event.
+        </p>
+      </div>
+    </section>
+
+    <!-- How It Works (3 Steps) -->
+    <section class="pilot-sequence-section">
+      <h2 class="pilot-section-heading">How it works</h2>
+
+      <div class="steps-sequence">
+        <div class="sequence-step">
+          <span class="sequence-num">1</span>
+          <div class="sequence-body">
+            <h3 class="sequence-title">Request your kit</h3>
+            <p class="sequence-text">
+              Submit the form below with your chapter name, campus, and target event size. We review every request and respond within 2 days.
+            </p>
+          </div>
+        </div>
+
+        <div class="sequence-step">
+          <span class="sequence-num">2</span>
+          <div class="sequence-body">
+            <h3 class="sequence-title">Receive wristbands &amp; setup</h3>
+            <p class="sequence-text">
+              We mail you 100 pre-encoded NFC wristbands and quick-start door cards. Monitors simply open a web link on their phones—Android reads NFC directly, iPhones use camera QR.
+            </p>
+          </div>
+        </div>
+
+        <div class="sequence-step">
+          <span class="sequence-num">3</span>
+          <div class="sequence-body">
+            <h3 class="sequence-title">Run your event &amp; review</h3>
+            <p class="sequence-text">
+              Tapping two bands out together records the departure group. If anyone hasn't checked in by morning, the risk chair knows immediately when they left and who they were with.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- The Pilot Form -->
+    <section class="pilot-form-section">
+      <div class="card glass pilot-form-card">
+        <div class="form-header">
+          <h2 class="form-title">Request your pilot kit</h2>
+          <p class="form-subtitle">Fill out this short form to get 100 wristbands and event setup.</p>
+        </div>
+
+        <form id="pilot-form" class="pilot-form" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="pilot-chapter">Chapter or student organization *</label>
+            <input type="text" id="pilot-chapter" name="chapter" class="input" placeholder="e.g. Kappa Alpha Theta" required autocomplete="organization">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="pilot-school">Campus or university *</label>
+            <input type="text" id="pilot-school" name="school" class="input" placeholder="e.g. UC Berkeley" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="pilot-email">Risk chair or organizer email *</label>
+            <input type="email" id="pilot-email" name="email" class="input" placeholder="risk@example.edu" required autocomplete="email">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="pilot-size">Expected event size</label>
+            <select id="pilot-size" name="eventSize" class="input select">
+              <option value="100">Under 100 guests</option>
+              <option value="250" selected>100 &ndash; 300 guests</option>
+              <option value="500">300 &ndash; 600 guests</option>
+              <option value="1000">600+ guests</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="pilot-notes">Any questions or event date (optional)</label>
+            <textarea id="pilot-notes" name="note" class="input textarea" rows="3" placeholder="Date of upcoming event, questions, or notes..."></textarea>
+          </div>
+
+          <button type="submit" id="pilot-submit-btn" class="btn btn-primary pilot-submit-btn">
+            Submit pilot request
+          </button>
+
+          <!-- Success State -->
+          <div id="pilot-status-success" class="pilot-feedback pilot-feedback-success hidden" role="status" aria-live="polite">
+            <span class="feedback-icon" aria-hidden="true">&#10003;</span>
+            <div class="feedback-body">
+              <strong>Request sent. We'll email you within 2 days.</strong>
+              <p>We received your pilot application and will reach out with kit shipping and setup details.</p>
+            </div>
+          </div>
+
+          <!-- Error / Fallback State -->
+          <div id="pilot-status-error" class="pilot-feedback pilot-feedback-error hidden" role="alert" aria-live="assertive">
+            <span class="feedback-icon" aria-hidden="true">&#9888;</span>
+            <div class="feedback-body" id="pilot-error-text">
+              Unable to send request. Please check your connection and try again.
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="pilot-footer">
+    <div class="pilot-container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <strong>Homebound</strong> &middot; Campus event safety and departure verification
+      </div>
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <a href="../site/">Site home</a>
+        <a href="../door/">Door scanner</a>
+        <a href="../dashboard/">Live dashboard</a>
+        <a href="../admin/">Admin console</a>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="pilot.js"></script>
+</body>
+</html>

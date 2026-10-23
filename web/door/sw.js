@@ -1,5 +1,5 @@
 // web/door/sw.js - Service Worker for Homebound Door Scanner
-const CACHE_NAME = 'hb-door-v3';
+const CACHE_NAME = 'hb-door-v4';
 
 const PRECACHE_PATHS = [
   './',

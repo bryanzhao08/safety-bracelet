@@ -22,7 +22,7 @@
 
   <!-- Join Shift Screen (shown when not logged in) -->
   <div id="join-view" class="door-app join-view-screen">
-    <div class="card join-card">
+    <div class="card join-card glass">
       <div style="margin-bottom: 1.5rem;">
         <span class="wristband-chip band-orange" style="margin-bottom: 0.75rem;">Homebound door</span>
         <h1 style="font-size: var(--text-28);">Start door shift</h1>
@@ -59,30 +59,26 @@
   </div>
 
   <!-- Active Door Shift Screen (Full-height) -->
-  <div id="door-view" class="door-app hidden">
+  <div id="door-view" class="door-app hidden" data-mode="in">
     <!-- Top Header -->
     <header class="door-header">
-      <div class="door-monitor-info">
-        <span id="door-event-name" class="door-event-title">Event</span>
-        <span id="door-monitor-name" class="door-monitor-name">Monitor</span>
+      <div class="door-header-left">
+        <div id="door-status-indicator" class="header-status-indicator" title="Connection status">
+          <span id="door-status-dot" class="header-status-dot"></span>
+          <span id="door-offline-badge" class="header-offline-badge hidden">0</span>
+        </div>
+        <div class="door-monitor-info">
+          <span id="door-event-name" class="door-event-title">Event</span>
+          <span id="door-monitor-name" class="door-monitor-name">Monitor</span>
+        </div>
       </div>
-      <div style="display: flex; gap: 0.5rem; align-items: center;">
-        <a href="../dashboard/" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: var(--text-14);">
-          Dashboard
-        </a>
-        <button id="btn-leave-shift" class="btn btn-secondary" style="min-height: 44px; padding: 0.4rem 0.8rem; font-size: var(--text-14);" title="Leave Shift">
-          Exit
-        </button>
+      <div class="door-header-actions">
+        <a href="../dashboard/" class="btn-capsule glass">Dashboard</a>
+        <button id="btn-leave-shift" class="btn-capsule glass" type="button" title="Leave Shift">Exit</button>
       </div>
     </header>
 
-    <!-- Web NFC Status Bar -->
-    <div id="nfc-bar" class="nfc-status-bar">
-      <div id="nfc-dot" class="nfc-status-dot"></div>
-      <span id="nfc-label">NFC reader active</span>
-    </div>
-
-    <!-- Offline Queue Status Bar -->
+    <!-- Offline Queue Status Bar (sync notification) -->
     <div id="offline-bar" class="offline-status-bar hidden" role="status" aria-live="polite">
       <div style="display: flex; align-items: center; gap: 0.5rem;">
         <div id="offline-dot" class="offline-status-dot"></div>
@@ -93,27 +89,31 @@
       </button>
     </div>
 
-    <!-- MIDDLE SCROLLABLE CONTENT (Top Half of Phone) -->
+    <!-- MIDDLE SCROLLABLE CONTENT (Top to Bottom Hierarchy) -->
     <div class="door-content-scroll">
-      <!-- IN MODE CONTENT -->
-      <main id="in-mode-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
-        <!-- ID Scanning action -->
-        <button id="btn-open-id-scanner" class="btn btn-scan-id btn-block" type="button">
+      <!-- 1. TOP ACTION SLOT: Scan ID in IN mode, Leaving Together tray in OUT mode -->
+      <div id="in-mode-top" class="in-mode-top">
+        <button id="btn-open-id-scanner" class="btn-scan-id btn-block" type="button">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="16" rx="3"></rect>
+            <circle cx="9" cy="10" r="2"></circle>
+            <line x1="15" y1="8" x2="17" y2="8"></line>
+            <line x1="15" y1="12" x2="17" y2="12"></line>
+            <line x1="7" y1="16" x2="17" y2="16"></line>
+          </svg>
           Scan ID
         </button>
 
-        <!-- ID Scan Result Card (Shown after scanning an ID) -->
+        <!-- ID Scan Result Card -->
         <div id="id-result-container" class="id-result-card hidden">
-          <div id="id-badge-wrap">
-            <!-- Full-width age band rendered by JS: 21+ or UNDER 21 or EXPIRED -->
-          </div>
+          <div id="id-badge-wrap"></div>
           <div id="id-guest-name" class="id-guest-name"></div>
           <div id="id-meta-line" class="id-meta-line"></div>
-          
+
           <div id="id-duplicate-warning" class="badge badge-amber hidden" style="width: 100%; justify-content: center;">
             Duplicate: ID already scanned tonight
           </div>
-          
+
           <!-- Candidate Picker if Ambiguous Match -->
           <div id="id-candidates-container" class="hidden">
             <p class="text-muted" style="margin-bottom: 0.5rem; font-size: var(--text-14);">Select matching guest:</p>
@@ -123,35 +123,16 @@
           <div id="id-tap-prompt" class="tap-band-prompt">
             Tap wristband to link
           </div>
-          <button id="btn-cancel-id" class="btn btn-secondary btn-block" type="button">
+          <button id="btn-cancel-id" class="btn btn-secondary btn-block" type="button" style="border-radius: var(--radius-full);">
             Cancel ID check
           </button>
         </div>
+      </div>
 
-        <!-- Secondary Actions Row: Search Guest & Camera QR -->
-        <div class="door-secondary-actions">
-          <button id="btn-open-guest-search" class="btn btn-secondary" type="button">
-            Search guest
-          </button>
-          <button id="btn-open-qr-scanner" class="btn btn-secondary" type="button">
-            Camera QR
-          </button>
-        </div>
-
-        <!-- Manual 4-character code entry -->
-        <form id="manual-code-form" class="manual-code-form">
-          <input type="text" id="manual-code-input" class="input input-short-code" maxlength="4" placeholder="CODE" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
-          <button type="submit" class="btn btn-primary" style="min-width: 100px;">
-            Check in
-          </button>
-        </form>
-      </main>
-
-      <!-- OUT MODE CONTENT (Leaving Tray) -->
-      <main id="out-mode-container" class="hidden" style="display: flex; flex-direction: column; gap: 0.75rem;">
-        <div class="leaving-tray-card">
+      <div id="out-mode-top" class="out-mode-top hidden">
+        <div class="leaving-tray-card glass">
           <div class="leaving-tray-header">
-            <span class="tray-title">Leaving Together (<span id="tray-count">0</span>)</span>
+            <span class="tray-title">Leaving together (<span id="tray-count">0</span>)</span>
             <span id="tray-countdown-text" class="badge badge-pink">30s</span>
           </div>
 
@@ -165,38 +146,74 @@
             </p>
           </div>
 
-          <!-- Single One-Touch Action Button -->
-          <button id="btn-leave-together" class="btn btn-done-leaving btn-block" type="button" disabled>
-            Done, 0 leaving
-          </button>
-          <button id="btn-leave-alone" class="hidden" type="button"></button>
+          <div class="leaving-tray-actions">
+            <button id="btn-leave-alone" class="btn btn-secondary btn-capsule" type="button" disabled>
+              Leaving alone
+            </button>
+            <button id="btn-leave-together" class="btn btn-done-leaving" type="button" disabled>
+              Done, 0 leaving together
+            </button>
+          </div>
         </div>
+      </div>
 
-        <!-- Manual Code & Camera QR for OUT mode -->
+      <!-- 2. CENTER: LARGE TAP ZONE -->
+      <div class="door-tap-zone-wrap">
+        <button id="btn-tap-zone" class="door-tap-zone glass mode-in" type="button" aria-label="Tap wristband to phone, or click to open camera QR scanner">
+          <div class="tap-zone-ring">
+            <div class="tap-zone-icon-wrap">
+              <svg class="tap-zone-icon" width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 8.5C7.5 7 10 6 12 6s4.5 1 6 2.5"/>
+                <path d="M4 6c3-3 7-4 8-4s5 1 8 4"/>
+                <rect x="7" y="10" width="10" height="11" rx="3" stroke-width="2"/>
+                <path d="M10 14h4"/>
+              </svg>
+            </div>
+            <div id="tap-zone-text" class="tap-zone-text">
+              Hold a band to the phone
+            </div>
+            <div class="tap-zone-hint">
+              Tap to open camera QR
+            </div>
+          </div>
+        </button>
+      </div>
+
+      <!-- 3. LOWER ACTIONS: Guest Search & Code Row -->
+      <div id="in-mode-actions" class="in-mode-actions">
         <div class="door-secondary-actions">
-          <button id="btn-open-qr-scanner-out" class="btn btn-secondary btn-block" type="button">
-            Camera QR
+          <button id="btn-open-guest-search" class="btn btn-secondary btn-block" type="button" style="border-radius: var(--radius-full); min-height: 48px;">
+            Search guest list
           </button>
         </div>
 
-        <form id="manual-code-form-out" class="manual-code-form">
-          <input type="text" id="manual-code-input-out" class="input input-short-code" maxlength="4" placeholder="CODE" autocomplete="off" autocorrect="off" autocapitalize="characters">
-          <button type="submit" class="btn btn-pink" style="min-width: 100px;">
-            Add out
+        <form id="manual-code-form" class="manual-code-form">
+          <input type="text" id="manual-code-input" class="input input-short-code" maxlength="4" placeholder="4-letter code" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+          <button type="submit" class="btn btn-primary btn-code-submit">
+            Check in
           </button>
         </form>
-      </main>
+      </div>
+
+      <div id="out-mode-actions" class="out-mode-actions hidden">
+        <form id="manual-code-form-out" class="manual-code-form">
+          <input type="text" id="manual-code-input-out" class="input input-short-code" maxlength="4" placeholder="4-letter code" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+          <button type="submit" class="btn btn-pink btn-code-submit">
+            Check out
+          </button>
+        </form>
+      </div>
     </div>
 
     <!-- BOTTOM HALF: HUGE IN | OUT TOGGLE THUMB TARGETS -->
     <div class="door-bottom-controls">
       <div class="mode-switch-wrapper">
-        <div class="mode-switch" role="tablist" aria-label="Door mode">
-          <button id="btn-mode-in" class="mode-btn active-in" type="button" role="tab" aria-selected="true">
+        <div class="mode-switch" role="group" aria-label="Door mode" data-mode="in">
+          <button id="btn-mode-in" class="mode-btn active-in" type="button" data-mode="in" aria-pressed="true">
             <span class="mode-title font-condensed">IN</span>
             <span class="mode-sub">Check in</span>
           </button>
-          <button id="btn-mode-out" class="mode-btn" type="button" role="tab" aria-selected="false">
+          <button id="btn-mode-out" class="mode-btn" type="button" data-mode="out" aria-pressed="false">
             <span class="mode-title font-condensed">OUT</span>
             <span class="mode-sub">Leaving</span>
           </button>
@@ -231,27 +248,27 @@
 
   <!-- Search & Link Guest Modal -->
   <div id="guest-search-modal" class="modal-overlay">
-    <div class="modal-content">
+    <div class="modal-content glass-sheet">
       <div class="modal-header">
-        <h2 id="guest-search-title">Guest list</h2>
-        <button id="btn-close-guest-search" class="btn btn-secondary" style="min-height: 40px; min-width: 40px; padding: 0;">&times;</button>
+        <h2 id="guest-search-title" class="sheet-title">Link band</h2>
+        <button id="btn-close-guest-search" class="btn-capsule glass" style="min-height: 36px; min-width: 36px; padding: 0;" aria-label="Close">&times;</button>
       </div>
-      <div class="modal-body">
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 0.75rem; min-height: 0; flex: 1; overflow: hidden;">
         <input type="search" id="guest-search-input" class="input" placeholder="Search by name..." autocomplete="off">
-        <button id="btn-open-add-walkin" class="btn btn-secondary btn-block" type="button">
-          + Add walk-in guest
+        <button id="btn-open-add-walkin" class="btn btn-secondary btn-block" type="button" style="min-height: 48px; border-radius: var(--radius-full); flex-shrink: 0;">
+          Add walk-in guest
         </button>
-        <div id="guest-search-results" class="flex-col gap-sm" style="max-height: 300px; overflow-y: auto;"></div>
+        <div id="guest-search-results" class="guest-sheet-list" style="flex: 1; min-height: 0; max-height: 310px; overflow-y: auto; padding-bottom: 0.5rem;"></div>
       </div>
     </div>
   </div>
 
   <!-- Add Walk-in Guest Modal -->
   <div id="walkin-modal" class="modal-overlay">
-    <div class="modal-content">
+    <div class="modal-content glass-sheet">
       <div class="modal-header">
-        <h2>Add walk-in guest</h2>
-        <button id="btn-close-walkin" class="btn btn-secondary" style="min-height: 40px; min-width: 40px; padding: 0;">&times;</button>
+        <h2 class="sheet-title">Add walk-in guest</h2>
+        <button id="btn-close-walkin" class="btn-capsule glass" style="min-height: 36px; min-width: 36px; padding: 0;" aria-label="Close">&times;</button>
       </div>
       <form id="walkin-form">
         <div class="modal-body">
@@ -268,9 +285,9 @@
             <input type="tel" id="walkin-phone" class="input" placeholder="+1 ...">
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" id="btn-cancel-walkin" class="btn btn-secondary">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save &amp; link band</button>
+        <div class="modal-footer" style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+          <button type="button" id="btn-cancel-walkin" class="btn btn-secondary btn-capsule">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="min-height: 44px; border-radius: var(--radius-full); padding: 0 1.25rem;">Save &amp; link band</button>
         </div>
       </form>
     </div>

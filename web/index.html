@@ -3,60 +3,46 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Homebound - Party Safety Bands</title>
+  <meta http-equiv="refresh" content="0; url=./site/">
+  <title>Homebound &mdash; Redirecting</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Atkinson+Hyperlegible+Next:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./shared/base.css">
   <script>
-    // Automatically route root visitors to the landing page
-    if (!window.location.search && !window.location.hash) {
-      window.location.replace('./site/');
-    }
+    window.location.replace('./site/' + window.location.search + window.location.hash);
   </script>
   <style>
-    .root-portal {
+    .redirect-container {
       min-height: 100vh;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 1.5rem;
+      text-align: center;
     }
-    .nav-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1rem;
+    .redirect-card {
+      max-width: 440px;
       width: 100%;
-      margin-top: 1.5rem;
-    }
-    @media (min-width: 480px) {
-      .nav-grid {
-        grid-template-columns: 1fr 1fr;
-      }
+      padding: 2.25rem 1.75rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
     }
   </style>
 </head>
 <body>
-  <div class="root-portal">
-    <div class="card" style="max-width: 540px; width: 100%; text-align: center; padding: 2rem 1.5rem;">
-      <h1 style="margin-bottom: 0.5rem;">Homebound</h1>
-      <p class="text-muted">Party safety bands & zero-server event check-in.</p>
-
-      <div class="nav-grid">
-        <a href="./site/" class="btn btn-primary">
-          About & Pilot
-        </a>
-        <a href="./setup/" class="btn btn-secondary">
-          Connect Sheet
-        </a>
-        <a href="./door/" class="btn btn-green">
-          Door Scanner
-        </a>
-        <a href="./dashboard/" class="btn btn-secondary">
-          Live Dashboard
-        </a>
-        <a href="./admin/" class="btn btn-secondary" style="grid-column: 1 / -1;">
-          Organizer Admin
-        </a>
-      </div>
+  <div class="redirect-container">
+    <div class="card glass redirect-card">
+      <span class="wristband-chip band-orange">Homebound</span>
+      <h1 style="font-size: var(--text-20); margin: 0.25rem 0;">Redirecting to Homebound...</h1>
+      <p class="text-muted" style="font-size: var(--text-14);">
+        If you are not redirected automatically, tap the link below.
+      </p>
+      <a href="./site/" class="btn btn-primary" style="min-height: 44px; margin-top: 0.5rem;">
+        Open Homebound
+      </a>
     </div>
   </div>
 </body>

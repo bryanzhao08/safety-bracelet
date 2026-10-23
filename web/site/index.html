@@ -15,7 +15,7 @@
   <!-- Header -->
   <header class="site-header">
     <div class="site-container">
-      <nav class="site-nav">
+      <nav class="site-nav" aria-label="Main navigation">
         <a href="#top" class="site-brand">
           <span class="wristband-chip band-orange">Homebound</span>
         </a>
@@ -23,19 +23,46 @@
         <ul class="site-nav-links">
           <li><a href="#how-it-works">How it works</a></li>
           <li><a href="#privacy">Privacy</a></li>
-          <li><a href="#hardware">Wristbands</a></li>
-          <li><a href="#pilot">Pilot</a></li>
+          <li><a href="../dashboard/">Dashboard</a></li>
+          <li><a href="../pilot/">Pilot</a></li>
         </ul>
 
-        <div style="display: flex; gap: 0.5rem; align-items: center;">
-          <a href="../door/" class="btn btn-secondary" style="min-height: 40px; padding: 0.35rem 0.85rem; font-size: var(--text-14);">
-            Door scanner
+        <div class="site-nav-actions">
+          <a href="../door/" class="btn btn-secondary nav-btn-secondary">
+            Open door scanner
           </a>
-          <a href="#pilot" class="btn btn-primary" style="min-height: 40px; padding: 0.35rem 0.95rem; font-size: var(--text-14);">
-            Request pilot
+          <a href="../pilot/" class="btn btn-primary nav-btn-primary">
+            Request a pilot
           </a>
         </div>
+
+        <button type="button" class="mobile-menu-btn glass" id="mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="mobile-nav-sheet">
+          <span class="menu-icon-bars" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+        </button>
       </nav>
+    </div>
+
+    <!-- Mobile Navigation Sheet -->
+    <div class="mobile-nav-backdrop" id="mobile-nav-backdrop" aria-hidden="true"></div>
+    <div class="mobile-nav-sheet glass" id="mobile-nav-sheet" aria-hidden="true">
+      <div class="mobile-sheet-header">
+        <span class="wristband-chip band-orange">Homebound</span>
+        <button type="button" class="mobile-close-btn glass" id="mobile-close-btn" aria-label="Close menu">&times;</button>
+      </div>
+      <ul class="mobile-nav-list">
+        <li><a href="#how-it-works" class="mobile-nav-link">How it works</a></li>
+        <li><a href="#privacy" class="mobile-nav-link">Privacy</a></li>
+        <li><a href="../dashboard/" class="mobile-nav-link">Dashboard</a></li>
+        <li><a href="../pilot/" class="mobile-nav-link">Pilot</a></li>
+      </ul>
+      <div class="mobile-sheet-actions">
+        <a href="../pilot/" class="btn btn-primary btn-block">Request a pilot</a>
+        <a href="../door/" class="btn btn-secondary btn-block">Open door scanner</a>
+      </div>
     </div>
   </header>
 
@@ -51,11 +78,11 @@
       </p>
 
       <div class="hero-actions">
-        <a href="#pilot" class="btn btn-primary" style="min-height: 48px; font-size: var(--text-16);">
+        <a href="../pilot/" class="btn btn-primary hero-btn-primary">
           Request free pilot kit
         </a>
-        <a href="../door/" class="btn btn-secondary" style="min-height: 48px; font-size: var(--text-16);">
-          Try the door scanner
+        <a href="../dashboard/" class="btn btn-secondary hero-btn-secondary">
+          See the live dashboard
         </a>
       </div>
 
@@ -166,13 +193,13 @@
       </div>
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
-        <div class="card">
+        <div class="card glass">
           <h3 style="font-size: var(--text-20); margin-bottom: 0.5rem;">$0.20 NFC stickers</h3>
           <p class="text-muted" style="font-size: var(--text-14);">
             Standard NTAG213 stickers adhere directly to disposable Tyvek paper bands or slide into 3D-printed reusable clips.
           </p>
         </div>
-        <div class="card">
+        <div class="card glass">
           <h3 style="font-size: var(--text-20); margin-bottom: 0.5rem;">iPhone &amp; Android ready</h3>
           <p class="text-muted" style="font-size: var(--text-14);">
             Android Chrome reads NFC directly. iPhones scan the printed QR code with the camera in under 50 ms.
@@ -181,53 +208,20 @@
       </div>
     </section>
 
-    <!-- Pilot Form Section -->
-    <section id="pilot" class="site-section">
-      <div>
-        <h2 class="section-title">Request a pilot</h2>
-        <p class="section-desc">Try Homebound at your chapter's next event with sample wristbands and guided setup.</p>
-      </div>
-
-      <div class="pilot-card">
-        <form id="pilot-form" style="display: flex; flex-direction: column; gap: 1rem;">
-          <div class="form-group" style="margin-bottom: 0;">
-            <label class="form-label" for="pilot-chapter">Chapter or student organization *</label>
-            <input type="text" id="pilot-chapter" class="input" placeholder="e.g. Kappa Alpha Theta" required>
-          </div>
-
-          <div class="form-group" style="margin-bottom: 0;">
-            <label class="form-label" for="pilot-school">Campus or university *</label>
-            <input type="text" id="pilot-school" class="input" placeholder="e.g. UC Berkeley" required>
-          </div>
-
-          <div class="form-group" style="margin-bottom: 0;">
-            <label class="form-label" for="pilot-email">Risk chair or organizer email *</label>
-            <input type="email" id="pilot-email" class="input" placeholder="risk@example.edu" required>
-          </div>
-
-          <div class="form-group" style="margin-bottom: 0;">
-            <label class="form-label" for="pilot-size">Expected event size</label>
-            <select id="pilot-size" class="input">
-              <option value="100">Under 100 guests</option>
-              <option value="250" selected>100 &ndash; 300 guests</option>
-              <option value="500">300 &ndash; 600 guests</option>
-              <option value="1000">600+ guests</option>
-            </select>
-          </div>
-
-          <div class="form-group" style="margin-bottom: 0;">
-            <label class="form-label" for="pilot-notes">Any questions or notes (optional)</label>
-            <textarea id="pilot-notes" class="input" rows="2" placeholder="Date of upcoming event, etc."></textarea>
-          </div>
-
-          <button type="submit" id="pilot-submit-btn" class="btn btn-primary" style="min-height: 48px; margin-top: 0.5rem;">
-            Request pilot kit
-          </button>
-
-          <div id="pilot-status-success" class="badge badge-green hidden" style="width: 100%; justify-content: center; padding: 0.75rem;">
-            Thanks! We'll reach out within 24 hours to coordinate your pilot kit.
-          </div>
-        </form>
+    <!-- Closing Band Section -->
+    <section class="site-section closing-band-section">
+      <div class="closing-band glass">
+        <div class="closing-band-content">
+          <h2 class="closing-title">Ready to bring Homebound to your next event?</h2>
+          <p class="closing-subhead">
+            Get 100 free NFC wristbands, mobile door setup, and live dashboard access for your chapter or student organization.
+          </p>
+        </div>
+        <div class="closing-band-action">
+          <a href="../pilot/" class="btn btn-primary closing-btn">
+            Request a pilot
+          </a>
+        </div>
       </div>
     </section>
   </main>
@@ -238,9 +232,10 @@
       <div>
         <strong>Homebound</strong> &middot; Campus event safety and departure verification
       </div>
-      <div style="display: flex; gap: 1rem;">
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
         <a href="../door/">Door scanner</a>
         <a href="../dashboard/">Live dashboard</a>
+        <a href="../pilot/">Pilot program</a>
         <a href="../admin/">Admin console</a>
       </div>
     </div>

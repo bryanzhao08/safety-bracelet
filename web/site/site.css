@@ -1,4 +1,4 @@
-/* web/site/site.css - Restyled Site: Wristband Motif & No Generic SaaS Clichés */
+/* web/site/site.css - Restyled Site: Wristband Motif & Liquid Glass */
 
 .site-body {
   background-color: transparent;
@@ -32,6 +32,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  position: relative;
 }
 
 .site-brand {
@@ -59,14 +60,175 @@
   font-size: var(--text-14);
   font-weight: 600;
   text-decoration: none;
+  transition: color 0.15s ease;
 }
 .site-nav-links a:hover {
   color: var(--text);
 }
 
-@media (max-width: 700px) {
+.site-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nav-btn-secondary {
+  min-height: 40px;
+  padding: 0.35rem 0.85rem;
+  font-size: var(--text-14);
+}
+
+.nav-btn-primary {
+  min-height: 40px;
+  padding: 0.35rem 0.95rem;
+  font-size: var(--text-14);
+}
+
+/* Mobile Menu Button */
+.mobile-menu-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: var(--radius-full);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  cursor: pointer;
+  color: var(--tyvek);
+}
+
+.menu-icon-bars {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 18px;
+  height: 14px;
+}
+
+.menu-icon-bars span {
+  display: block;
+  height: 2px;
+  width: 100%;
+  background-color: var(--tyvek);
+  border-radius: 2px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* Mobile Nav Sheet & Backdrop */
+.mobile-nav-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 12, 30, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 190;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.mobile-nav-backdrop.is-open {
+  display: block;
+  opacity: 1;
+}
+
+.mobile-nav-sheet {
+  display: none;
+  position: fixed;
+  top: 4.5rem;
+  right: 1rem;
+  left: 1rem;
+  max-width: 420px;
+  margin: 0 auto;
+  z-index: 200;
+  background: rgba(27, 35, 64, 0.88);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+  border-radius: 24px;
+  padding: 1.5rem;
+  flex-direction: column;
+  gap: 1.25rem;
+  transform: translateY(-8px);
+  opacity: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.mobile-nav-sheet.is-open {
+  display: flex;
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.mobile-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.mobile-close-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-20);
+  line-height: 1;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.mobile-close-btn:hover {
+  color: var(--text);
+}
+
+.mobile-nav-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.mobile-nav-link {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  font-size: var(--text-16);
+  font-weight: 600;
+  color: var(--text);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+}
+.mobile-nav-link:hover, .mobile-nav-link:active {
+  background: var(--glass-bg);
+  text-decoration: none;
+}
+
+.mobile-sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 768px) {
   .site-nav-links {
     display: none;
+  }
+  .site-nav-actions {
+    display: none;
+  }
+  .mobile-menu-btn {
+    display: flex;
   }
 }
 
@@ -84,7 +246,7 @@
   font-stretch: 75%;
   font-variation-settings: 'wdth' 75, 'wght' 800;
   font-weight: 800;
-  font-size: clamp(40px, 8vw, var(--text-88));
+  font-size: clamp(38px, 8vw, var(--text-88));
   line-height: 0.98;
   letter-spacing: -0.04em;
   color: var(--text);
@@ -104,6 +266,18 @@
   gap: 1rem;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.hero-btn-primary {
+  min-height: 48px;
+  font-size: var(--text-16);
+  padding: 0.75rem 1.5rem;
+}
+
+.hero-btn-secondary {
+  min-height: 48px;
+  font-size: var(--text-16);
+  padding: 0.75rem 1.5rem;
 }
 
 /* -------------------------------------------------------------
@@ -338,21 +512,28 @@
   font-size: var(--text-14);
 }
 
-/* Pilot Form - Glass */
-.pilot-card {
+/* Closing Band Section */
+.closing-band-section {
+  border-top: 1px solid var(--border);
+}
+
+.closing-band {
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-highlight), var(--glass-shadow);
   border-radius: var(--radius-glass);
-  padding: 2rem;
-  max-width: 640px;
+  padding: 2.25rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
   position: relative;
   overflow: hidden;
 }
 
-.pilot-card::before {
+.closing-band::before {
   content: "";
   position: absolute;
   top: 0;
@@ -362,6 +543,48 @@
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 40%);
   pointer-events: none;
   border-radius: inherit;
+}
+
+.closing-band-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 600px;
+}
+
+.closing-title {
+  font-family: var(--font-display);
+  font-size: var(--text-24, 24px);
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.closing-subhead {
+  font-size: var(--text-16);
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.closing-btn {
+  white-space: nowrap;
+  min-height: 48px;
+  padding: 0.75rem 1.75rem;
+  font-size: var(--text-16);
+  flex-shrink: 0;
+}
+
+@media (max-width: 700px) {
+  .closing-band {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: left;
+    padding: 1.75rem 1.5rem;
+    gap: 1.25rem;
+  }
+  .closing-btn {
+    width: 100%;
+  }
 }
 
 .site-footer {
@@ -374,7 +597,7 @@
 
 /* Fallback for browsers without backdrop-filter */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .site-header, .hero-band-stage, .pilot-card {
+  .site-header, .hero-band-stage, .closing-band, .mobile-nav-sheet {
     background-color: var(--panel) !important;
   }
 }

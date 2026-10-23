@@ -1,56 +1,62 @@
-// web/site/site.js - Pilot landing page logic
-import { submitPilot } from '../shared/api.js';
+// web/site/site.js - Marketing site navigation & mobile menu logic
 
 document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('pilot-form');
-  const submitBtn = document.getElementById('pilot-submit-btn');
-  const statusSuccess = document.getElementById('pilot-status-success');
+  const menuBtn = document.getElementById('mobile-menu-btn');
+  const closeBtn = document.getElementById('mobile-close-btn');
+  const navSheet = document.getElementById('mobile-nav-sheet');
+  const backdrop = document.getElementById('mobile-nav-backdrop');
 
-  if (form) {
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
+  function openMenu() {
+    if (!navSheet || !backdrop) return;
+    navSheet.classList.add('is-open');
+    backdrop.classList.add('is-open');
+    navSheet.setAttribute('aria-hidden', 'false');
+    backdrop.setAttribute('aria-hidden', 'false');
+    if (menuBtn) {
+      menuBtn.setAttribute('aria-expanded', 'true');
+    }
+  }
 
-      const chapter = document.getElementById('pilot-chapter')?.value.trim();
-      const school = document.getElementById('pilot-school')?.value.trim();
-      const email = document.getElementById('pilot-email')?.value.trim();
-      const sizeVal = document.getElementById('pilot-size')?.value;
-      const eventSize = sizeVal ? parseInt(sizeVal, 10) : null;
-      const notes = document.getElementById('pilot-notes')?.value.trim();
+  function closeMenu() {
+    if (!navSheet || !backdrop) return;
+    navSheet.classList.remove('is-open');
+    backdrop.classList.remove('is-open');
+    navSheet.setAttribute('aria-hidden', 'true');
+    backdrop.setAttribute('aria-hidden', 'true');
+    if (menuBtn) {
+      menuBtn.setAttribute('aria-expanded', 'false');
+    }
+  }
 
-      const lead = {
-        chapter,
-        school,
-        email,
-        eventSize,
-        note: notes,
-        submittedAt: new Date().toISOString(),
-      };
-
-      try {
-        await submitPilot({ chapter, school, email, eventSize, note: notes });
-      } catch (err) {
-        console.warn('submitPilot network error, saving to localStorage:', err);
+  if (menuBtn) {
+    menuBtn.addEventListener('click', () => {
+      const isOpen = navSheet?.classList.contains('is-open');
+      if (isOpen) {
+        closeMenu();
+      } else {
+        openMenu();
       }
-
-      try {
-        const stored = JSON.parse(localStorage.getItem('homebound_pilot_leads') || '[]');
-        stored.push(lead);
-        localStorage.setItem('homebound_pilot_leads', JSON.stringify(stored));
-      } catch (err) {
-        console.warn('LocalStorage lead save fallback', err);
-      }
-
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Application received!';
-      }
-
-      if (statusSuccess) {
-        statusSuccess.classList.remove('hidden');
-        statusSuccess.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
-
-      form.reset();
     });
   }
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeMenu);
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener('click', closeMenu);
+  }
+
+  // Close menu when clicking any mobile navigation link or action
+  const sheetLinks = navSheet?.querySelectorAll('a');
+  sheetLinks?.forEach((link) => {
+    link.addEventListener('click', closeMenu);
+  });
+
+  // Close on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && navSheet?.classList.contains('is-open')) {
+      closeMenu();
+    }
+  });
 });

@@ -16,15 +16,18 @@ const joinError = document.getElementById('join-error');
 const doorEventName = document.getElementById('door-event-name');
 const doorMonitorName = document.getElementById('door-monitor-name');
 const btnLeaveShift = document.getElementById('btn-leave-shift');
+const doorStatusDot = document.getElementById('door-status-dot');
+const doorOfflineBadge = document.getElementById('door-offline-badge');
 
 const btnModeIn = document.getElementById('btn-mode-in');
 const btnModeOut = document.getElementById('btn-mode-out');
-const inModeContainer = document.getElementById('in-mode-container');
-const outModeContainer = document.getElementById('out-mode-container');
+const inModeTop = document.getElementById('in-mode-top');
+const outModeTop = document.getElementById('out-mode-top');
+const inModeActions = document.getElementById('in-mode-actions');
+const outModeActions = document.getElementById('out-mode-actions');
 
-const nfcBar = document.getElementById('nfc-bar');
-const nfcLabel = document.getElementById('nfc-label');
-const nfcDot = document.getElementById('nfc-dot');
+const btnTapZone = document.getElementById('btn-tap-zone');
+const tapZoneText = document.getElementById('tap-zone-text');
 
 const offlineBar = document.getElementById('offline-bar');
 const offlineDot = document.getElementById('offline-dot');
@@ -42,8 +45,6 @@ const idCandidatesList = document.getElementById('id-candidates-list');
 const btnCancelId = document.getElementById('btn-cancel-id');
 
 const btnOpenGuestSearch = document.getElementById('btn-open-guest-search');
-const btnOpenQrScanner = document.getElementById('btn-open-qr-scanner');
-const btnOpenQrScannerOut = document.getElementById('btn-open-qr-scanner-out');
 const manualCodeForm = document.getElementById('manual-code-form');
 const manualCodeInput = document.getElementById('manual-code-input');
 const manualCodeFormOut = document.getElementById('manual-code-form-out');
@@ -56,6 +57,7 @@ const trayTimerBar = document.getElementById('tray-timer-bar');
 const leavingGuestList = document.getElementById('leaving-guest-list');
 const trayEmptyMsg = document.getElementById('tray-empty-msg');
 const btnLeaveTogether = document.getElementById('btn-leave-together');
+const btnLeaveAlone = document.getElementById('btn-leave-alone');
 
 // Camera Modal Elements
 const cameraModal = document.getElementById('camera-modal');
@@ -100,9 +102,40 @@ if ('serviceWorker' in navigator) {
     .catch(err => console.warn('SW registration failed', err));
 }
 
+// Update Tap Zone instructions according to NFC capability
+function updateTapZoneInstructions() {
+  if (!tapZoneText) return;
+  const hasNfc = 'NDEFReader' in window;
+  const isAndroid = /android/i.test(navigator.userAgent);
+  if (hasNfc && isAndroid) {
+    tapZoneText.textContent = 'Hold a band to the phone';
+  } else {
+    tapZoneText.textContent = "Scan the band's QR or type its code";
+  }
+}
+updateTapZoneInstructions();
+
+// Tap zone button opens camera QR scanner
+btnTapZone?.addEventListener('click', () => {
+  startCamera('band');
+});
+
 // Initialize offline queue & subscribe
 offline.initOfflineQueue();
 offline.onQueueChange(({ count, isSyncing }) => {
+  // Update Header status dot and offline count badge
+  if (doorStatusDot && doorOfflineBadge) {
+    if (count > 0) {
+      doorStatusDot.classList.add('offline');
+      doorOfflineBadge.textContent = String(count);
+      doorOfflineBadge.classList.remove('hidden');
+    } else {
+      doorStatusDot.classList.remove('offline');
+      doorOfflineBadge.classList.add('hidden');
+    }
+  }
+
+  // Update offlineBar if visible
   if (!offlineBar) return;
   if (count > 0) {
     offlineBar.classList.remove('hidden');
@@ -166,36 +199,64 @@ function escapeHtml(str) {
 }
 
 // --- Mode Switch (IN / OUT) ---
-btnModeIn.addEventListener('click', () => {
-  currentMode = 'in';
-  btnModeIn.className = 'mode-btn active-in';
-  btnModeIn.setAttribute('aria-selected', 'true');
-  btnModeOut.className = 'mode-btn';
-  btnModeOut.setAttribute('aria-selected', 'false');
-  if (btnModeIn.parentElement) btnModeIn.parentElement.classList.remove('mode-out');
-  inModeContainer.classList.remove('hidden');
-  outModeContainer.classList.add('hidden');
+function setMode(mode) {
+  currentMode = mode;
+  doorView.setAttribute('data-mode', mode);
+
+  const isOut = mode === 'out';
+  btnModeIn.setAttribute('aria-pressed', (!isOut).toString());
+  btnModeOut.setAttribute('aria-pressed', isOut.toString());
+  btnModeIn.className = isOut ? 'mode-btn' : 'mode-btn active-in';
+  btnModeOut.className = isOut ? 'mode-btn active-out' : 'mode-btn';
+
+  const modeSwitch = btnModeIn.closest('.mode-switch');
+  if (modeSwitch) {
+    modeSwitch.setAttribute('data-mode', mode);
+    if (isOut) modeSwitch.classList.add('mode-out');
+    else modeSwitch.classList.remove('mode-out');
+  }
+
+  if (btnTapZone) {
+    btnTapZone.className = isOut ? 'door-tap-zone glass mode-out' : 'door-tap-zone glass mode-in';
+  }
+
+  if (isOut) {
+    inModeTop?.classList.add('hidden');
+    outModeTop?.classList.remove('hidden');
+    inModeActions?.classList.add('hidden');
+    outModeActions?.classList.remove('hidden');
+    renderLeavingTray();
+  } else {
+    outModeTop?.classList.add('hidden');
+    inModeTop?.classList.remove('hidden');
+    outModeActions?.classList.add('hidden');
+    inModeActions?.classList.remove('hidden');
+  }
+}
+
+btnModeIn.addEventListener('click', (e) => {
+  e.preventDefault();
+  setMode('in');
 });
 
-btnModeOut.addEventListener('click', () => {
-  currentMode = 'out';
-  btnModeOut.className = 'mode-btn active-out';
-  btnModeOut.setAttribute('aria-selected', 'true');
-  btnModeIn.className = 'mode-btn';
-  btnModeIn.setAttribute('aria-selected', 'false');
-  if (btnModeOut.parentElement) btnModeOut.parentElement.classList.add('mode-out');
-  outModeContainer.classList.remove('hidden');
-  inModeContainer.classList.add('hidden');
-  renderLeavingTray();
+btnModeOut.addEventListener('click', (e) => {
+  e.preventDefault();
+  setMode('out');
+});
+
+// Event delegation on mode switch
+document.querySelector('.mode-switch')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-mode]');
+  if (btn) {
+    setMode(btn.getAttribute('data-mode'));
+  }
 });
 
 // --- Shift Join & Session Management ---
-// Handles ?band=<token> and ?bandToken=<token> prefill from NFC / QR / /t/<token> redirect
 let pendingBandToken = null;
 
 async function initSession() {
   const urlParams = new URLSearchParams(window.location.search);
-  // Door accepts ?band=<token> exactly like the /t/<token> prefill
   const prefillToken = urlParams.get('band') || urlParams.get('bandToken') || urlParams.get('b');
   if (prefillToken) {
     pendingBandToken = prefillToken;
@@ -248,6 +309,7 @@ async function initSession() {
 joinForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   joinError.classList.add('hidden');
+
   const eventId = joinEventId.value.trim();
   const monitorCode = joinMonitorCode.value.trim().toUpperCase();
   const name = joinName.value.trim();
@@ -286,21 +348,14 @@ btnLeaveShift.addEventListener('click', () => {
 // --- Web NFC Integration ---
 async function initNfc() {
   if (!('NDEFReader' in window)) {
-    if (nfcBar) {
-      nfcLabel.textContent = 'Camera QR & code entry ready';
-      nfcDot.style.backgroundColor = 'var(--slate)';
-      nfcDot.style.boxShadow = 'none';
-    }
+    updateTapZoneInstructions();
     return;
   }
 
   try {
     const ndef = new window.NDEFReader();
     await ndef.scan();
-    if (nfcBar) {
-      nfcLabel.textContent = 'NFC reader active';
-      nfcDot.style.backgroundColor = 'var(--band-orange)';
-    }
+    updateTapZoneInstructions();
 
     ndef.addEventListener('reading', ({ message }) => {
       for (const record of message.records) {
@@ -328,11 +383,7 @@ async function initNfc() {
       triggerVerdictFlood({ name: 'NFC Error', verdict: 'RETRY', detail: 'Hold wristband steady to phone', type: 'stop' });
     });
   } catch (err) {
-    if (nfcBar) {
-      nfcLabel.textContent = 'NFC tap disabled (use Camera QR or code)';
-      nfcDot.style.backgroundColor = 'var(--slate)';
-      nfcDot.style.boxShadow = 'none';
-    }
+    updateTapZoneInstructions();
   }
 }
 
@@ -406,7 +457,8 @@ async function handleCheckInBand({ bandToken, shortCode }) {
   if (res.data?.needsGuest) {
     if (key) localInsideBands.delete(key);
     unlinkedBand = { bandToken, shortCode: res.data.band?.shortCode || shortCode };
-    openGuestSearch(`Link Band ${unlinkedBand.shortCode || ''}`);
+    const codeStr = unlinkedBand.shortCode ? ` ${unlinkedBand.shortCode}` : '';
+    openGuestSearch(`Link band${codeStr}`);
     return;
   }
 
@@ -625,15 +677,18 @@ function renderLeavingTray() {
     trayEmptyMsg.classList.remove('hidden');
     leavingGuestList.appendChild(trayEmptyMsg);
     btnLeaveTogether.disabled = true;
-    btnLeaveTogether.textContent = 'Done, 0 leaving';
+    btnLeaveAlone.disabled = true;
+    btnLeaveTogether.textContent = 'Done, 0 leaving together';
     stopTrayTimer();
     return;
   }
 
   trayEmptyMsg.classList.add('hidden');
   btnLeaveTogether.disabled = false;
+  btnLeaveAlone.disabled = false;
+
   if (leavingTray.length === 1) {
-    btnLeaveTogether.textContent = 'Done, 1 leaving alone';
+    btnLeaveTogether.textContent = 'Done, 1 leaving together';
   } else {
     btnLeaveTogether.textContent = `Done, ${leavingTray.length} leaving together`;
   }
@@ -689,6 +744,7 @@ function updateTrayTimerDisplay() {
   trayTimerBar.style.width = `${pct}%`;
 }
 
+// Submit together as one group
 async function submitDepartures(together = true) {
   if (leavingTray.length === 0) return;
   const items = [...leavingTray];
@@ -717,8 +773,38 @@ async function submitDepartures(together = true) {
   }
 }
 
+// Submit each individually as "leaving alone"
+async function submitDeparturesAlone() {
+  if (leavingTray.length === 0) return;
+  const items = [...leavingTray];
+  leavingTray = [];
+  renderLeavingTray();
+
+  const session = api.getMonitorSession();
+  const token = session?.token;
+
+  for (const item of items) {
+    const key = item.shortCode || item.bandToken;
+    if (key) localInsideBands.delete(key);
+  }
+
+  const names = items.map(i => i.name).join(', ');
+  triggerVerdictFlood({ name: names, verdict: 'LEFT', detail: 'Leaving alone', type: 'pink' });
+
+  for (const item of items) {
+    await offline.executeOrQueueDeparture({
+      bandTokens: item.bandToken ? [item.bandToken] : [],
+      shortCodes: item.shortCode ? [item.shortCode] : [],
+    }, token);
+  }
+}
+
 btnLeaveTogether.addEventListener('click', () => {
-  submitDepartures(leavingTray.length > 1);
+  submitDepartures(true);
+});
+
+btnLeaveAlone.addEventListener('click', () => {
+  submitDeparturesAlone();
 });
 
 manualCodeFormOut.addEventListener('submit', async (e) => {
@@ -730,12 +816,8 @@ manualCodeFormOut.addEventListener('submit', async (e) => {
 });
 
 // --- Camera QR / Barcode Scanner ---
-btnOpenQrScanner.addEventListener('click', () => {
-  startCamera('band');
-});
-
-btnOpenQrScannerOut.addEventListener('click', () => {
-  startCamera('band');
+btnOpenIdScanner.addEventListener('click', () => {
+  startCamera('id');
 });
 
 btnCloseCamera.addEventListener('click', closeCameraModal);
@@ -872,12 +954,12 @@ function startFrameDetection() {
   animFrameId = requestAnimationFrame(checkFrame);
 }
 
-// --- Guest Search & Walk-in Modal ---
+// --- Guest Search & Link-Band Sheet ---
 btnOpenGuestSearch.addEventListener('click', () => {
-  openGuestSearch('Search Guest List');
+  openGuestSearch('Guest list');
 });
 
-async function openGuestSearch(title = 'Guest List') {
+async function openGuestSearch(title = 'Guest list') {
   guestSearchTitle.textContent = title;
   guestSearchModal.classList.add('open');
   guestSearchInput.value = '';
@@ -898,7 +980,7 @@ async function executeGuestSearch(q) {
     const guests = await api.searchGuests(q);
     renderGuestSearchResults(guests);
   } catch {
-    guestSearchResults.innerHTML = '<p class="text-muted text-center">Failed to load guests</p>';
+    guestSearchResults.innerHTML = '<p class="text-muted text-center" style="padding: 1.5rem 0;">Failed to load guests</p>';
   }
 }
 
@@ -915,25 +997,23 @@ function renderGuestSearchResults(guests) {
       if (guest.inside) localInsideBands.add(guest.band);
     }
 
-    const item = document.createElement('div');
-    item.className = 'card';
-    item.style.padding = '0.75rem 1rem';
-    item.style.cursor = 'pointer';
-    item.style.display = 'flex';
-    item.style.alignItems = 'center';
-    item.style.justifyContent = 'space-between';
-
-    item.innerHTML = `
-      <div>
-        <span style="font-weight: 700; font-size: var(--text-16);">${escapeHtml(guest.name)}</span>
-        ${guest.band ? `<span class="badge badge-muted" style="margin-left: 0.5rem;">[${escapeHtml(guest.band)}]</span>` : ''}
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'guest-row-glass';
+    row.innerHTML = `
+      <div class="guest-row-info">
+        <span class="guest-row-name">${escapeHtml(guest.name)}</span>
+        ${guest.band ? `<span class="badge badge-muted" style="font-size: 11px;">[${escapeHtml(guest.band)}]</span>` : ''}
+        ${guest.inside ? `<span class="badge badge-orange" style="font-size: 11px;">Inside</span>` : ''}
       </div>
-      <span class="badge ${guest.inside ? 'badge-orange' : 'badge-muted'}">
-        ${guest.inside ? 'Inside' : guest.band ? 'Linked' : 'Tap to Link'}
+      <span class="guest-row-chevron" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
       </span>
     `;
 
-    item.addEventListener('click', async () => {
+    row.addEventListener('click', async () => {
       const session = api.getMonitorSession();
       const token = session?.token;
 
@@ -975,7 +1055,7 @@ function renderGuestSearchResults(guests) {
       }
     });
 
-    guestSearchResults.appendChild(item);
+    guestSearchResults.appendChild(row);
   });
 }
 
