@@ -1,6 +1,6 @@
 // web/shared/api.js - Client API module for Homebound v2 (Server & Sheets modes)
 
-import { getBackend } from './config.js';
+import { getBackend, PILOT_SHEET_URL } from './config.js';
 
 const STORAGE_KEYS = {
   MONITOR_TOKEN: 'hb_monitor_token',
@@ -681,6 +681,21 @@ export async function updateEvent(eventId, updates = {}) {
  * Submit pilot program signup: POST /api/pilot
  */
 export async function submitPilot({ chapter, school, email, eventSize, note }) {
+  if (getBackend().type === 'sheets') {
+    if (!PILOT_SHEET_URL) {
+      throw new ApiError(503, 'pilot_not_connected', 'Pilot sign-ups are not connected on this site yet.');
+    }
+    const response = await fetch(PILOT_SHEET_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'pilot', chapter, school, email, eventSize: eventSize ?? null, note: note || null }),
+    });
+    const data = await response.json().catch(() => null);
+    if (!data || data.error) {
+      throw new ApiError(data?.status || 500, data?.error || 'invalid_response', data?.message || 'Pilot request failed');
+    }
+    return data;
+  }
   return request('/api/pilot', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

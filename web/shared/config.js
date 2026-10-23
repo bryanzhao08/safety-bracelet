@@ -2,6 +2,10 @@
 
 const STORAGE_KEY = 'hb_sheets_url';
 
+// Where pilot sign-ups go when there's no Node server (GitHub Pages): the /exec URL of an Apps Script
+// deployment of sheets/Code.gs in the founder's own "Homebound pilots" Google Sheet. Empty = not connected.
+export const PILOT_SHEET_URL = '';
+
 /**
  * Returns current backend configuration:
  * { type: 'server' } | { type: 'sheets', url: string | null }

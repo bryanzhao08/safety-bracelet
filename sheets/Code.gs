@@ -1160,13 +1160,13 @@ function doPost(e) {
 
     const settings = getSettings();
     if (!settings.id) {
-      if (action !== 'ping' && action !== 'setup') {
+      if (action !== 'ping' && action !== 'setup' && action !== 'pilot') {
         throw { status: 400, error: 'event_not_setup', message: 'Run setup() first in the Google Sheet' };
       }
     }
 
     let result;
-    const writeActions = ['setup', 'addGuest', 'idCheckin', 'scan', 'departures', 'importCsv', 'createBands', 'updateEvent', 'endEvent'];
+    const writeActions = ['pilot', 'setup', 'addGuest', 'idCheckin', 'scan', 'departures', 'importCsv', 'createBands', 'updateEvent', 'endEvent'];
     const isWrite = writeActions.includes(action);
 
     let lock = null;
@@ -1177,6 +1177,28 @@ function doPost(e) {
 
     try {
       switch (action) {
+        case 'pilot': {
+          // Public pilot sign-up from the marketing site. Apps Script can't see the caller's IP,
+          // so cap total sign-ups per hour instead.
+          const cache = CacheService.getScriptCache();
+          const count = Number(cache.get('pilot:hour') || 0);
+          if (count >= 50) throw { status: 429, error: 'rate_limited', message: 'Too many requests. Try again in an hour.' };
+          const clean = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
+          const email = clean(body.email, 200);
+          if (!clean(body.chapter, 200) || !clean(body.school, 200) || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+            throw { status: 400, error: 'invalid_pilot', message: 'Chapter, school and a valid email are required.' };
+          }
+          const sheet = getSheet('Pilot');
+          if (sheet.getLastRow() === 0) sheet.appendRow(['at', 'chapter', 'school', 'email', 'eventSize', 'note']);
+          // Prefix values that a spreadsheet would treat as formulas
+          const safe = v => /^[=+\-@]/.test(v) ? "'" + v : v;
+          sheet.appendRow([new Date().toISOString(), safe(clean(body.chapter, 200)), safe(clean(body.school, 200)),
+            safe(email), Number(body.eventSize) || '', safe(clean(body.note, 1000))]);
+          cache.put('pilot:hour', String(count + 1), 3600);
+          result = { ok: true };
+          break;
+        }
+
         case 'ping':
           result = { ok: true, eventName: settings.eventName || 'Homebound Event', eventId: settings.id || null };
           break;

@@ -60,3 +60,13 @@ Google Apps Script runs in a serverless cloud environment managed by Google:
 - **Concurrency & Locks**: Write operations use `LockService.getScriptLock()` with a 30-second timeout to prevent race conditions when multiple monitors scan concurrently.
 - **Quotas**: Free Google accounts have a limit of 20,000 URL fetch / trigger executions per day and 90 minutes of script runtime per day; Google Workspace accounts have significantly higher limits (100,000+ calls/day). This easily accommodates private events and chapter parties.
 - **High-throughput events**: For large-scale events (> 1,000 guests) requiring sub-50ms scan latency, use the native Node server (`npm start`).
+
+## Pilot sign-ups on the public site
+
+On GitHub Pages there's no server, so the Pilot page sends sign-ups to a Google Sheet of yours:
+
+1. Make a new Google Sheet called "Homebound pilots", open Extensions → Apps Script, paste `sheets/Code.gs`,
+   and deploy it as a web app (Execute as: Me, Who has access: Anyone). You don't need to run `setup`.
+2. Put the `/exec` URL in `PILOT_SHEET_URL` in `web/shared/config.js` and push.
+
+Each sign-up becomes a row in the `Pilot` tab. Until the URL is set, the form says sign-ups aren't connected yet.

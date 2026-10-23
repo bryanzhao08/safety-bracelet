@@ -425,4 +425,13 @@ test('Google Sheets backend: setup -> importCsv -> monitorSession -> idCheckin -
   assert.equal(sheetsMap.get('Bands').rows.length, 1, 'Retention should clear Bands to header only');
   assert.equal(sheetsMap.get('Scans').rows.length, 1, 'Retention should clear Scans to header only');
   assert.equal(sheetsMap.get('Departures').rows.length, 1, 'Retention should clear Departures to header only');
+
+  // 11. Public pilot sign-up: stored, validated, formula-safe
+  const ok = callDoPost({ action: 'pilot', chapter: 'Alpha Test', school: 'Test U', email: 'risk@example.test', eventSize: 120, note: '=HYPERLINK("x")' });
+  assert.equal(ok.ok, true);
+  const pilotRows = sheetsMap.get('Pilot').rows;
+  assert.equal(pilotRows.length, 2, 'Pilot sheet should have header + 1 row');
+  assert.equal(pilotRows[1][5], `'=HYPERLINK("x")`, 'Formula-like input is escaped');
+  const bad = callDoPost({ action: 'pilot', chapter: 'X', school: 'Y', email: 'not-an-email' });
+  assert.equal(bad.error, 'invalid_pilot');
 });
