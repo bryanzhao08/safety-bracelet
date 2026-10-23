@@ -168,6 +168,62 @@ def make_carrier(
     return carrier
 
 
+# Disposable concert / festival bands the slider fits. The band is threaded through the slider before
+# the band is closed (Tyvek: before peeling the adhesive liner; woven: before crimping the lock bead).
+SLIDER_BANDS = {
+    # name: (channel width, channel height, grip ridge height)
+    "tyvek_19": (20.0, 0.9, 0.30),   # 19 mm Tyvek, ~0.15 mm thick (also fits 0.4 mm vinyl snap bands)
+    "tyvek_25": (26.0, 0.9, 0.30),   # 25 mm (1") Tyvek
+    "woven_15": (16.0, 1.6, 0.40),   # 15 mm woven fabric festival band, ~1.0-1.2 mm thick
+}
+
+
+def make_slider(
+    channel_w: float,
+    channel_h: float,
+    ridge_h: float,
+    sticker_diam: float = 25.5,
+    sticker_depth: float = 1.0,
+    floor: float = 1.0,
+    roof: float = 1.2,
+    length: float = 32.0,
+    wall: float = 1.4,
+) -> cq.Workplane:
+    """
+    Slide-on NFC tag holder for disposable wristbands.
+
+    The band runs along X through a closed channel, so the slider can't fall off once the band is
+    closed. Two low ridges on the channel floor pinch the band so the slider stays where it's put
+    instead of spinning around the wrist. Prints flat, pocket up, no supports (the channel roof is a
+    short bridge).
+    """
+    width = max(sticker_diam + 2 * 1.2, channel_w + 2 * wall)
+    height = floor + channel_h + roof + sticker_depth
+
+    body = cq.Workplane("XY").box(length, width, height, centered=(True, True, False))
+    body = body.edges("|Z").fillet(3.0)
+    body = body.faces(">Z").edges().fillet(0.6)
+    body = body.faces("<Z").edges().fillet(0.6)
+
+    def block(dx, dy, dz, z0, x=0.0):
+        return cq.Workplane("XY").box(dx, dy, dz, centered=(True, True, False)).translate((x, 0, z0))
+
+    # Band channel, open at both ends, with flared mouths so the band end finds its way in
+    body = body.cut(block(length + 2, channel_w, channel_h, floor))
+    for x in (-(length / 2), length / 2):
+        body = body.cut(block(3.0, channel_w + 1.0, channel_h + 0.5, floor - 0.25, x))
+
+    # Grip ridges across the band
+    for x in (-8.0, 8.0):
+        body = body.union(block(1.0, channel_w, ridge_h, floor, x))
+
+    # Tag pocket on top
+    body = body.cut(
+        cq.Workplane("XY").circle(sticker_diam / 2).extrude(sticker_depth).translate((0, 0, height - sticker_depth))
+    )
+    return body
+
+
 def render_preview(
     shape: cq.Workplane,
     out_png: str,
@@ -315,6 +371,23 @@ def main():
         "Outer: 44.0 x 30.0 x 2.2 mm | Pocket: Ø25.5 x 1.0 mm | Slits: 26.0 x 1.4 mm | Flat back",
         base_color=(0.25, 0.55, 0.40),
     )
+
+    # 4. Slide-on holders for disposable concert bands
+    for name, (cw, ch, rh) in SLIDER_BANDS.items():
+        print(f"Generating slider_{name}...")
+        slider = make_slider(cw, ch, rh)
+        bb = slider.val().BoundingBox()
+        base = os.path.join(out_dir, f"slider_{name}")
+        cq.exporters.export(slider, base + ".step")
+        cq.exporters.export(slider, base + ".stl")
+        render_preview(
+            slider,
+            base + ".png",
+            f"Homebound slide-on NFC holder ({name.replace('_', ' ')} band)",
+            f"Outer: {bb.xlen:.1f} x {bb.ylen:.1f} x {bb.zlen:.1f} mm | Channel: {cw:.1f} x {ch:.1f} mm "
+            f"| Grip ridges: {rh:.2f} mm | Pocket: Ø25.5 x 1.0 mm",
+            base_color=(0.85, 0.35, 0.25),
+        )
 
     print("\nAll CAD models successfully generated in cad/out/:")
     for f in sorted(os.listdir(out_dir)):

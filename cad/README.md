@@ -22,6 +22,26 @@ The clips hold a standard **25 mm round NTAG213 / NTAG216 NFC sticker** (or cust
 
 ---
 
+## Slide-on holder for disposable concert bands (recommended)
+
+`out/slider_tyvek_19.*`, `out/slider_tyvek_25.*`, `out/slider_woven_15.*`
+
+A 32 mm long block with a Ø25.5 × 1.0 mm pocket on top for a 25 mm NTAG213/216 sticker and a closed channel
+underneath that the band slides through. Two 0.3–0.4 mm ridges on the channel floor grip the band, so the slider
+stays put and doesn't spin around the wrist.
+
+| File | Band | Channel (w × h) | Outer size |
+|---|---|---|---|
+| `slider_tyvek_19` | 19 mm Tyvek (also 0.4 mm vinyl snap bands) | 20.0 × 0.9 mm | 32.0 × 27.9 × 4.1 mm |
+| `slider_tyvek_25` | 25 mm (1") Tyvek | 26.0 × 0.9 mm | 32.0 × 28.8 × 4.1 mm |
+| `slider_woven_15` | 15 mm woven fabric festival band | 16.0 × 1.6 mm | 32.0 × 27.9 × 4.8 mm |
+
+**At the door:** stick the NFC tag in the pocket, then slide the open band end through the slider **before closing
+the band** (Tyvek: before peeling the adhesive liner; woven: before crimping the lock bead). Once the band is closed,
+the slider can't come off, and cutting the band off frees it to be reused.
+
+**Printing:** flat, pocket up, no supports, 0.2 mm layers. The channel roof is a short bridge. PETG or PLA.
+
 ## Dimensions & Specifications
 
 ### 1. Snap-On Wristband Clip (19 mm & 25 mm)

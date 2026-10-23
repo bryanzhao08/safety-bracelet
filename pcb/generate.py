@@ -106,7 +106,7 @@ def generate_kicad_pro():
     "classes": [
       {
         "bus_width": 12,
-        "clearance": 0.2,
+        "clearance": 0.15,
         "diff_pair_gap": 0.25,
         "diff_pair_via_gap": 0.25,
         "diff_pair_width": 0.2,
@@ -822,7 +822,8 @@ def main():
         board_diam_mm=22.4, dout_mm=20.35, n_turns=9, w_mm=0.25, s_mm=0.16, steps_per_turn=36
     )
     with open(pcb_path, "w") as f:
-        f.write(pcb_str)
+        # KiCad's S-expression parser has no comment syntax; drop the ";;" section markers.
+        f.write("\n".join(l for l in pcb_str.splitlines() if not l.lstrip().startswith(";;")) + "\n")
     print(f"Wrote {pcb_path}")
 
     # 4. Matplotlib Visual Renders
