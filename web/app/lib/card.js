@@ -1,182 +1,127 @@
 import { utf8ToBase64Url, base64UrlToUtf8 } from './b64.js';
+import { decodeParty } from './party.js';
 
 const B32_ALPHABET = '0123456789abcdefghjkmnpqrstvwxyz';
+const PHONE_RE = /^\+?[0-9 ()-]{7,20}$/;
+const EMAIL_RE = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+const SCRIPT_RE = /[<>]|javascript:/i;
+const SOCIAL = {
+  ig: /^[A-Za-z0-9._]{1,30}$/, sc: /^[A-Za-z][A-Za-z0-9._-]{2,14}$/,
+  tt: /^[A-Za-z0-9._]{2,24}$/, x: /^[A-Za-z0-9_]{1,15}$/,
+  li: /^[A-Za-z0-9-]{3,100}$/
+};
+const URL_BASE = {
+  ig: 'https://instagram.com/', sc: 'https://snapchat.com/add/',
+  tt: 'https://www.tiktok.com/@', x: 'https://x.com/', li: 'https://www.linkedin.com/in/'
+};
+const LABEL = { ig: 'instagram', sc: 'snapchat', tt: 'tiktok', x: 'twitter', li: 'linkedin' };
+
+export const PLATFORMS = [
+  { key: 'ig', label: 'Instagram', placeholder: '@username', shareHelp: 'Profile → Share profile → Copy link' },
+  { key: 'sc', label: 'Snapchat', placeholder: '@username', shareHelp: 'Profile → Share profile → Copy link' },
+  { key: 'tt', label: 'TikTok', placeholder: '@username', shareHelp: 'Profile → Share profile → Copy link' },
+  { key: 'x', label: 'X', placeholder: '@username', shareHelp: 'Profile → Share profile → Copy link' },
+  { key: 'li', label: 'LinkedIn', placeholder: 'profile-name', shareHelp: 'Profile → More → Share profile → Copy link' }
+];
 
 export function newId() {
   const bytes = new Uint8Array(10);
   globalThis.crypto.getRandomValues(bytes);
-  let id = '';
-  for (let i = 0; i < 10; i++) {
-    id += B32_ALPHABET[bytes[i] % 32];
-  }
-  return id;
+  return [...bytes].map(b => B32_ALPHABET[b % 32]).join('');
 }
 
-const PHONE_RE = /^\+?[0-9 ()-]{7,20}$/;
-const SOCIAL_RE = /^[A-Za-z0-9._]{1,30}$/;
-const EMAIL_RE = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
-const SCRIPT_RE = /[<>]|javascript:/i;
-
 function validateAndCleanCard(raw) {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    throw new Error('bad_card');
-  }
-
-  // Reject oversized raw payload (e.g. hostile extra data)
-  try {
-    const rawLen = JSON.stringify(raw).length;
-    if (rawLen > 2000) {
-      throw new Error('bad_card');
-    }
-  } catch {
-    throw new Error('bad_card');
-  }
-
-  if (raw.v !== undefined && raw.v !== 1) {
-    throw new Error('bad_card');
-  }
-
-  if (typeof raw.id !== 'string') {
-    throw new Error('bad_card');
-  }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('bad_card');
+  let json;
+  try { json = JSON.stringify(raw); } catch { throw new Error('bad_card'); }
+  if (!json || new TextEncoder().encode(json).length > 2000 || (raw.v !== undefined && raw.v !== 1)) throw new Error('bad_card');
+  if (typeof raw.id !== 'string' || typeof raw.n !== 'string') throw new Error('bad_card');
   const id = raw.id.trim();
-  if (id.length < 1 || id.length > 50 || SCRIPT_RE.test(id)) {
-    throw new Error('bad_card');
-  }
-
-  if (typeof raw.n !== 'string') {
-    throw new Error('bad_card');
-  }
   const n = raw.n.trim();
-  if (n.length < 1 || n.length > 40 || SCRIPT_RE.test(n)) {
-    throw new Error('bad_card');
-  }
-
-  const clean = {
-    v: 1,
-    id,
-    n
-  };
-
-  if (raw.p !== undefined && raw.p !== null) {
-    if (typeof raw.p !== 'string') throw new Error('bad_card');
-    const p = raw.p.trim();
-    if (p.length > 0) {
-      if (!PHONE_RE.test(p) || SCRIPT_RE.test(p)) throw new Error('bad_card');
-      clean.p = p;
+  if (!id || id.length > 50 || SCRIPT_RE.test(id) || !n || n.length > 40 || SCRIPT_RE.test(n)) throw new Error('bad_card');
+  const clean = { v: 1, id, n };
+  for (const [key, re] of [['p', PHONE_RE], ['e', EMAIL_RE], ...Object.entries(SOCIAL)]) {
+    if (raw[key] == null) continue;
+    if (typeof raw[key] !== 'string') throw new Error('bad_card');
+    let value = raw[key].trim();
+    if (SOCIAL[key] && value.startsWith('@')) value = value.slice(1);
+    if (value) {
+      if (!re.test(value) || SCRIPT_RE.test(value)) throw new Error('bad_card');
+      clean[key] = value;
     }
   }
-
-  if (raw.ig !== undefined && raw.ig !== null) {
-    if (typeof raw.ig !== 'string') throw new Error('bad_card');
-    let ig = raw.ig.trim();
-    if (ig.startsWith('@')) ig = ig.slice(1);
-    if (ig.length > 0) {
-      if (!SOCIAL_RE.test(ig) || SCRIPT_RE.test(ig)) throw new Error('bad_card');
-      clean.ig = ig;
-    }
-  }
-
-  if (raw.sc !== undefined && raw.sc !== null) {
-    if (typeof raw.sc !== 'string') throw new Error('bad_card');
-    let sc = raw.sc.trim();
-    if (sc.startsWith('@')) sc = sc.slice(1);
-    if (sc.length > 0) {
-      if (!SOCIAL_RE.test(sc) || SCRIPT_RE.test(sc)) throw new Error('bad_card');
-      clean.sc = sc;
-    }
-  }
-
-  if (raw.e !== undefined && raw.e !== null) {
-    if (typeof raw.e !== 'string') throw new Error('bad_card');
-    const e = raw.e.trim();
-    if (e.length > 0) {
-      if (!EMAIL_RE.test(e) || SCRIPT_RE.test(e)) throw new Error('bad_card');
-      clean.e = e;
-    }
-  }
-
   return clean;
 }
 
-export function encodeCard(card) {
-  const clean = validateAndCleanCard(card);
-  return utf8ToBase64Url(JSON.stringify(clean));
-}
-
+export function encodeCard(card) { return utf8ToBase64Url(JSON.stringify(validateAndCleanCard(card))); }
 export function decodeCard(str) {
-  if (typeof str !== 'string' || !str.trim()) {
-    throw new Error('bad_card');
-  }
+  if (typeof str !== 'string' || !str.trim()) throw new Error('bad_card');
   let json;
-  try {
-    json = base64UrlToUtf8(str.trim());
-  } catch {
-    // If str was already raw json, try that as fallback
-    if (str.trim().startsWith('{')) {
-      json = str.trim();
-    } else {
-      throw new Error('bad_card');
-    }
-  }
-  let obj;
-  try {
-    obj = JSON.parse(json);
-  } catch {
-    throw new Error('bad_card');
-  }
-  return validateAndCleanCard(obj);
+  try { json = base64UrlToUtf8(str.trim()); }
+  catch { if (str.trim().startsWith('{')) json = str.trim(); else throw new Error('bad_card'); }
+  try { return validateAndCleanCard(JSON.parse(json)); } catch { throw new Error('bad_card'); }
 }
-
 export function cardUrl(base, card) {
   const encoded = encodeCard(card);
-  if (base.endsWith('#add=')) {
-    return `${base}${encoded}`;
+  if (base.endsWith('#add=')) return base + encoded;
+  if (base.includes('#add=')) return base.replace(/#add=.*$/, `#add=${encoded}`);
+  return `${base.split('#')[0]}#add=${encoded}`;
+}
+
+export function parseProfileLink(text) {
+  if (typeof text !== 'string') return null;
+  const input = text.trim();
+  if (/^@[A-Za-z0-9._-]+$/.test(input)) return { platform: null, handle: input.slice(1) };
+  if (!/^(?:https?:\/\/)?(?:www\.|m\.)?(?:instagram\.com|snapchat\.com|tiktok\.com|x\.com|twitter\.com|linkedin\.com)\//i.test(input)) return null;
+  let url;
+  try { url = new URL(/^https?:\/\//i.test(input) ? input : `https://${input}`); } catch { return null; }
+  const host = url.hostname.toLowerCase().replace(/^(www|m)\./, '');
+  const parts = url.pathname.split('/').filter(Boolean);
+  let platform, handle;
+  if (host === 'instagram.com' && parts.length === 1) [platform, handle] = ['ig', parts[0]];
+  else if (host === 'snapchat.com' && parts.length === 2 && parts[0].toLowerCase() === 'add') [platform, handle] = ['sc', parts[1]];
+  else if (host === 'tiktok.com' && parts.length === 1 && parts[0].startsWith('@')) [platform, handle] = ['tt', parts[0].slice(1)];
+  else if ((host === 'x.com' || host === 'twitter.com') && parts.length === 1) [platform, handle] = ['x', parts[0]];
+  else if (host === 'linkedin.com' && parts.length === 2 && parts[0].toLowerCase() === 'in') [platform, handle] = ['li', parts[1]];
+  return platform && SOCIAL[platform].test(handle) ? { platform, handle } : null;
+}
+
+export function profileUrl(key, handle) {
+  if (!SOCIAL[key] || typeof handle !== 'string') throw new Error('bad_platform');
+  const clean = handle.trim().replace(/^@/, '');
+  if (!SOCIAL[key].test(clean)) throw new Error('bad_handle');
+  return URL_BASE[key] + clean;
+}
+
+export function shareableCard(me, share = {}) {
+  const card = validateAndCleanCard(me);
+  const result = { v: 1, id: card.id, n: card.n };
+  for (const key of ['p', 'e', ...Object.keys(SOCIAL)]) {
+    if (card[key] !== undefined && share?.[key] !== false) result[key] = card[key];
   }
-  if (base.includes('#add=')) {
-    return base.replace(/#add=.*$/, `#add=${encoded}`);
-  }
-  return `${base}#add=${encoded}`;
+  return result;
 }
 
 export function parseScan(text) {
-  if (typeof text !== 'string' || !text.trim()) {
-    return null;
-  }
+  if (typeof text !== 'string' || !text.trim()) return null;
   const trimmed = text.trim();
-  let candidate = trimmed;
-  const match = trimmed.match(/#add=([^&]+)/);
-  if (match) {
-    candidate = match[1];
-  } else if (trimmed.startsWith('#add=')) {
-    candidate = trimmed.slice(5);
-  }
+  const partyMatch = trimmed.match(/#party=([^&]+)/);
+  const cardMatch = trimmed.match(/#add=([^&]+)/);
   try {
-    return decodeCard(candidate);
-  } catch {
-    return null;
-  }
+    if (partyMatch) return { kind: 'party', party: decodeParty(partyMatch[1]) };
+    if (cardMatch) return { kind: 'card', card: decodeCard(cardMatch[1]) };
+    return { kind: 'card', card: decodeCard(trimmed) };
+  } catch { return null; }
 }
 
+function escapeVcard(value) { return String(value).replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/;/g, '\\;').replace(/,/g, '\\,'); }
 export function vcard(card) {
-  const lines = [
-    'BEGIN:VCARD',
-    'VERSION:3.0',
-    `FN:${card.n}`,
-    `N:${card.n};;;;`
-  ];
-  if (card.p) {
-    lines.push(`TEL;TYPE=CELL:${card.p}`);
-    lines.push(`TEL:${card.p}`);
-  }
-  if (card.e) {
-    lines.push(`EMAIL:${card.e}`);
-  }
-  if (card.ig) {
-    lines.push(`X-SOCIALPROFILE;type=instagram:https://instagram.com/${card.ig}`);
-  }
-  if (card.sc) {
-    lines.push(`X-SOCIALPROFILE;type=snapchat:https://snapchat.com/add/${card.sc}`);
+  const c = validateAndCleanCard(card);
+  const lines = ['BEGIN:VCARD', 'VERSION:3.0', `FN:${escapeVcard(c.n)}`, `N:${escapeVcard(c.n)};;;;`];
+  if (c.p) lines.push(`TEL;TYPE=CELL:${c.p}`, `TEL:${c.p}`);
+  if (c.e) lines.push(`EMAIL:${c.e}`);
+  for (const key of Object.keys(SOCIAL)) {
+    if (c[key]) lines.push(`X-SOCIALPROFILE;type=${LABEL[key]}:${profileUrl(key, c[key])}`, `URL:${profileUrl(key, c[key])}`);
   }
   lines.push('END:VCARD');
   return lines.join('\r\n') + '\r\n';

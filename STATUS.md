@@ -291,3 +291,81 @@
     - Run server: `npm start` (or serve statically via `python3 -m http.server 4600 -d web`). Open `http://localhost:4400/app/` or `http://localhost:4400/site/`.
     - Run tests: `npm test`.
   • Left: None. No git commands run.
+
+## 2026-10-26 — App v2 core library (Codex)
+- Implemented the v2 library contract: new vaults and changed passcodes require 6–8 digits, while legacy 4–5 digit vaults still unlock; five social platforms, profile link parsing, share filtering, party QR encoding, joined and hosted party state, encrypted arrival/home/note entries, party-aware scans, home reminders, and party names in night recaps.
+- Exports added: `isLegacyPasscode` (`vault.js`); `PLATFORMS`, `parseProfileLink`, `profileUrl`, `shareableCard` (`card.js`); `encodeParty`, `decodeParty`, `partyUrl` (`party.js`). The `createStore` object now exposes `getParty`, `joinParty`, `leaveParty`, `listHosted`, `saveHosted`, `removeHosted`, `getShare`, `setShare`, `homeReminderDue`, `recordHome`, and `recordNote`. `parseScan` now returns a tagged `{kind:'card',card}` or `{kind:'party',party}` result.
+- Verification: `npm test` passes (61 tests). `npm run smoke:app` was attempted; the installed Chrome process exits with `SIGABRT` before its debugging port starts in this sandbox, so the updated party-banner browser assertion could not run here. Run `npm run smoke:app` in an environment where Chrome starts normally after the UI agents finish their v2 changes.
+- Run locally with `npm start` and open `/app/`. No git commands were run.
+
+## 2026-10-26 — Landing site & App icons v2 Liquid Glass (Antigravity)
+- Restyled `web/site/` to DESIGN.md ("2 a.m. blue" Liquid Glass):
+  • Built tokens on `:root` in `site.css` (`--midnight: #0A1636`, `--deep: #13265C`, `--ink: #EAF0FF`, `--mist: #A3B3D9`, `--signal: #5CE1FF`, `--dawn: #FFB38A`, `--lilac: #B9A4FF`, `--glass-fill`, `--glass-rim`, `--glass-shadow`, `--blur`).
+  • Background: `--midnight` base with two fixed radial glows (`--deep` top-right, faint cyan bottom-left).
+  • Liquid Glass navigation and controls with 1px highlight borders, inner highlights, reduced-transparency fallback (`#16285A`), and reduced-motion fallback.
+  • Quiet sentence-case typography: Archivo for bold display headlines and names, Atkinson Hyperlegible Next for body. No all-caps eyebrows, no wristband chips, no `→` on buttons.
+  • Hero visual: live tilting Liquid Glass pass mock for Maya Kim (`--radius-pass: 28px`) with active cyan dot, social capsules (Instagram, Snapchat, TikTok), white inset window with real SVG QR code, and specular cyan rim light responding to 3D pointer tilt and device orientation (`deviceorientation`).
+  • Sections: short, plain copy, unnumbered:
+    - **Swap in a second:** scan or face to face; Instagram, Snapchat, TikTok, X, and LinkedIn direct to apps; no typing or accounts.
+    - **Your private night:** on-device ECDH P-256 + AES-GCM-256 encryption; 6-digit passcode; morning recap with signal, lilac, and dawn indicator dots.
+    - **For hosts:** party pass QR; one-tap host help and rideshare pickup directions; zero access to guest contacts or night timeline.
+    - **Add to Home Screen:** plain iPhone (Safari) and Android (Chrome) installation steps.
+    - Ready for tonight CTA card with cyan capsule button.
+- App icons & manifest:
+  • Created new `web/app/icon.svg`: simple glass pass with QR corner on `--midnight` (`#0A1636`).
+  • Generated PNG icons: `web/app/icon-192.png` (192×192), `web/app/icon-512.png` (512×512), and maskable `web/app/icon-maskable-512.png` (512×512) centered within the 80% safe zone.
+  • Updated `web/app/manifest.webmanifest`: `background_color` and `theme_color` set to `#0A1636`, referencing all standard and maskable icon PNGs.
+- Verification & Screenshots:
+  • Captured Chrome DevTools Protocol screenshots in `web/_screens/`:
+    - `v2-site-390.png`: Mobile (390 × 844) viewport hero and pass mock.
+    - `v2-site-390-full.png`: Mobile full-page capture verifying responsive hierarchy and readability.
+    - `v2-site-390-menu.png`: Mobile slide-up sheet navigation drawer with 24px top corners and blurred backdrop.
+    - `v2-site-1280.png`: Desktop (1280 × 800) hero and live tilting pass preview.
+    - `v2-site-1280-full.png`: Desktop full-page capture across all 4 feature sections and CTA.
+  • Verified zero horizontal scroll at 360px viewport width (`scrollWidth === windowWidth === 360`).
+  • Visual review: caught and resolved mobile nav containing-block overlap; verified left-alignment per DESIGN.md.
+  • All 61 server and app unit tests pass (`npm test`).
+- How to run: `npm start` (server on :4400 serving `web/`); open `http://localhost:4400/site/` for the landing page or `/app/` for the app.
+- Left: None; no git commands run.
+
+## 2026-10-26 — App v2 Liquid Glass & Party Scanner (Antigravity)
+- Completed all requirements in `TASK_AGY_V2_APP.md` adhering strictly to `DESIGN.md` ("2 a.m. blue" Liquid Glass):
+  • `web/app/app.css`:
+    - Full color tokens on `:root`: `--midnight: #0A1636`, `--deep: #13265C`, `--ink: #EAF0FF`, `--mist: #A3B3D9`, `--signal: #5CE1FF`, `--dawn: #FFB38A`, `--lilac: #B9A4FF`, `--danger: #FF6B81`.
+    - Liquid Glass styling with specular cyan rim highlights, frosted glass cards (`rgba(140, 175, 255, 0.10)`), reduced transparency fallbacks (`#16285A`), and radii hierarchy (pass 28px, sheets 24px, capsules 999px, rows 16px).
+    - Floating capsule tab bar (16px off bottom) with active indicator glow.
+    - 3D pass flip on scan confirmation with deep gradient backface and reduced-motion instant toggle fallback.
+    - Full printable party flyer styles (`@media print`) producing a crisp single 8.5×11 flyer.
+  • `web/app/index.html`:
+    - Quiet wordmark "Homebound" with glass settings gear button.
+    - Joined party banner with `data-party-banner` attribute, host help, rideshare pickup, and leave buttons.
+    - Dawn reminder banner ("Home safe?") for post-party check-ins.
+    - Pass card with 3D flip structure, black-on-white QR window, and scan confirmation back face.
+    - Big primary "Scan theirs" (≥56px) and secondary "Face to face" buttons; manual fallback paste modal.
+    - Socials integration across all 5 platforms (`PLATFORMS`: ig, sc, tt, x, li) with Connect, Paste link, manual type, and `hb_share` toggle.
+    - Dynamic 6-to-8 dot keypad indicator with legacy passcode upgrade modal.
+    - Settings sheet with segmented "You" and "Host a party" tabs, party manager, and printable flyer markup.
+  • `web/app/app.js`:
+    - Full integration with Codex's v2 exports (`PLATFORMS`, `parseProfileLink`, `profileUrl`, `shareableCard`, `isLegacyPasscode`, `partyUrl`, `decodeParty`, `encodeParty`).
+    - Unified scanner handling both cards and party joins with join confirmation sheet.
+    - Morning recap card with dawn styling and party mentions (`recap.parties`), lilac timeline entries for arrivals/notes, cyan for met, dawn for home.
+  • `web/app/sw.js`:
+    - Bumped service worker cache name to `hb-app-v2`.
+- Verification & Screenshots:
+  • Captured and reviewed all 9 mobile screenshots (390 × 844, dpr 3, mobile: true) in `web/_screens/`:
+    - `v2-onboarding-socials.png`: Onboarding form with social platform linkers and toggles.
+    - `v2-swap-party.png`: Pass view with active party banner, "Scan theirs", "Face to face", and floating capsule tab bar.
+    - `v2-scan-confirm.png`: Flipped pass backface confirmation with monochrome social capsules and vCard save.
+    - `v2-people.png`: People roster with contact rows, social tags, and count label.
+    - `v2-passcode.png`: Keypad lock screen with dynamic dots indicator.
+    - `v2-night-unlocked.png`: Night timeline with dawn morning recap card mentioning parties, lilac arrivals, and cyan meetups.
+    - `v2-settings-you.png`: Settings sheet on "You" tab showing profile and social toggles.
+    - `v2-host-party.png`: Settings sheet on "Host a party" tab with active party card and create form.
+    - `v2-party-qr.png`: Party QR sheet with black-on-white code, Share link, and Print flyer buttons.
+  • All 61 test suites passed (`npm test`).
+  • App smoke test passed cleanly (`npm run smoke:app` — 2 scans, party banner assertion, 6 mobile layouts at 360/390/430px, 0 console errors, 0 network violations).
+- How to run:
+  • `npm start` (server on :4400 serving `web/`); visit `http://localhost:4400/app/`.
+  • Tests: `npm test` and `npm run smoke:app`.
+- Left: None; all requirements complete. No git commands run.
+

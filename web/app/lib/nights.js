@@ -112,6 +112,7 @@ export function recap(night) {
   let last = null;
   let lastWith = null;
   let wentHome = null;
+  const parties = [];
 
   for (const entry of entries) {
     if (!entry || !entry.at) continue;
@@ -133,6 +134,8 @@ export function recap(night) {
       }
     } else if (entry.type === 'home') {
       wentHome = entry.at;
+    } else if (entry.type === 'arrive' && entry.name && !parties.includes(entry.name)) {
+      parties.push(entry.name);
     }
   }
 
@@ -141,7 +144,8 @@ export function recap(night) {
     first,
     last,
     lastWith,
-    wentHome
+    wentHome,
+    parties
   };
 }
 
@@ -159,6 +163,8 @@ export function shareText(night, options = {}) {
       desc = entry.again ? `saw ${entry.name} again` : `met ${entry.name}`;
     } else if (entry.type === 'home') {
       desc = 'home';
+    } else if (entry.type === 'arrive') {
+      desc = `Arrived at ${entry.name}`;
     } else if (entry.type === 'note') {
       desc = entry.text || '';
     } else {

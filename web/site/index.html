@@ -4,25 +4,27 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Homebound &mdash; Swap numbers. Remember the night.</title>
-  <meta name="description" content="Swap contacts at a party with a QR scan. Your phone quietly keeps a private, passcode-locked timeline of who you met and when.">
+  <meta name="description" content="Swap contact info in one second with a QR scan. Your phone quietly keeps an encrypted timeline of who you were with, so the morning after, you know how to reach them.">
+  <link rel="icon" type="image/svg+xml" href="../app/icon.svg">
+  <link rel="apple-touch-icon" href="../app/icon-512.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Atkinson+Hyperlegible+Next:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../shared/base.css">
   <link rel="stylesheet" href="site.css">
 </head>
 <body class="site-body">
-  <!-- Header -->
+  <!-- Top Navigation Header -->
   <header class="site-header">
     <div class="site-container">
       <nav class="site-nav" aria-label="Main navigation">
         <a href="#top" class="site-brand">
-          <span class="wristband-chip band-orange">Homebound</span>
+          <span class="brand-text">Homebound</span>
         </a>
 
         <ul class="site-nav-links">
-          <li><a href="#how-it-works">How it works</a></li>
-          <li><a href="#private-log">Private log</a></li>
+          <li><a href="#swap">Swap</a></li>
+          <li><a href="#private-night">Private night</a></li>
+          <li><a href="#hosts">For hosts</a></li>
           <li><a href="#install">Add to phone</a></li>
         </ul>
 
@@ -41,24 +43,25 @@
         </button>
       </nav>
     </div>
-
-    <!-- Mobile Navigation Sheet -->
-    <div class="mobile-nav-backdrop" id="mobile-nav-backdrop" aria-hidden="true"></div>
-    <div class="mobile-nav-sheet glass" id="mobile-nav-sheet" aria-hidden="true">
-      <div class="mobile-sheet-header">
-        <span class="wristband-chip band-orange">Homebound</span>
-        <button type="button" class="mobile-close-btn glass" id="mobile-close-btn" aria-label="Close menu">&times;</button>
-      </div>
-      <ul class="mobile-nav-list">
-        <li><a href="#how-it-works" class="mobile-nav-link">How it works</a></li>
-        <li><a href="#private-log" class="mobile-nav-link">Private log</a></li>
-        <li><a href="#install" class="mobile-nav-link">Add to phone</a></li>
-      </ul>
-      <div class="mobile-sheet-actions">
-        <a href="../app/" class="btn btn-primary btn-block">Open the app</a>
-      </div>
-    </div>
   </header>
+
+  <!-- Mobile Navigation Sheet (top-level fixed overlay) -->
+  <div class="mobile-nav-backdrop" id="mobile-nav-backdrop" aria-hidden="true"></div>
+  <div class="mobile-nav-sheet glass" id="mobile-nav-sheet" aria-hidden="true">
+    <div class="mobile-sheet-header">
+      <span class="brand-text">Homebound</span>
+      <button type="button" class="mobile-close-btn glass" id="mobile-close-btn" aria-label="Close menu">&times;</button>
+    </div>
+    <ul class="mobile-nav-list">
+      <li><a href="#swap" class="mobile-nav-link">Swap</a></li>
+      <li><a href="#private-night" class="mobile-nav-link">Private night</a></li>
+      <li><a href="#hosts" class="mobile-nav-link">For hosts</a></li>
+      <li><a href="#install" class="mobile-nav-link">Add to phone</a></li>
+    </ul>
+    <div class="mobile-sheet-actions">
+      <a href="../app/" class="btn btn-primary btn-block">Open the app</a>
+    </div>
+  </div>
 
   <main id="top" class="site-container">
     <!-- Hero Section -->
@@ -70,7 +73,7 @@
         </h1>
 
         <p class="hero-subhead">
-          Swap contact info in one second with a QR code. Your phone quietly keeps a private, passcode-locked timeline of who you were with and when &mdash; so the morning after, you know who to reach.
+          Swap contact info in one second with a QR code. Your phone quietly keeps an encrypted timeline of who you were with, so the morning after, you know how to reach them.
         </p>
 
         <div class="hero-actions-wrapper">
@@ -78,174 +81,315 @@
             <a href="../app/" class="btn btn-primary hero-btn-primary" id="btn-open-app">
               Open the app
             </a>
-            <a href="#how-it-works" class="btn btn-secondary hero-btn-secondary">
+            <a href="#swap" class="btn btn-glass hero-btn-secondary">
               See how it works
             </a>
           </div>
-          <p class="hero-demo-subtext">Runs directly in your browser. Encrypted on your device.</p>
+          <p class="hero-demo-subtext">Runs directly in your browser. Encrypted on your phone.</p>
         </div>
       </div>
 
-      <!-- Ticket Stub Mockup Preview -->
-      <div class="hero-preview-wrapper" aria-hidden="true">
-        <div class="hero-stub-card">
-          <div class="stub-notch stub-notch-top"></div>
-          <div class="stub-header">
-            <div class="stub-chip">Homebound</div>
-            <div class="stub-name">Alex Rivera</div>
-            <div class="stub-handle">@alexrivera</div>
+      <!-- Live Tilting Glass Pass Mock -->
+      <div class="hero-preview-wrapper" id="pass-tilt-wrapper">
+        <div class="pass-card glass" id="hero-pass" aria-label="Interactive Homebound pass preview">
+          <div class="pass-rim-glow" aria-hidden="true"></div>
+          
+          <div class="pass-header">
+            <div class="pass-title-row">
+              <span class="pass-name">Maya Kim</span>
+              <span class="pass-status-dot" aria-hidden="true"></span>
+            </div>
+            <div class="pass-socials">
+              <span class="social-pill">
+                <svg class="social-glyph" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                </svg>
+                <span>maya.k</span>
+              </span>
+              <span class="social-pill">
+                <svg class="social-glyph" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+                  <path d="M12 2c-3.8 0-6 2.8-6 5.8 0 1.5.6 2.8 1.4 3.7.2.2.3.4.2.7l-.4 1.5c-.1.3.1.5.3.6.8.2 1.9.4 2.8-.2.3-.2.7-.1.9.1.5.6 1.4 1 2.8 1 1.4 0 2.3-.4 2.8-1 .2-.2.6-.3.9-.1.9.6 2 .4 2.8.2.3-.1.4-.3.3-.6l-.4-1.5c-.1-.3 0-.5.2-.7.8-.9 1.4-2.2 1.4-3.7C18 4.8 15.8 2 12 2z"/>
+                </svg>
+                <span>mayak</span>
+              </span>
+              <span class="social-pill">
+                <svg class="social-glyph" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.29 0 .58.04.86.12V9.42a6.33 6.33 0 0 0-.86-.06 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.75a8.28 8.28 0 0 0 4.84 1.55V6.85a4.85 4.85 0 0 1-1.07-.16z"/>
+                </svg>
+                <span>mayakim</span>
+              </span>
+            </div>
           </div>
-          <div class="stub-perf"></div>
-          <div class="stub-body">
-            <div class="stub-qr-box">
-              <svg viewBox="0 0 100 100" width="140" height="140" class="stub-qr-svg">
-                <!-- Decorative QR preview pattern -->
-                <rect width="100" height="100" fill="#ffffff" />
-                <rect x="10" y="10" width="26" height="26" fill="#1B2340" />
-                <rect x="14" y="14" width="18" height="18" fill="#ffffff" />
-                <rect x="18" y="18" width="10" height="10" fill="#1B2340" />
-                <rect x="64" y="10" width="26" height="26" fill="#1B2340" />
-                <rect x="68" y="14" width="18" height="18" fill="#ffffff" />
-                <rect x="72" y="18" width="10" height="10" fill="#1B2340" />
-                <rect x="10" y="64" width="26" height="26" fill="#1B2340" />
-                <rect x="14" y="68" width="18" height="18" fill="#ffffff" />
-                <rect x="18" y="72" width="10" height="10" fill="#1B2340" />
-                <rect x="42" y="12" width="6" height="18" fill="#1B2340" />
-                <rect x="52" y="24" width="6" height="12" fill="#1B2340" />
-                <rect x="42" y="44" width="16" height="14" fill="#1B2340" />
-                <rect x="64" y="44" width="10" height="10" fill="#1B2340" />
-                <rect x="80" y="52" width="10" height="14" fill="#1B2340" />
-                <rect x="44" y="68" width="12" height="16" fill="#1B2340" />
-                <rect x="64" y="68" width="24" height="6" fill="#1B2340" />
-                <rect x="70" y="78" width="18" height="12" fill="#1B2340" />
+
+          <div class="pass-window">
+            <div class="pass-qr-container" id="pass-qr-target">
+              <!-- Crisp QR SVG -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 29" width="168" height="168" shape-rendering="crispEdges" aria-label="QR code for Maya Kim">
+                <rect width="29" height="29" fill="#ffffff"/>
+                <!-- Top-Left Finder -->
+                <rect x="2" y="2" width="7" height="7" fill="#0A1636"/>
+                <rect x="3" y="3" width="5" height="5" fill="#ffffff"/>
+                <rect x="4" y="4" width="3" height="3" fill="#0A1636"/>
+                <!-- Top-Right Finder -->
+                <rect x="20" y="2" width="7" height="7" fill="#0A1636"/>
+                <rect x="21" y="3" width="5" height="5" fill="#ffffff"/>
+                <rect x="22" y="4" width="3" height="3" fill="#0A1636"/>
+                <!-- Bottom-Left Finder -->
+                <rect x="2" y="20" width="7" height="7" fill="#0A1636"/>
+                <rect x="3" y="21" width="5" height="5" fill="#ffffff"/>
+                <rect x="4" y="22" width="3" height="3" fill="#0A1636"/>
+                <!-- Timing & Alignment -->
+                <rect x="8" y="4" width="1" height="1" fill="#0A1636"/>
+                <rect x="10" y="4" width="2" height="1" fill="#0A1636"/>
+                <rect x="14" y="4" width="1" height="1" fill="#0A1636"/>
+                <rect x="16" y="4" width="2" height="1" fill="#0A1636"/>
+                <rect x="4" y="8" width="1" height="1" fill="#0A1636"/>
+                <rect x="4" y="10" width="1" height="2" fill="#0A1636"/>
+                <rect x="4" y="14" width="1" height="1" fill="#0A1636"/>
+                <rect x="4" y="16" width="1" height="2" fill="#0A1636"/>
+                <!-- Alignment Pattern -->
+                <rect x="18" y="18" width="5" height="5" fill="#0A1636"/>
+                <rect x="19" y="19" width="3" height="3" fill="#ffffff"/>
+                <rect x="20" y="20" width="1" height="1" fill="#0A1636"/>
+                <!-- Data Modules -->
+                <rect x="10" y="2" width="1" height="1" fill="#0A1636"/>
+                <rect x="13" y="2" width="2" height="1" fill="#0A1636"/>
+                <rect x="17" y="2" width="1" height="1" fill="#0A1636"/>
+                <rect x="11" y="7" width="2" height="1" fill="#0A1636"/>
+                <rect x="15" y="7" width="1" height="1" fill="#0A1636"/>
+                <rect x="10" y="10" width="3" height="1" fill="#0A1636"/>
+                <rect x="14" y="10" width="2" height="1" fill="#0A1636"/>
+                <rect x="10" y="12" width="1" height="2" fill="#0A1636"/>
+                <rect x="13" y="12" width="3" height="1" fill="#0A1636"/>
+                <rect x="17" y="12" width="1" height="2" fill="#0A1636"/>
+                <rect x="11" y="15" width="2" height="1" fill="#0A1636"/>
+                <rect x="15" y="15" width="2" height="1" fill="#0A1636"/>
+                <rect x="10" y="18" width="1" height="1" fill="#0A1636"/>
+                <rect x="13" y="18" width="2" height="1" fill="#0A1636"/>
+                <rect x="10" y="21" width="2" height="1" fill="#0A1636"/>
+                <rect x="14" y="21" width="1" height="2" fill="#0A1636"/>
+                <rect x="11" y="24" width="3" height="1" fill="#0A1636"/>
+                <rect x="16" y="24" width="1" height="1" fill="#0A1636"/>
+                <rect x="24" y="10" width="2" height="2" fill="#0A1636"/>
+                <rect x="25" y="14" width="1" height="2" fill="#0A1636"/>
+                <rect x="24" y="18" width="2" height="1" fill="#0A1636"/>
+                <rect x="24" y="22" width="2" height="2" fill="#0A1636"/>
               </svg>
             </div>
-            <div class="stub-caption">Hold phones screen to screen</div>
           </div>
-          <div class="stub-notch stub-notch-bottom"></div>
+
+          <div class="pass-footer">
+            <span class="pass-caption">Hold phones screen to screen</span>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Section 1: How swapping works -->
-    <section class="site-section" id="how-it-works">
-      <div class="section-badge-wrap">
-        <span class="wristband-chip band-pink">Swap</span>
+    <!-- Section: Swap in a second -->
+    <section class="site-section" id="swap">
+      <div class="section-header">
+        <h2 class="section-title">Swap in a second</h2>
+        <p class="section-lead">
+          Scan, or hold phones face to face. Instagram, Snapchat, TikTok, X and LinkedIn go straight to their apps.
+        </p>
       </div>
-      <h2 class="section-title">How swapping works</h2>
-      <p class="section-lead">
-        No typing numbers, no spelling handles in loud rooms, and no account to sign up for.
-      </p>
 
       <div class="feature-grid">
         <div class="card glass feature-card">
-          <div class="feature-step">01</div>
-          <h3 class="feature-title">Your ticket stub</h3>
+          <div class="card-icon-wrap" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="4"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+          </div>
+          <h3 class="feature-title">Scan or face to face</h3>
           <p class="feature-desc">
-            Your screen displays a clean ticket stub with your name and unique QR code encoding your card info.
+            Point your camera at their pass, or tap Face to face to display your code on top while the front camera scans theirs simultaneously.
           </p>
         </div>
 
         <div class="card glass feature-card">
-          <div class="feature-step">02</div>
-          <h3 class="feature-title">Scan theirs or Face to face</h3>
+          <div class="card-icon-wrap" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+          </div>
+          <h3 class="feature-title">Straight to their apps</h3>
           <p class="feature-desc">
-            Tap <strong>Scan theirs</strong> to read their code, or tap <strong>Face to face</strong> to split the screen: your QR on top, front camera below.
+            Each profile button hands off directly to the installed app on your phone: Instagram, Snapchat, TikTok, X, and LinkedIn. Phone numbers get call and text capsules.
           </p>
+          <div class="platform-chips">
+            <span class="platform-chip">Instagram</span>
+            <span class="platform-chip">Snapchat</span>
+            <span class="platform-chip">TikTok</span>
+            <span class="platform-chip">X</span>
+            <span class="platform-chip">LinkedIn</span>
+          </div>
         </div>
 
         <div class="card glass feature-card">
-          <div class="feature-step">03</div>
-          <h3 class="feature-title">Instant contact actions</h3>
+          <div class="card-icon-wrap" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+          </div>
+          <h3 class="feature-title">No typing, no accounts</h3>
           <p class="feature-desc">
-            Instantly see their info with one-tap buttons to call, text, open Instagram, or save to your phone contacts.
+            No spelling handles in a crowded room, no app store download, and no password to create. Open your browser and swap immediately.
           </p>
         </div>
       </div>
     </section>
 
-    <!-- Section 2: The private night log -->
-    <section class="site-section" id="private-log">
-      <div class="section-badge-wrap">
-        <span class="wristband-chip band-orange">Encrypted &bull; On-device</span>
+    <!-- Section: Your private night -->
+    <section class="site-section" id="private-night">
+      <div class="section-header">
+        <h2 class="section-title">Your private night</h2>
+        <p class="section-lead">
+          Encrypted on your phone; only your 6-digit passcode opens it; nobody else, not even a party host, can see it.
+        </p>
       </div>
-      <h2 class="section-title">The private night log</h2>
-      <p class="section-lead">
-        What happens at the party stays on your phone. Encrypted with keys generated on your device.
-      </p>
 
       <div class="feature-grid">
         <div class="card glass feature-card">
-          <div class="feature-dot dot-pink"></div>
-          <h3 class="feature-title">Quietly records your night</h3>
+          <div class="feature-dot dot-signal" aria-hidden="true"></div>
+          <h3 class="feature-title">Sealed on your phone</h3>
           <p class="feature-desc">
-            Every swap adds a sealed timestamp to your timeline. You can also tap &ldquo;Add a note&rdquo; or &ldquo;I&rsquo;m home&rdquo; at any time without entering your passcode.
+            Every swap adds a sealed entry using public-key cryptography (ECDH P-256 + AES-GCM-256). The app can append to the log while locked, but cannot read it without your passcode.
           </p>
         </div>
 
         <div class="card glass feature-card">
-          <div class="feature-dot dot-orange"></div>
-          <h3 class="feature-title">Hardware-grade encryption</h3>
+          <div class="feature-dot dot-lilac" aria-hidden="true"></div>
+          <h3 class="feature-title">Passcode-protected timeline</h3>
           <p class="feature-desc">
-            The log is sealed with public-key cryptography (ECDH P-256 + AES-GCM-256) and unlocked only with your chosen passcode. No server ever holds your key or your log.
+            Your contact list stays handy so you can reach anyone anytime. The timestamped timeline of where you went and when you met stays strictly encrypted behind your 6-digit passcode.
           </p>
         </div>
 
         <div class="card glass feature-card">
-          <div class="feature-dot dot-lime"></div>
+          <div class="feature-dot dot-dawn" aria-hidden="true"></div>
           <h3 class="feature-title">The morning after</h3>
           <p class="feature-desc">
-            Unlock your Night tab to see a clear timeline of who you were with, recap details, and quick links to reach out or share your night with a friend.
+            Check your Night recap to see who you were with and who you were last with. Log &ldquo;I&rsquo;m home&rdquo; or add a quick note anytime without unlocking.
           </p>
         </div>
       </div>
     </section>
 
-    <!-- Section 3: Add to Home Screen -->
-    <section class="site-section" id="install">
-      <div class="section-badge-wrap">
-        <span class="wristband-chip band-lime">Installable PWA</span>
+    <!-- Section: For hosts -->
+    <section class="site-section" id="hosts">
+      <div class="section-header">
+        <h2 class="section-title">For hosts</h2>
+        <p class="section-lead">
+          Make a party code with your help number and ride info; guests get a &ldquo;Home safe?&rdquo; reminder when it ends; you never see their contacts.
+        </p>
       </div>
-      <h2 class="section-title">Add to Home Screen</h2>
-      <p class="section-lead">
-        Homebound works offline and opens instantly like a native app. No app store download required.
-      </p>
+
+      <div class="feature-grid">
+        <div class="card glass feature-card">
+          <div class="card-icon-wrap" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <h3 class="feature-title">Party code</h3>
+          <p class="feature-desc">
+            Generate a party pass with your name, help number, ride directions, and party hours. Print it or display it on a tablet at the entrance.
+          </p>
+        </div>
+
+        <div class="card glass feature-card">
+          <div class="card-icon-wrap" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            </svg>
+          </div>
+          <h3 class="feature-title">Help and ride info</h3>
+          <p class="feature-desc">
+            Guests who join see a quiet glass banner on their screen with one-tap access to call or text the host for help, plus designated rideshare pickup notes.
+          </p>
+        </div>
+
+        <div class="card glass feature-card">
+          <div class="card-icon-wrap" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <h3 class="feature-title">Private by design</h3>
+          <p class="feature-desc">
+            Guests receive a gentle &ldquo;Home safe?&rdquo; reminder when the party ends. You never receive guest contacts, device IDs, or their night timeline.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section: Add to Home Screen -->
+    <section class="site-section" id="install">
+      <div class="section-header">
+        <h2 class="section-title">Add to Home Screen</h2>
+        <p class="section-lead">
+          Homebound works offline and opens instantly like an app. No app store download needed.
+        </p>
+      </div>
 
       <div class="install-grid">
         <div class="card glass install-card">
-          <div class="install-platform">
-            <span class="platform-icon">&CirclePlus;</span>
-            <span class="platform-name">iPhone &amp; iPad (Safari)</span>
+          <div class="install-header">
+            <div class="install-badge">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+              </svg>
+            </div>
+            <h3 class="install-platform-title">iPhone &amp; iPad (Safari)</h3>
           </div>
           <ol class="install-steps">
-            <li>Open Safari and navigate to Homebound</li>
-            <li>Tap the <strong>Share</strong> button (the square with an arrow pointing up at the bottom)</li>
+            <li>Open Safari and visit Homebound</li>
+            <li>Tap the <strong>Share</strong> button at the bottom of the screen</li>
             <li>Scroll down and tap <strong>Add to Home Screen</strong></li>
             <li>Tap <strong>Add</strong> in the top right corner</li>
           </ol>
         </div>
 
         <div class="card glass install-card">
-          <div class="install-platform">
-            <span class="platform-icon">&phone;</span>
-            <span class="platform-name">Android (Chrome)</span>
+          <div class="install-header">
+            <div class="install-badge">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+              </svg>
+            </div>
+            <h3 class="install-platform-title">Android (Chrome)</h3>
           </div>
           <ol class="install-steps">
-            <li>Open Chrome and navigate to Homebound</li>
-            <li>Tap the <strong>three dots</strong> menu (<strong>&vellip;</strong>) in the top-right corner</li>
+            <li>Open Chrome and visit Homebound</li>
+            <li>Tap the <strong>three dots</strong> menu (<strong>&vellip;</strong>) in the top right corner</li>
             <li>Tap <strong>Add to Home screen</strong> or <strong>Install app</strong></li>
-            <li>Tap <strong>Install</strong> to add Homebound to your home screen</li>
+            <li>Tap <strong>Install</strong> to add Homebound to your phone</li>
           </ol>
         </div>
       </div>
     </section>
 
-    <!-- CTA Section -->
+    <!-- Call to Action -->
     <section class="cta-section">
       <div class="card glass cta-card">
         <h2 class="cta-headline">Ready for tonight?</h2>
         <p class="cta-subhead">
-          Set up your card in 30 seconds. No email verification, no ads, no cloud sync.
+          Set up your pass in 30 seconds. No email verification, no ads, no cloud sync.
         </p>
         <a href="../app/" class="btn btn-primary cta-btn">
           Open the app
@@ -257,14 +401,15 @@
   <footer class="site-footer">
     <div class="site-container footer-content">
       <div class="footer-brand">
-        <span class="wristband-chip band-orange">Homebound</span>
+        <span class="brand-text">Homebound</span>
         <span class="footer-copy">Private contact swap &bull; On-device night log</span>
       </div>
       <div class="footer-links">
-        <a href="../app/">App</a>
-        <a href="#how-it-works">How it works</a>
-        <a href="#private-log">Private log</a>
-        <a href="#install">Install</a>
+        <a href="../app/">Open the app</a>
+        <a href="#swap">Swap</a>
+        <a href="#private-night">Private night</a>
+        <a href="#hosts">For hosts</a>
+        <a href="#install">Add to phone</a>
       </div>
     </div>
   </footer>

@@ -127,3 +127,84 @@ Storage is injected: any `{getItem,setItem,removeItem}`.
 2. Log entries are only ever stored sealed. Plaintext entries exist in memory only while unlocked.
 3. `hb_people` never contains timestamps or locations.
 4. Forgotten passcode: the only reset is "Delete everything".
+
+---
+# v2 changes (2026-10-26)
+
+## Passcode: minimum 6 digits
+- `createVault` and `changePasscode` (new passcode) accept only `^\d{6,8}$`; anything else throws
+  `bad_passcode_format`.
+- `unlock` still accepts 4–8 digits so existing vaults open. The UI forces "Choose a new 6-digit passcode" right
+  after a legacy unlock.
+- `isLegacyPasscode(p)` returns true for 4–5 digits.
+
+## Socials (`card.js`)
+- **Card keys:**
+  - `ig`: Instagram `^[A-Za-z0-9._]{1,30}$`
+  - `sc`: Snapchat `^[A-Za-z][A-Za-z0-9._-]{2,14}$`
+  - `tt`: TikTok `^[A-Za-z0-9._]{2,24}$`
+  - `x`: X `^[A-Za-z0-9_]{1,15}$`
+  - `li`: LinkedIn `^[A-Za-z0-9-]{3,100}$`
+  - A leading `@` is stripped before validation.
+- **`PLATFORMS`:** an array of `{key, label, placeholder, shareHelp}`. `shareHelp` holds the in-app steps for
+  copying your profile link, e.g. Instagram: "Profile → Share profile → Copy link".
+- **`parseProfileLink(text)`** → `{platform, handle}` or `null`. Handles:
+  - `instagram.com/<h>` (strips query and trailing `/`)
+  - `snapchat.com/add/<h>`, `snapchat.com/t/...` (→ `null`, short links can't be resolved offline)
+  - `tiktok.com/@<h>`
+  - `x.com/<h>`, `twitter.com/<h>`
+  - `linkedin.com/in/<h>`
+  - with or without `https://` / `www.` / `m.`
+  - a bare `@handle` returns `{platform:null, handle}`
+- **`profileUrl(key, handle)`** → `https://instagram.com/h`, `https://snapchat.com/add/h`,
+  `https://www.tiktok.com/@h`, `https://x.com/h`, `https://www.linkedin.com/in/h`.
+- **`shareableCard(me, share)`** → a copy of `me` keeping only the keys where `share[key] !== false`. `id` and `n`
+  are always kept. The QR uses this.
+
+**"Connect" vs manual entry, in the UI.** A static site can't log in to Instagram or Snapchat, because the
+platforms need registered apps, OAuth review and a server. "Connect" therefore means:
+1. "Open Instagram" deep-links to the app (`instagram://user?username=` is not needed, just
+   `https://instagram.com/`) and shows `shareHelp`.
+2. "Paste link" reads `navigator.clipboard.readText()` (with a paste-box fallback), runs `parseProfileLink`, and
+   fills the handle, showing a preview capsule to confirm.
+3. Manual typing is always available.
+
+## Party (`party.js`, new). Host settings, no server
+**The party object:**
+```
+{ v:1, id, name (1–60), startsAt:ISO, endsAt:ISO,
+  host:{ n (1–40), p? },        // who guests contact for help
+  ride?: (≤140)                 // "Uber pickup at the north gate"
+  note?: (≤280),                // house rules / safety note
+  ask?: { home:true }           // remind guests to tap "I'm home" after endsAt
+}
+```
+- `encodeParty`, `decodeParty` (throws `bad_party`, validates like `decodeCard`, max 1.5 KB),
+  `partyUrl(base, p)` → `#party=`, and `parseScan` now returns `{kind:'card',card} | {kind:'party',party} | null`.
+  - **Breaking change:** update callers.
+- **Store additions:**
+  - `getParty()` / `joinParty(party, {now, loc})`: saves `hb_party` and seals `{type:'arrive', at, partyId, name}`
+  - `leaveParty()`
+  - `listHosted()` / `saveHosted(party)` / `removeHosted(id)` for `hb_hosted`
+  - `getShare()` / `setShare(patch)` for `hb_share`
+  - `homeReminderDue(now)` → true when joined, `ask.home`, `now > endsAt`, and no `home` was sealed since
+    `startsAt`. The store keeps `hb_party_home` as a boolean set by `recordHome`; that's allowed plaintext.
+  - `recordHome({now, loc})` / `recordNote({text, now, loc})` seal entries (and set the flag).
+  - `recordScan` stamps `partyId` on sealed met entries while a party is joined.
+- **Privacy:** the host never receives anything. Joining only tells *your* phone about the party.
+- **`nights.js`:** `arrive` entries render as "Arrived at <name>". `recap` adds `parties:[name]`.
+
+## Settings, two screens
+- **You** (user settings):
+  - your card: name, phone, email
+  - Socials: per platform, Connect / Paste link / type, with a "Share in my code" toggle (`hb_share`)
+  - Night log: change passcode (6+), location on/off, auto-lock minutes (1/5/15)
+  - Delete everything
+- **Host a party** (host settings):
+  - create or edit a party (the fields above)
+  - show the party QR full-screen, plus a "Share link" (navigator.share) and "Print" (print stylesheet with a big
+    QR and the party name)
+  - list hosted parties; end or delete a party
+  - a line: "Guests see your name, number and notes. You never see their contacts or their night."
+- **Joined party** (guests): a slim glass banner on Swap with "<name> · Help" (call/text the host) and "Ride"
+  (shows `ride`). After `endsAt`, if `homeReminderDue`: a dawn-colored banner, "Home safe? Tap I'm home".

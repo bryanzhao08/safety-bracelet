@@ -124,21 +124,21 @@ test('card: parseScan handles full URL, bare value, and garbage', () => {
   const url = `https://homebound.app/app/#add=${encoded}`;
   const parsedFromUrl = parseScan(url);
   assert.ok(parsedFromUrl);
-  assert.equal(parsedFromUrl.id, card.id);
-  assert.equal(parsedFromUrl.n, card.n);
-  assert.equal(parsedFromUrl.p, card.p);
+  assert.equal(parsedFromUrl.card.id, card.id);
+  assert.equal(parsedFromUrl.card.n, card.n);
+  assert.equal(parsedFromUrl.card.p, card.p);
 
   // Full URL with extra query params or fragment
   const urlWithParams = `https://homebound.app/app/?ref=cam#add=${encoded}`;
   const parsedFromParams = parseScan(urlWithParams);
   assert.ok(parsedFromParams);
-  assert.equal(parsedFromParams.n, card.n);
+  assert.equal(parsedFromParams.card.n, card.n);
 
   // Bare base64url value
   const parsedFromBare = parseScan(encoded);
   assert.ok(parsedFromBare);
-  assert.equal(parsedFromBare.id, card.id);
-  assert.equal(parsedFromBare.n, card.n);
+  assert.equal(parsedFromBare.card.id, card.id);
+  assert.equal(parsedFromBare.card.n, card.n);
 
   // Garbage returns null
   assert.equal(parseScan(''), null);

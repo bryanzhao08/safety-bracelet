@@ -1,9 +1,13 @@
 import { bytesToBase64Url, base64UrlToBytes } from './b64.js';
 
-function assertPasscodeFormat(passcode) {
-  if (typeof passcode !== 'string' || !/^\d{4,8}$/.test(passcode)) {
+function assertPasscodeFormat(passcode, legacy = false) {
+  if (typeof passcode !== 'string' || !(legacy ? /^\d{4,8}$/ : /^\d{6,8}$/).test(passcode)) {
     throw new Error('bad_passcode_format');
   }
+}
+
+export function isLegacyPasscode(passcode) {
+  return typeof passcode === 'string' && /^\d{4,5}$/.test(passcode);
 }
 
 async function deriveWrappingKey(passcode, saltBytes, iter = 310000) {
@@ -114,7 +118,7 @@ export async function seal(meta, entry) {
 }
 
 export async function unlock(meta, passcode) {
-  assertPasscodeFormat(passcode);
+  assertPasscodeFormat(passcode, true);
   if (!meta || !meta.salt || !meta.wrapped || !meta.wrapped.iv || !meta.wrapped.ct) {
     throw new Error('bad_passcode');
   }

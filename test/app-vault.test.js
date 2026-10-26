@@ -40,7 +40,7 @@ test('vault: create -> seal -> unlock -> open round trip', async () => {
 });
 
 test('vault: wrong passcode throws bad_passcode', async () => {
-  const meta = await createVault('1234');
+  const meta = await createVault('123456');
   await assert.rejects(
     async () => unlock(meta, '9999'),
     /bad_passcode/
@@ -48,7 +48,7 @@ test('vault: wrong passcode throws bad_passcode', async () => {
 });
 
 test('vault: sealing works with only meta (no passcode needed)', async () => {
-  const meta = await createVault('45678');
+  const meta = await createVault('456789');
   // Passcode is not known or needed to seal
   const entry = {
     id: 'e2',
@@ -62,14 +62,14 @@ test('vault: sealing works with only meta (no passcode needed)', async () => {
   assert.ok(sealed.iv);
   assert.ok(sealed.ct);
 
-  const privKey = await unlock(meta, '45678');
+  const privKey = await unlock(meta, '456789');
   const decrypted = await open(privKey, sealed);
   assert.deepEqual(decrypted, entry);
 });
 
 test('vault: changePasscode old entries still open, and old passcode fails', async () => {
-  const oldPass = '1111';
-  const newPass = '22222';
+  const oldPass = '111111';
+  const newPass = '222222';
   const meta = await createVault(oldPass);
 
   const entry = { id: 'e3', type: 'home', at: '2026-10-25T02:00:00.000Z' };
@@ -91,9 +91,9 @@ test('vault: changePasscode old entries still open, and old passcode fails', asy
   assert.deepEqual(decrypted, entry);
 });
 
-test('vault: format check on passcode (4-8 digits)', async () => {
-  // Invalid formats: non-digits, too short (< 4), too long (> 8), empty
-  const invalidPasscodes = ['', '123', '123456789', 'abcd', '12a4', '12 34'];
+test('vault: format check on passcode (6-8 digits for creation)', async () => {
+  // Creation requires 6–8 digits; unlock retains support for legacy 4–5 digits.
+  const invalidPasscodes = ['', '123', '1234', '12345', '123456789', 'abcd', '12a4', '12 34'];
   for (const p of invalidPasscodes) {
     await assert.rejects(
       async () => createVault(p),
@@ -101,16 +101,19 @@ test('vault: format check on passcode (4-8 digits)', async () => {
     );
   }
 
-  const meta = await createVault('1234');
-  for (const p of invalidPasscodes) {
+  const meta = await createVault('123456');
+  for (const p of invalidPasscodes.filter(p => !/^\d{4,5}$/.test(p))) {
     await assert.rejects(
       async () => unlock(meta, p),
       /bad_passcode_format/
     );
     await assert.rejects(
-      async () => changePasscode(meta, '1234', p),
+      async () => changePasscode(meta, '123456', p),
       /bad_passcode_format/
     );
+  }
+  for (const p of ['1234', '12345']) {
+    await assert.rejects(changePasscode(meta, '123456', p), /bad_passcode_format/);
   }
 });
 

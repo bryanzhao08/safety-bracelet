@@ -1,4 +1,5 @@
 import { newId, decodeCard } from './card.js';
+import { encodeParty, decodeParty } from './party.js';
 import { seal } from './vault.js';
 
 function sanitizePersonCard(card) {
@@ -10,6 +11,9 @@ function sanitizePersonCard(card) {
   if (card.p) clean.p = card.p;
   if (card.ig) clean.ig = card.ig;
   if (card.sc) clean.sc = card.sc;
+  if (card.tt) clean.tt = card.tt;
+  if (card.x) clean.x = card.x;
+  if (card.li) clean.li = card.li;
   if (card.e) clean.e = card.e;
   return clean;
 }
@@ -125,8 +129,93 @@ export function createStore(storage) {
     return updated;
   }
 
+  const parse = (key, fallback) => {
+    try { return JSON.parse(storage.getItem(key)) ?? fallback; } catch { return fallback; }
+  };
+  const timestamp = now => now ? new Date(now).toISOString() : new Date().toISOString();
+  async function sealedEntry(entry) {
+    const vault = getVault();
+    if (!vault) throw new Error('no_vault');
+    const sealed = await seal(vault, { id: newId(), ...entry });
+    appendSealed(sealed);
+    return sealed;
+  }
+
+  function getParty() {
+    const raw = parse('hb_party', null);
+    if (!raw) return null;
+    try { return decodeParty(encodeParty(raw)); } catch { return null; }
+  }
+
+  async function joinParty(party, { now, loc } = {}) {
+    const clean = decodeParty(encodeParty(party));
+    const entry = { type: 'arrive', at: timestamp(now), partyId: clean.id, name: clean.name };
+    if (loc) entry.loc = loc;
+    await sealedEntry(entry);
+    storage.setItem('hb_party', JSON.stringify(clean));
+    storage.setItem('hb_party_home', 'false');
+    return clean;
+  }
+
+  function leaveParty() {
+    storage.removeItem('hb_party');
+    storage.removeItem('hb_party_home');
+  }
+
+  function listHosted() {
+    const hosted = parse('hb_hosted', []);
+    return Array.isArray(hosted) ? hosted : [];
+  }
+
+  function saveHosted(party) {
+    const clean = decodeParty(encodeParty(party));
+    const hosted = listHosted().filter(item => item.id !== clean.id);
+    hosted.push(clean);
+    storage.setItem('hb_hosted', JSON.stringify(hosted));
+    return clean;
+  }
+
+  function removeHosted(id) {
+    storage.setItem('hb_hosted', JSON.stringify(listHosted().filter(item => item.id !== id)));
+  }
+
+  function getShare() {
+    const share = parse('hb_share', {});
+    return share && typeof share === 'object' && !Array.isArray(share) ? share : {};
+  }
+
+  function setShare(patch) {
+    const share = { ...getShare() };
+    for (const key of ['p', 'e', 'ig', 'sc', 'tt', 'x', 'li']) {
+      if (Object.hasOwn(patch || {}, key)) share[key] = patch[key] !== false;
+    }
+    storage.setItem('hb_share', JSON.stringify(share));
+    return share;
+  }
+
+  function homeReminderDue(now = new Date()) {
+    const party = getParty();
+    return Boolean(party?.ask?.home && new Date(now).getTime() > Date.parse(party.endsAt) && parse('hb_party_home', false) !== true);
+  }
+
+  async function recordHome({ now, loc } = {}) {
+    const entry = { type: 'home', at: timestamp(now) };
+    if (loc) entry.loc = loc;
+    const sealed = await sealedEntry(entry);
+    const party = getParty();
+    if (party && Date.parse(entry.at) >= Date.parse(party.startsAt)) storage.setItem('hb_party_home', 'true');
+    return sealed;
+  }
+
+  async function recordNote({ text, now, loc } = {}) {
+    if (typeof text !== 'string' || !text.trim() || text.trim().length > 280) throw new Error('bad_note');
+    const entry = { type: 'note', at: timestamp(now), text: text.trim() };
+    if (loc) entry.loc = loc;
+    return sealedEntry(entry);
+  }
+
   function wipe() {
-    const known = ['hb_me', 'hb_people', 'hb_vault', 'hb_log', 'hb_settings'];
+    const known = ['hb_me', 'hb_people', 'hb_vault', 'hb_log', 'hb_settings', 'hb_party', 'hb_party_home', 'hb_hosted', 'hb_share'];
     for (const k of known) {
       storage.removeItem(k);
     }
@@ -176,6 +265,9 @@ export function createStore(storage) {
       name: person.n
     };
 
+    const party = getParty();
+    if (party) entry.partyId = party.id;
+
     if (!isNew) {
       entry.again = true;
     }
@@ -203,6 +295,17 @@ export function createStore(storage) {
     replaceLog,
     getSettings,
     setSettings,
+    getParty,
+    joinParty,
+    leaveParty,
+    listHosted,
+    saveHosted,
+    removeHosted,
+    getShare,
+    setShare,
+    homeReminderDue,
+    recordHome,
+    recordNote,
     wipe,
     recordScan
   };

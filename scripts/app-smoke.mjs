@@ -128,31 +128,34 @@ async function main() {
     };
     for (const route of ['/app/', '/site/']) for (const width of [360, 390, 430]) await layout(route, width);
     await navigate(origin + '/app/');
-    const cards = await evaluate(`(async () => {
+    const links = await evaluate(`(async () => {
       const { newId, cardUrl } = await import('/app/lib/card.js');
+      const { partyUrl } = await import('/app/lib/party.js');
       const { createVault } = await import('/app/lib/vault.js');
       const { createStore } = await import('/app/lib/store.js');
       const store = createStore(localStorage);
       store.setMe({v:1,id:newId(),n:'Smoke Owner',p:'+15551230000'});
       store.setVault(await createVault('642813'));
       const base = location.origin + '/app/';
-      return [
+      return { cards: [
         cardUrl(base + '?smoke=1', {v:1,id:newId(),n:'Smoke Jordan',p:'+15551230001'}),
         cardUrl(base + '?smoke=2', {v:1,id:newId(),n:'Smoke Priya',p:'+15551230002'}),
-      ];
+      ], party: partyUrl(base + '?smoke=3', {v:1,id:newId(),name:'Smoke Party',startsAt:'2026-10-26T20:00:00.000Z',endsAt:'2026-10-27T02:00:00.000Z',host:{n:'Smoke Host',p:'+15551230003'},ask:{home:true}}) };
     })()`);
-    for (let index = 0; index < cards.length; index++) {
-      await navigate(cards[index]);
+    for (let index = 0; index < links.cards.length; index++) {
+      await navigate(links.cards[index]);
       await waitFor(() => evaluate(`(async () => {
         const {createStore} = await import('/app/lib/store.js');
         const store = createStore(localStorage);
         return store.listPeople().length >= ${index + 1} && store.listSealed().length >= ${index + 1} && !location.hash;
       })()`), `scan ${index + 1}`);
     }
+    await navigate(links.party);
+    await waitFor(() => evaluate("Boolean(document.querySelector('[data-party-banner]'))"), 'party banner');
     const storage = await evaluate(`({log:localStorage.getItem('hb_log'), people:localStorage.getItem('hb_people')})`);
     if (!storage.log || storage.log.includes('Smoke Jordan') || storage.log.includes('Smoke Priya')) throw new Error('hb_log contains a plaintext name or is missing');
     if (errors.length) throw new Error(`Browser errors:\n${[...new Set(errors)].join('\n')}`);
-    console.log(`App smoke passed: 2 scans, 6 mobile layouts, ${requests.length} requests, no console errors`);
+    console.log(`App smoke passed: 2 scans, party banner, 6 mobile layouts, ${requests.length} requests, no console errors`);
   } finally {
     cdp?.close();
     if (chrome && chrome.exitCode === null) chrome.kill();
