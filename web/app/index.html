@@ -6,7 +6,7 @@
   <title>Homebound</title>
   <meta name="description" content="Swap numbers. Remember the night.">
   <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#0A1636">
+  <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Homebound">
@@ -171,36 +171,7 @@
             </svg>
           </div>
 
-          <h2 class="passcode-title">Night log</h2>
-          <p class="passcode-subtext">Enter your passcode to unlock your private on-device log.</p>
-
-          <!-- Passcode Dots (initially 6, grows to 8) -->
-          <div class="passcode-dots-row" id="passcode-dots">
-            <span class="passcode-dot"></span>
-            <span class="passcode-dot"></span>
-            <span class="passcode-dot"></span>
-            <span class="passcode-dot"></span>
-            <span class="passcode-dot"></span>
-            <span class="passcode-dot"></span>
-          </div>
-
-          <div class="passcode-error-msg" id="passcode-error" aria-live="assertive"></div>
-
-          <!-- Numeric Keypad -->
-          <div class="keypad-grid" id="passcode-keypad">
-            <button type="button" class="keypad-btn" data-digit="1">1</button>
-            <button type="button" class="keypad-btn" data-digit="2">2</button>
-            <button type="button" class="keypad-btn" data-digit="3">3</button>
-            <button type="button" class="keypad-btn" data-digit="4">4</button>
-            <button type="button" class="keypad-btn" data-digit="5">5</button>
-            <button type="button" class="keypad-btn" data-digit="6">6</button>
-            <button type="button" class="keypad-btn" data-digit="7">7</button>
-            <button type="button" class="keypad-btn" data-digit="8">8</button>
-            <button type="button" class="keypad-btn" data-digit="9">9</button>
-            <button type="button" class="keypad-btn keypad-btn-fn" id="keypad-clear">Clear</button>
-            <button type="button" class="keypad-btn" data-digit="0">0</button>
-            <button type="button" class="keypad-btn keypad-btn-fn" id="keypad-backspace" aria-label="Backspace">&#9003;</button>
-          </div>
+          <div id="night-keypad"></div>
         </div>
 
         <!-- Unlocked View (Morning Recap & Timeline) -->
@@ -319,13 +290,7 @@
           </div>
 
           <!-- Change Passcode -->
-          <form id="form-change-passcode" style="display: flex; flex-direction: column; gap: 10px; margin-top: 4px;">
-            <span class="text-15" style="font-weight: 600;">Change passcode</span>
-            <input type="password" id="change-old-pass" class="form-input" inputmode="numeric" placeholder="Current passcode" required>
-            <input type="password" id="change-new-pass" class="form-input" inputmode="numeric" placeholder="New passcode (6–8 digits)" minlength="6" maxlength="8" required>
-            <p id="change-pass-error" class="text-13 text-danger"></p>
-            <button type="submit" class="btn-glass-action" style="min-height: 44px;">Update passcode</button>
-          </form>
+          <button type="button" id="btn-change-passcode" class="btn-glass-action" style="min-height: 44px;">Change passcode</button>
         </div>
 
         <hr style="border: none; border-top: 1px solid var(--glass-rim);">
@@ -528,32 +493,6 @@
     </div>
   </div>
 
-  <!-- Legacy Passcode Upgrade Modal -->
-  <div class="modal-overlay" id="modal-legacy-passcode">
-    <div class="sheet-card">
-      <div class="sheet-header">
-        <h3 class="sheet-title">New passcode required</h3>
-      </div>
-      <p class="text-15 text-mist">
-        Homebound now requires a 6 to 8 digit passcode to protect your private night log. Choose your new passcode.
-      </p>
-      <form id="form-legacy-upgrade" style="display: flex; flex-direction: column; gap: 12px;">
-        <div class="form-group">
-          <label class="form-label" for="legacy-new-pass">New passcode (6–8 digits)</label>
-          <input type="password" id="legacy-new-pass" class="form-input" inputmode="numeric" minlength="6" maxlength="8" required placeholder="••••••">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="legacy-new-pass-confirm">Confirm passcode</label>
-          <input type="password" id="legacy-new-pass-confirm" class="form-input" inputmode="numeric" minlength="6" maxlength="8" required placeholder="••••••">
-        </div>
-        <p id="legacy-upgrade-error" class="text-13 text-danger"></p>
-        <button type="submit" class="btn-primary-signal" style="min-height: 52px;">
-          Save new passcode
-        </button>
-      </form>
-    </div>
-  </div>
-
   <!-- Camera Scanner: "Scan theirs" -->
   <div class="scanner-screen-modal" id="scanner-theirs-modal">
     <div class="scanner-camera-view">
@@ -636,36 +575,7 @@
       </div>
 
       <!-- Step 2: Passcode Setup (6-8 digits) -->
-      <div id="onboarding-step-2" style="display: none;">
-        <h2 class="sheet-title" style="margin-bottom: 4px;">Choose passcode</h2>
-        <div style="border-left: 3px solid var(--dawn); background: rgba(255, 179, 138, 0.08); padding: 10px 12px; border-radius: 4px; margin: 10px 0;">
-          <p class="text-14" style="font-weight: 600; color: var(--dawn);">
-            If you forget it, the log can&rsquo;t be recovered.
-          </p>
-        </div>
-        <p class="text-14 text-mist" style="margin-bottom: 16px;">
-          Your private night log is encrypted on your device. Choose a 6 to 8 digit passcode to open it.
-        </p>
-        <form id="form-onboard-passcode" style="display: flex; flex-direction: column; gap: 12px;">
-          <div class="form-group">
-            <label class="form-label" for="onboard-pass">Passcode (6&ndash;8 digits)</label>
-            <input type="password" id="onboard-pass" class="form-input" inputmode="numeric" minlength="6" maxlength="8" required placeholder="••••••">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="onboard-pass-confirm">Confirm passcode</label>
-            <input type="password" id="onboard-pass-confirm" class="form-input" inputmode="numeric" minlength="6" maxlength="8" required placeholder="••••••">
-          </div>
-          <p id="onboard-pass-error" class="text-13 text-danger"></p>
-          <div style="display: flex; gap: 10px; margin-top: 8px;">
-            <button type="button" id="btn-onboard-back" class="btn-glass-action" style="min-height: 52px; flex: 0.4;">
-              Back
-            </button>
-            <button type="submit" id="btn-onboard-finish" class="btn-primary-signal" style="min-height: 52px; flex: 1;">
-              Finish setup
-            </button>
-          </div>
-        </form>
-      </div>
+      
     </div>
   </div>
 

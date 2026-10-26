@@ -7,6 +7,7 @@ import { createStore } from './lib/store.js';
 import { groupByNight, recap, shareText, formatTime, formatNightLabel } from './lib/nights.js';
 import { generateQRSvg } from '../shared/qr.js';
 import { QrCameraScanner } from './ui/scanner.js';
+import { mountKeypad, askPasscode, createPasscode } from './ui/keypad.js';
 
 // Initialize Store with localStorage
 const store = createStore(localStorage);
@@ -17,7 +18,7 @@ let me = store.getMe();
 let vaultMeta = store.getVault();
 let unlockedKey = null; // Stored in memory only!
 let autoLockTimer = null;
-let currentPasscodeAttempt = '';
+let nightPad = null;
 let activeScanner = null;
 let selectedContact = null;
 let confirmFlipTimer = null;
@@ -248,8 +249,7 @@ function lockNightLog() {
     clearTimeout(autoLockTimer);
     autoLockTimer = null;
   }
-  currentPasscodeAttempt = '';
-  updatePasscodeDots();
+  nightPad?.reset();
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -846,8 +846,7 @@ function renderNight() {
   if (!unlockedKey) {
     if (lockedScreen) lockedScreen.style.display = 'flex';
     if (unlockedScreen) unlockedScreen.style.display = 'none';
-    currentPasscodeAttempt = '';
-    updatePasscodeDots();
+    nightPad?.reset();
   } else {
     if (lockedScreen) lockedScreen.style.display = 'none';
     if (unlockedScreen) unlockedScreen.style.display = 'flex';
@@ -855,84 +854,53 @@ function renderNight() {
   }
 }
 
-function updatePasscodeDots() {
-  const container = document.getElementById('passcode-dots');
-  if (!container) return;
+// Unlock with the iPhone-style keypad. New vaults store `len` (passcode length) so a wrong
+// code can shake as soon as the last dot fills. Older vaults have no `len`: try at 4 and 5
+// (legacy) and 6, then extend to 8 dots.
+function setupPasscodeKeypad() {
+  const root = document.getElementById('night-keypad');
+  if (!root) return;
+  const knownLen = () => store.getVault()?.len || null;
 
-  const targetCount = Math.max(6, currentPasscodeAttempt.length);
-  const currentCount = container.children.length;
-
-  if (targetCount > currentCount) {
-    for (let i = currentCount; i < targetCount; i++) {
-      const dot = document.createElement('span');
-      dot.className = 'passcode-dot';
-      container.appendChild(dot);
+  async function tryUnlock(attempt) {
+    vaultMeta = store.getVault();
+    if (!vaultMeta) return false;
+    try {
+      unlockedKey = await unlock(vaultMeta, attempt);
+    } catch {
+      return false;
     }
-  } else if (targetCount < currentCount && targetCount >= 6) {
-    while (container.children.length > targetCount) {
-      container.removeChild(container.lastChild);
+    lastUnlockedPasscode = attempt;
+    if (!vaultMeta.len) {
+      vaultMeta = { ...vaultMeta, len: attempt.length };
+      store.setVault(vaultMeta);
     }
+    resetAutoLockTimer();
+    nightPad.reset();
+    nightPad.setLength(knownLen() || 6);
+    renderNight();
+    if (isLegacyPasscode(attempt)) promptLegacyUpgrade();
+    return true;
   }
 
-  const dots = container.querySelectorAll('.passcode-dot');
-  dots.forEach((dot, idx) => {
-    dot.classList.toggle('filled', idx < currentPasscodeAttempt.length);
-  });
-}
-
-function setupPasscodeKeypad() {
-  const keypad = document.getElementById('passcode-keypad');
-  const errorEl = document.getElementById('passcode-error');
-
-  keypad?.addEventListener('click', async (e) => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-
-    if (errorEl) errorEl.textContent = '';
-
-    const digit = btn.dataset.digit;
-    if (digit !== undefined) {
-      if (currentPasscodeAttempt.length < 8) {
-        currentPasscodeAttempt += digit;
-        updatePasscodeDots();
+  nightPad = mountKeypad(root, {
+    title: 'Night log',
+    subtitle: 'Enter your passcode',
+    length: knownLen() || 6,
+    onInput: async (code) => {
+      // Legacy 4–5 digit vaults without a stored length
+      if (!knownLen() && code.length >= 4 && code.length <= 5) await tryUnlock(code);
+    },
+    onComplete: async (code) => {
+      if (await tryUnlock(code)) return;
+      if (!knownLen() && code.length < 8) {
+        // Unknown length: allow continuing up to 8 digits
+        nightPad.setLength(code.length + 1);
+        return;
       }
-
-      // Check unlock when 4–8 digits entered
-      if (currentPasscodeAttempt.length >= 4) {
-        vaultMeta = store.getVault();
-        if (!vaultMeta) return;
-
-        try {
-          const attempt = currentPasscodeAttempt;
-          const key = await unlock(vaultMeta, attempt);
-          unlockedKey = key;
-          lastUnlockedPasscode = attempt;
-          resetAutoLockTimer();
-          renderNight();
-
-          // Check if legacy passcode (4-5 digits): force upgrade
-          if (isLegacyPasscode(attempt)) {
-            promptLegacyUpgrade();
-          }
-        } catch {
-          if (currentPasscodeAttempt.length >= 8) {
-            if (errorEl) errorEl.textContent = 'Wrong passcode';
-            currentPasscodeAttempt = '';
-            updatePasscodeDots();
-          }
-        }
-      }
-    } else if (btn.id === 'keypad-clear') {
-      currentPasscodeAttempt = '';
-      updatePasscodeDots();
-      if (errorEl) errorEl.textContent = '';
-    } else if (btn.id === 'keypad-backspace') {
-      if (currentPasscodeAttempt.length > 0) {
-        currentPasscodeAttempt = currentPasscodeAttempt.slice(0, -1);
-        updatePasscodeDots();
-      }
-      if (errorEl) errorEl.textContent = '';
-    }
+      nightPad.setLength(knownLen() || 6);
+      nightPad.shake('Wrong passcode');
+    },
   });
 
   document.getElementById('btn-lock-night')?.addEventListener('click', () => {
@@ -943,40 +911,22 @@ function setupPasscodeKeypad() {
 }
 
 // Legacy passcode migration prompt
-function promptLegacyUpgrade() {
-  const modal = document.getElementById('modal-legacy-passcode');
-  if (!modal) return;
-  modal.classList.add('is-open', 'open');
-
-  const form = document.getElementById('form-legacy-upgrade');
-  const errorEl = document.getElementById('legacy-upgrade-error');
-
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const newPass = document.getElementById('legacy-new-pass')?.value;
-    const confirmPass = document.getElementById('legacy-new-pass-confirm')?.value;
-
-    if (errorEl) errorEl.textContent = '';
-
-    if (newPass !== confirmPass) {
-      if (errorEl) errorEl.textContent = 'Passcodes do not match';
-      return;
-    }
-    if (!newPass || newPass.length < 6 || newPass.length > 8 || !/^\d+$/.test(newPass)) {
-      if (errorEl) errorEl.textContent = 'Passcode must be 6 to 8 digits';
-      return;
-    }
-
-    try {
-      const updatedMeta = await changePasscode(vaultMeta, lastUnlockedPasscode, newPass);
-      store.setVault(updatedMeta);
-      vaultMeta = updatedMeta;
-      modal.classList.remove('is-open', 'open');
-      showToast('Passcode upgraded to 6 digits');
-    } catch (err) {
-      if (errorEl) errorEl.textContent = 'Failed to update passcode';
-    }
-  }, { once: true });
+async function promptLegacyUpgrade() {
+  const newPass = await createPasscode({
+    title: 'Choose a new passcode',
+    subtitle: 'Homebound now uses 6 digits to protect your night log.',
+    cancelLabel: null,
+  });
+  if (!newPass) return;
+  try {
+    const updatedMeta = await changePasscode(vaultMeta, lastUnlockedPasscode, newPass);
+    vaultMeta = { ...updatedMeta, len: newPass.length };
+    store.setVault(vaultMeta);
+    lastUnlockedPasscode = newPass;
+    showToast('Passcode updated');
+  } catch {
+    showToast('Couldn’t update the passcode. Try again from Settings.');
+  }
 }
 
 // Unlocked Timeline & Morning Recap
@@ -1403,33 +1353,28 @@ function setupSettingsYou() {
     resetAutoLockTimer();
   });
 
-  // Change Passcode form (requires 6-8 digits)
-  document.getElementById('form-change-passcode')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const oldPass = document.getElementById('change-old-pass')?.value;
-    const newPass = document.getElementById('change-new-pass')?.value;
-    const errorEl = document.getElementById('change-pass-error');
-
-    if (errorEl) errorEl.textContent = '';
+  // Change passcode: current → new → confirm, all on the keypad
+  document.getElementById('btn-change-passcode')?.addEventListener('click', async () => {
     vaultMeta = store.getVault();
     if (!vaultMeta) return;
-
-    if (!newPass || newPass.length < 6 || newPass.length > 8 || !/^\d+$/.test(newPass)) {
-      if (errorEl) errorEl.textContent = 'New passcode must be 6 to 8 digits';
-      return;
-    }
-
+    const oldPass = await askPasscode({
+      title: 'Enter your current passcode',
+      length: vaultMeta.len || 6,
+      check: async (c) => {
+        try { await unlock(vaultMeta, c); return null; } catch { return 'Wrong passcode'; }
+      },
+    });
+    if (!oldPass) return;
+    const newPass = await createPasscode({ title: 'Enter a new passcode' });
+    if (!newPass) return;
     try {
       const updatedMeta = await changePasscode(vaultMeta, oldPass, newPass);
-      store.setVault(updatedMeta);
-      vaultMeta = updatedMeta;
-      document.getElementById('change-old-pass').value = '';
-      document.getElementById('change-new-pass').value = '';
-      showToast('Passcode updated successfully');
-    } catch (err) {
-      if (errorEl) {
-        errorEl.textContent = err.message === 'bad_passcode' ? 'Current passcode is incorrect' : 'Invalid passcode format';
-      }
+      vaultMeta = { ...updatedMeta, len: newPass.length };
+      store.setVault(vaultMeta);
+      nightPad?.setLength(newPass.length);
+      showToast('Passcode changed');
+    } catch {
+      showToast('Couldn’t change the passcode');
     }
   });
 
@@ -1780,9 +1725,6 @@ function setupOnboardingSocials() {
 
 function setupOnboarding() {
   const formCard = document.getElementById('form-onboard-card');
-  const formPasscode = document.getElementById('form-onboard-passcode');
-  const backBtn = document.getElementById('btn-onboard-back');
-  const errorEl = document.getElementById('onboard-pass-error');
 
   // Step 1: Your Card
   formCard?.addEventListener('submit', (e) => {
@@ -1798,54 +1740,41 @@ function setupOnboarding() {
     if (phone) onboardCardData.p = phone; else delete onboardCardData.p;
     if (email) onboardCardData.e = email; else delete onboardCardData.e;
 
-    showOnboardingStep(2);
+    finishOnboarding();
   });
 
-  backBtn?.addEventListener('click', () => showOnboardingStep(1));
+}
 
-  // Step 2: Passcode (requires 6-8 digits)
-  formPasscode?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const pass = document.getElementById('onboard-pass')?.value;
-    const confirmPass = document.getElementById('onboard-pass-confirm')?.value;
-
-    if (errorEl) errorEl.textContent = '';
-
-    if (pass !== confirmPass) {
-      if (errorEl) errorEl.textContent = 'Passcodes do not match.';
-      return;
-    }
-
-    if (!pass || pass.length < 6 || pass.length > 8 || !/^[0-9]+$/.test(pass)) {
-      if (errorEl) errorEl.textContent = 'Passcode must be 6 to 8 digits.';
-      return;
-    }
-
-    try {
-      const meta = await createVault(pass);
-      store.setMe(onboardCardData);
-      store.setVault(meta);
-
-      // Reload me/vaultMeta, close the onboarding modal (classes and inline style), render Swap
-      checkOnboarding();
-      showToast('Welcome to Homebound');
-
-      // Check pending scan
-      const pendingRaw = localStorage.getItem('hb_pending_scan');
-      if (pendingRaw) {
-        localStorage.removeItem('hb_pending_scan');
-        try {
-          const pending = JSON.parse(pendingRaw);
-          if (pending?.url) {
-            await processScannedText(pending.url);
-          }
-        } catch {}
-      }
-    } catch (err) {
-      console.error('Onboarding vault creation error:', err);
-      if (errorEl) errorEl.textContent = 'Failed to create encryption vault.';
-    }
+async function finishOnboarding() {
+  const pass = await createPasscode({
+    title: 'Create a passcode',
+    subtitle: 'It opens your private night log. If you forget it, the log can’t be recovered.',
+    cancelLabel: 'Back',
   });
+  if (!pass) return; // back to the card form
+
+  try {
+    const meta = await createVault(pass);
+    store.setMe(onboardCardData);
+    store.setVault({ ...meta, len: pass.length });
+
+    // Reload me/vaultMeta, close the onboarding modal (classes and inline style), render Swap
+    checkOnboarding();
+    nightPad?.setLength(pass.length);
+    showToast('Welcome to Homebound');
+
+    const pendingRaw = localStorage.getItem('hb_pending_scan');
+    if (pendingRaw) {
+      localStorage.removeItem('hb_pending_scan');
+      try {
+        const pending = JSON.parse(pendingRaw);
+        if (pending?.url) await processScannedText(pending.url);
+      } catch {}
+    }
+  } catch (err) {
+    console.error('Onboarding vault creation error:', err);
+    showToast('Couldn’t set up the night log. Try again.');
+  }
 }
 
 // ============================================================================

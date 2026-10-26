@@ -2,24 +2,24 @@
   <defs>
     <!-- Background Glows -->
     <radialGradient id="bg-glow-tr" cx="80%" cy="20%" r="65%">
-      <stop offset="0%" stop-color="#13265C" stop-opacity="1"/>
-      <stop offset="100%" stop-color="#0A1636" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#0B2A45" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="bg-glow-bl" cx="20%" cy="80%" r="55%">
-      <stop offset="0%" stop-color="#5CE1FF" stop-opacity="0.16"/>
-      <stop offset="100%" stop-color="#0A1636" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#5AC8FA" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
     </radialGradient>
 
     <!-- Glass Pass Gradient -->
     <linearGradient id="glass-grad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#8CAFFA" stop-opacity="0.22"/>
       <stop offset="45%" stop-color="#8CAFFA" stop-opacity="0.08"/>
-      <stop offset="100%" stop-color="#13265C" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#0B2A45" stop-opacity="0.18"/>
     </linearGradient>
 
     <!-- Rim Light Gradient -->
     <linearGradient id="rim-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#5CE1FF" stop-opacity="0.8"/>
+      <stop offset="0%" stop-color="#5AC8FA" stop-opacity="0.8"/>
       <stop offset="35%" stop-color="#BED7FF" stop-opacity="0.5"/>
       <stop offset="100%" stop-color="#8CAFFA" stop-opacity="0.15"/>
     </linearGradient>
@@ -31,7 +31,7 @@
   </defs>
 
   <!-- Base Midnight Background -->
-  <rect width="512" height="512" fill="#0A1636"/>
+  <rect width="512" height="512" fill="#000000"/>
   <rect width="512" height="512" fill="url(#bg-glow-tr)"/>
   <rect width="512" height="512" fill="url(#bg-glow-bl)"/>
 
@@ -47,18 +47,18 @@
 
     <!-- Pass Header Elements -->
     <!-- Signal Accent Dot -->
-    <circle cx="166" cy="126" r="5" fill="#5CE1FF"/>
+    <circle cx="166" cy="126" r="5" fill="#5AC8FA"/>
     <!-- Name bar -->
-    <rect x="180" y="121" width="95" height="10" rx="5" fill="#EAF0FF"/>
+    <rect x="180" y="121" width="95" height="10" rx="5" fill="#F5F7FA"/>
     <!-- Handle bar -->
-    <rect x="180" y="137" width="65" height="6" rx="3" fill="#A3B3D9" fill-opacity="0.75"/>
+    <rect x="180" y="137" width="65" height="6" rx="3" fill="#A1AAB8" fill-opacity="0.75"/>
 
     <!-- QR Inset Window (White rounded container) -->
     <g transform="translate(161, 162)">
       <rect width="190" height="190" rx="18" fill="#FFFFFF"/>
 
-      <!-- QR Pattern (clean, high-contrast #0A1636 on #FFFFFF, 25x25 grid, scale 6.4) -->
-      <g transform="translate(15, 15) scale(6.4)" fill="#0A1636" shape-rendering="crispEdges">
+      <!-- QR Pattern (clean, high-contrast #000000 on #FFFFFF, 25x25 grid, scale 6.4) -->
+      <g transform="translate(15, 15) scale(6.4)" fill="#000000" shape-rendering="crispEdges">
         <!-- Top-Left Finder (7x7) -->
         <path d="M0,0 h7 v7 h-7 z M1,1 v5 h5 v-5 z M2,2 h3 v3 h-3 z"/>
         <!-- Top-Right Finder (7x7) -->

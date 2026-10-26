@@ -2,17 +2,17 @@
 
 :root {
   /* Tokens from DESIGN.md */
-  --midnight:   #0A1636;  /* page base */
-  --deep:       #13265C;  /* glow layer under glass */
-  --ink:        #EAF0FF;  /* primary text (≥ 12:1 on midnight) */
-  --mist:       #A3B3D9;  /* secondary text (≥ 7:1) */
-  --signal:     #5CE1FF;  /* primary actions, "met" dots, focus ring */
+  --midnight:   #000000;  /* page base */
+  --deep:       #0B2A45;  /* glow layer under glass */
+  --ink:        #F5F7FA;  /* primary text (≥ 12:1 on midnight) */
+  --mist:       #A1AAB8;  /* secondary text (≥ 7:1) */
+  --signal:     #5AC8FA;  /* primary actions, "met" dots, focus ring */
   --dawn:       #FFB38A;  /* morning-after recap, "home" dots: nothing else */
   --lilac:      #B9A4FF;  /* notes, party arrivals */
   --danger:     #FF6B7A;
-  --glass-fill: rgba(140, 175, 255, 0.10);
-  --glass-rim:  rgba(190, 215, 255, 0.28);   /* 1px top/left highlight border */
-  --glass-shadow: 0 10px 40px rgba(2, 8, 30, 0.55);
+  --glass-fill: rgba(255, 255, 255, 0.08);
+  --glass-rim:  rgba(255, 255, 255, 0.16);   /* 1px top/left highlight border */
+  --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.55);
   --blur: blur(22px) saturate(170%);
 
   /* Typography */
@@ -54,7 +54,7 @@ body.site-body {
   /* Fixed radial glows: --deep at top right (60%), faint cyan at bottom left */
   background-image:
     radial-gradient(circle at 85% 15%, var(--deep) 0%, transparent 60%),
-    radial-gradient(circle at 15% 85%, rgba(92, 225, 255, 0.10) 0%, transparent 50%);
+    radial-gradient(circle at 15% 85%, rgba(90, 200, 250, 0.10) 0%, transparent 50%);
   background-attachment: fixed;
   background-repeat: no-repeat;
   color: var(--ink);
@@ -78,7 +78,7 @@ body.site-body {
 /* Reduced transparency fallback */
 @media (prefers-reduced-transparency: reduce) {
   .glass {
-    background: #16285A;
+    background: #15181D;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
@@ -86,7 +86,7 @@ body.site-body {
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .glass {
-    background: #16285A;
+    background: #15181D;
   }
 }
 
@@ -103,11 +103,11 @@ body.site-body {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(10, 22, 54, 0.85);
+  background: rgba(0, 0, 0, 0.85);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
   border-bottom: 1px solid var(--glass-rim);
-  box-shadow: 0 4px 24px rgba(2, 8, 30, 0.4);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
   padding: 0.85rem 0;
 }
 
@@ -191,12 +191,12 @@ body.site-body {
   background: var(--signal);
   color: var(--midnight);
   font-weight: 700;
-  box-shadow: 0 4px 20px rgba(92, 225, 255, 0.35);
+  box-shadow: 0 4px 20px rgba(90, 200, 250, 0.35);
 }
 
 .btn-primary:hover {
-  background: #7be7ff;
-  box-shadow: 0 6px 28px rgba(92, 225, 255, 0.5);
+  background: #8AD8FF;
+  box-shadow: 0 6px 28px rgba(90, 200, 250, 0.5);
 }
 
 .nav-btn-primary {
@@ -217,12 +217,12 @@ body.site-body {
   -webkit-backdrop-filter: var(--blur);
   border: 1px solid var(--glass-rim);
   color: var(--ink);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 4px 16px rgba(2, 8, 30, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .btn-glass:hover {
-  background: rgba(140, 175, 255, 0.18);
-  border-color: rgba(190, 215, 255, 0.4);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .hero-btn-secondary {
@@ -269,7 +269,7 @@ body.site-body {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(2, 8, 30, 0.75);
+  background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 200;
@@ -292,12 +292,12 @@ body.site-body {
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   z-index: 210;
   padding: 1.5rem 1.25rem 2.5rem;
-  background: rgba(14, 26, 60, 0.94);
+  background: rgba(16, 19, 24, 0.94);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
   border: 1px solid var(--glass-rim);
   border-bottom: none;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 -8px 40px rgba(2, 8, 30, 0.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 -8px 40px rgba(0, 0, 0, 0.7);
   transform: translateY(100%);
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   flex-direction: column;
@@ -445,8 +445,8 @@ body.site-body {
   pointer-events: none;
   background: radial-gradient(
     circle at var(--rim-x, 40%) var(--rim-y, 10%),
-    rgba(92, 225, 255, 0.55) 0%,
-    rgba(190, 215, 255, 0.25) 30%,
+    rgba(90, 200, 250, 0.55) 0%,
+    rgba(255, 255, 255, 0.25) 30%,
     transparent 65%
   );
   opacity: 0.85;
@@ -462,8 +462,8 @@ body.site-body {
   .pass-rim-glow {
     background: radial-gradient(
       circle at 35% 10%,
-      rgba(92, 225, 255, 0.45) 0%,
-      rgba(190, 215, 255, 0.2) 30%,
+      rgba(90, 200, 250, 0.45) 0%,
+      rgba(255, 255, 255, 0.2) 30%,
       transparent 65%
     );
   }
@@ -510,8 +510,8 @@ body.site-body {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background: rgba(140, 175, 255, 0.14);
-  border: 1px solid rgba(190, 215, 255, 0.22);
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: var(--radius-capsule);
   padding: 0.25rem 0.65rem;
   font-size: var(--text-13);
@@ -532,7 +532,7 @@ body.site-body {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 24px rgba(2, 8, 30, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   margin-bottom: 1rem;
 }
 
@@ -562,7 +562,7 @@ body.site-body {
 /* Sections */
 .site-section {
   padding: 4.5rem 0;
-  border-top: 1px solid rgba(190, 215, 255, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .section-header {
@@ -608,8 +608,8 @@ body.site-body {
   width: 48px;
   height: 48px;
   border-radius: var(--radius-capsule);
-  background: rgba(92, 225, 255, 0.12);
-  border: 1px solid rgba(92, 225, 255, 0.3);
+  background: rgba(90, 200, 250, 0.12);
+  border: 1px solid rgba(90, 200, 250, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -663,8 +663,8 @@ body.site-body {
 }
 
 .platform-chip {
-  background: rgba(140, 175, 255, 0.12);
-  border: 1px solid rgba(190, 215, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-capsule);
   padding: 0.2rem 0.65rem;
   font-size: var(--text-13);
@@ -697,7 +697,7 @@ body.site-body {
   width: 44px;
   height: 44px;
   border-radius: var(--radius-capsule);
-  background: rgba(140, 175, 255, 0.15);
+  background: rgba(255, 255, 255, 0.15);
   border: 1px solid var(--glass-rim);
   display: flex;
   align-items: center;
@@ -740,7 +740,7 @@ body.site-body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: radial-gradient(circle at 50% 0%, rgba(92, 225, 255, 0.12) 0%, var(--glass-fill) 70%);
+  background: radial-gradient(circle at 50% 0%, rgba(90, 200, 250, 0.12) 0%, var(--glass-fill) 70%);
 }
 
 .cta-headline {
@@ -767,8 +767,8 @@ body.site-body {
 
 /* Footer */
 .site-footer {
-  border-top: 1px solid rgba(190, 215, 255, 0.14);
-  background: rgba(10, 22, 54, 0.85);
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.85);
   padding: 2.5rem 0 3.5rem;
 }
 

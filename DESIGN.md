@@ -1,5 +1,7 @@
 # Homebound design system v2: "2 a.m. blue" Liquid Glass (owned by Claude)
 
+> **v3 update (2026-10-26):** the palette is now black (#000000) with sky blue (#5AC8FA) and neutral white glass (fill rgba(255,255,255,.08), rim .16). The passcode entry is an iPhone-style keypad (web/app/ui/keypad.js): 6 dots, round 78px glass number keys with letters, and Delete/Cancel text keys.
+
 Subject: phones swapped at a party at night, and checked again the morning after. The UI is a deep, saturated
 night blue (not near-black). Liquid Glass is used for **controls and navigation only**, and content sits on its
 own clear layer. Two accents with fixed meanings:
@@ -8,11 +10,11 @@ own clear layer. Two accents with fixed meanings:
 
 ## Tokens: put them on `:root` in `web/app/app.css` and copy them into `web/site/site.css`
 ```
---midnight:   #0A1636;  /* page base */
+--midnight: #000000;  /* page base */
 --deep:       #13265C;  /* glow layer under glass */
 --ink:        #EAF0FF;  /* primary text (≥ 12:1 on midnight) */
 --mist:       #A3B3D9;  /* secondary text (≥ 7:1) */
---signal:     #5CE1FF;  /* primary actions, "met" dots, focus ring */
+--signal:     #5AC8FA;  /* primary actions, "met" dots, focus ring */
 --dawn:       #FFB38A;  /* morning-after recap, "home" dots: nothing else */
 --lilac:      #B9A4FF;  /* notes, party arrivals */
 --danger:     #FF6B7A;

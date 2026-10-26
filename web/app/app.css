@@ -2,17 +2,17 @@
 
 :root {
   color-scheme: dark;
-  --midnight: #0A1636;  /* page base */
-  --deep: #13265C;      /* glow layer under glass */
-  --ink: #EAF0FF;       /* primary text (≥ 12:1 on midnight) */
-  --mist: #A3B3D9;      /* secondary text (≥ 7:1) */
-  --signal: #5CE1FF;    /* primary actions, "met" dots, focus ring */
+  --midnight: #000000;  /* page base */
+  --deep: #0B2A45;      /* glow layer under glass */
+  --ink: #F5F7FA;       /* primary text (≥ 12:1 on midnight) */
+  --mist: #A1AAB8;      /* secondary text (≥ 7:1) */
+  --signal: #5AC8FA;    /* primary actions, "met" dots, focus ring */
   --dawn: #FFB38A;      /* morning-after recap, "home" dots: nothing else */
   --lilac: #B9A4FF;     /* notes, party arrivals */
   --danger: #FF6B7A;
-  --glass-fill: rgba(140, 175, 255, 0.10);
-  --glass-rim: rgba(190, 215, 255, 0.28);   /* 1px top/left highlight border */
-  --glass-shadow: 0 10px 40px rgba(2, 8, 30, 0.55);
+  --glass-fill: rgba(255, 255, 255, 0.08);
+  --glass-rim: rgba(255, 255, 255, 0.16);   /* 1px top/left highlight border */
+  --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.55);
   --blur: blur(22px) saturate(170%);
 
   /* Radii hierarchy */
@@ -58,7 +58,7 @@ body.app-body {
   background-color: var(--midnight);
   background-image:
     radial-gradient(circle at 100% 0%, var(--deep) 0%, transparent 60%),
-    radial-gradient(circle at 0% 100%, rgba(92, 225, 255, 0.10) 0%, transparent 50%);
+    radial-gradient(circle at 0% 100%, rgba(90, 200, 250, 0.10) 0%, transparent 50%);
   background-attachment: fixed;
   display: flex;
   justify-content: center;
@@ -69,7 +69,7 @@ body.app-body {
   .glass-surface, .app-header, .app-nav, .header-btn, .pass-card,
   .social-capsule, .glass-btn, .sheet-card, .modal-card, .banner-party,
   .modal-overlay, .person-row {
-    background: #16285A !important;
+    background: #15181D !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
@@ -79,7 +79,7 @@ body.app-body {
   .glass-surface, .app-header, .app-nav, .header-btn, .pass-card,
   .social-capsule, .glass-btn, .sheet-card, .modal-card, .banner-party,
   .modal-overlay, .person-row {
-    background: #16285A !important;
+    background: #15181D !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
@@ -157,7 +157,7 @@ body.app-body {
 
 .header-btn:active {
   transform: scale(0.96);
-  background: rgba(140, 175, 255, 0.18);
+  background: rgba(255, 255, 255, 0.18);
 }
 
 /* Floating Glass Capsule Tab Bar (16px off bottom) */
@@ -170,7 +170,7 @@ body.app-body {
   max-width: 370px;
   height: var(--tab-bar-height);
   border-radius: var(--radius-capsule);
-  background: rgba(16, 28, 64, 0.85);
+  background: rgba(18, 21, 26, 0.85);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
   border: 1px solid var(--glass-rim);
@@ -230,7 +230,7 @@ body.app-body {
   margin-bottom: 14px;
   padding: 10px 14px;
   border-radius: var(--radius-row);
-  background: rgba(20, 36, 80, 0.7);
+  background: rgba(22, 26, 32, 0.7);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
   border: 1px solid var(--glass-rim);
@@ -360,13 +360,13 @@ body.app-body {
   width: 100%;
   min-height: 410px;
   border-radius: var(--radius-pass);
-  background: linear-gradient(145deg, rgba(20, 38, 88, 0.94) 0%, rgba(12, 22, 58, 0.98) 100%);
+  background: linear-gradient(145deg, rgba(22, 26, 32, 0.94) 0%, rgba(14, 17, 22, 0.98) 100%);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
   border: 1px solid var(--glass-rim);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    0 0 28px rgba(92, 225, 255, 0.16),
+    0 0 28px rgba(90, 200, 250, 0.16),
     var(--glass-shadow);
   display: flex;
   flex-direction: column;
@@ -386,7 +386,7 @@ body.app-body {
   border-radius: var(--radius-pass);
   background: radial-gradient(
     circle at var(--tilt-x) var(--tilt-y),
-    rgba(92, 225, 255, 0.40) 0%,
+    rgba(90, 200, 250, 0.40) 0%,
     transparent 65%
   );
   pointer-events: none;
@@ -549,7 +549,7 @@ body.app-body {
   justify-content: center;
   gap: 10px;
   cursor: pointer;
-  box-shadow: 0 4px 20px rgba(92, 225, 255, 0.35);
+  box-shadow: 0 4px 20px rgba(90, 200, 250, 0.35);
   transition: transform 0.15s ease, filter 0.15s ease;
 }
 
@@ -581,7 +581,7 @@ body.app-body {
 
 .btn-glass-action:active {
   transform: scale(0.98);
-  background: rgba(140, 175, 255, 0.18);
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .swap-quick-row {
@@ -638,7 +638,7 @@ body.app-body {
 
 .social-capsule:active {
   transform: scale(0.96);
-  background: rgba(140, 175, 255, 0.2);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .social-capsule svg {
@@ -680,7 +680,7 @@ body.app-body {
 
 .person-row {
   border-radius: var(--radius-row);
-  background: rgba(20, 36, 80, 0.7);
+  background: rgba(22, 26, 32, 0.7);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
   border: 1px solid var(--glass-rim);
@@ -696,7 +696,7 @@ body.app-body {
 
 .person-row:active {
   transform: scale(0.99);
-  background: rgba(140, 175, 255, 0.16);
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .person-left {
@@ -710,7 +710,7 @@ body.app-body {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: rgba(92, 225, 255, 0.15);
+  background: rgba(90, 200, 250, 0.15);
   border: 1px solid var(--signal);
   color: var(--signal);
   font-family: var(--font-display);
@@ -753,7 +753,7 @@ body.app-body {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: rgba(92, 225, 255, 0.12);
+  background: rgba(90, 200, 250, 0.12);
   border: 1px solid var(--signal);
   color: var(--signal);
   display: flex;
@@ -837,7 +837,7 @@ body.app-body {
 
 .keypad-btn:active {
   transform: scale(0.93);
-  background: rgba(140, 175, 255, 0.22);
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .keypad-btn-fn {
@@ -1015,7 +1015,7 @@ body.app-body {
 .modal-overlay {
   position: fixed !important;
   inset: 0 !important;
-  background: rgba(2, 8, 30, 0.8) !important;
+  background: rgba(0, 0, 0, 0.8) !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
   z-index: 1000 !important;
@@ -1042,7 +1042,7 @@ body.app-body {
   max-height: 88dvh;
   border-top-left-radius: var(--radius-sheet);
   border-top-right-radius: var(--radius-sheet);
-  background: #101E4A;
+  background: #0E1116;
   border: 1px solid var(--glass-rim);
   border-bottom: none;
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.7);
@@ -1143,7 +1143,7 @@ body.app-body {
 
 .form-input:focus {
   border-color: var(--signal);
-  box-shadow: 0 0 0 2px rgba(92, 225, 255, 0.2);
+  box-shadow: 0 0 0 2px rgba(90, 200, 250, 0.2);
 }
 
 .form-hint {
@@ -1306,7 +1306,7 @@ body.app-body {
   transform: translateX(-50%) translateY(-30px);
   padding: 10px 20px;
   border-radius: var(--radius-capsule);
-  background: #182C62;
+  background: #16191F;
   border: 1px solid var(--glass-rim);
   color: var(--ink);
   font-size: 15px;
@@ -1358,4 +1358,144 @@ body.app-body {
 
 .print-party-flyer {
   display: none;
+}
+
+/* ===== iPhone-style passcode keypad (ui/keypad.js) ===== */
+.ipk {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  padding: 8px 0 12px;
+}
+.ipk-title {
+  font-family: var(--font-body);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 6px;
+}
+.ipk-sub {
+  font-size: 15px;
+  color: var(--mist);
+  max-width: 290px;
+  margin: 0 0 4px;
+}
+.ipk-dots {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  margin: 22px 0 6px;
+}
+.ipk-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink);
+  transition: background-color .08s ease;
+}
+.ipk-dot.on { background: var(--ink); }
+.ipk-dots.shake { animation: ipk-shake .45s cubic-bezier(.36,.07,.19,.97); }
+@keyframes ipk-shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(5px); }
+  30%, 50%, 70% { transform: translateX(-10px); }
+  40%, 60% { transform: translateX(10px); }
+}
+.ipk-error {
+  min-height: 22px;
+  margin: 4px 0 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--danger);
+}
+.ipk-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 78px);
+  column-gap: 26px;
+  row-gap: 16px;
+  justify-content: center;
+}
+.ipk-key {
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  border: 1px solid var(--glass-rim);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  cursor: pointer;
+  transition: background-color .35s ease;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+.ipk-key:active {
+  background: rgba(90, 200, 250, 0.45);
+  transition: none;
+}
+.ipk-num {
+  font-family: -apple-system, "SF Pro Display", system-ui, "Helvetica Neue", Roboto, Arial, sans-serif;
+  font-size: 36px;
+  font-weight: 400;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.ipk-abc {
+  font-family: -apple-system, var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  line-height: 1;
+  color: var(--ink);
+  opacity: .85;
+}
+.ipk-text {
+  background: none;
+  border: none;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 500;
+  cursor: pointer;
+  min-height: 78px;
+}
+.ipk-key:focus-visible, .ipk-text:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+}
+.ipk-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 80% 0%, rgba(11, 42, 69, .9) 0%, transparent 55%),
+    radial-gradient(circle at 0% 100%, rgba(90, 200, 250, .12) 0%, transparent 50%),
+    rgba(0, 0, 0, .92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+.ipk-overlay > div { max-width: 360px; }
+@media (max-height: 640px) {
+  .ipk-grid { grid-template-columns: repeat(3, 68px); row-gap: 12px; }
+  .ipk-key { width: 68px; height: 68px; }
+  .ipk-num { font-size: 30px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ipk-dots.shake { animation: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .ipk-key { background: #1C1F24; backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
