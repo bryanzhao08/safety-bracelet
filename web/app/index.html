@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Homebound</title>
+  <meta name="description" content="Swap numbers. Remember the night.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#1B2340">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Homebound">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Atkinson+Hyperlegible+Next:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="app.css">
+  
+  <!-- Vendored ZXing QR decoder library -->
+  <script src="../shared/vendor/zxing/zxing.min.js"></script>
+</head>
+<body class="app-body">
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="app-brand">
+        <span class="wristband-chip band-orange">Homebound</span>
+      </div>
+      <button type="button" class="header-btn" id="btn-settings-open" aria-label="Settings">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </header>
+
+    <!-- iOS Add to Home Screen Prompt (shown once) -->
+    <div id="ios-pwa-banner" class="ios-pwa-banner" style="display: none;">
+      <span>Tap <strong>Share</strong> then <strong>&ldquo;Add to Home Screen&rdquo;</strong> to install.</span>
+      <button type="button" id="btn-ios-pwa-close" class="ios-pwa-close" aria-label="Dismiss">&times;</button>
+    </div>
+
+    <!-- Toast Notification Message -->
+    <div id="toast-msg" class="toast-msg" aria-live="polite">Saved to your night</div>
+
+    <!-- Main Content Area with Views -->
+    <main class="app-main">
+      <!-- 1. SWAP VIEW -->
+      <section id="view-swap" class="app-view swap-view">
+        <div class="swap-top-bar">
+          <h2 class="swap-title">Your ticket</h2>
+          <button type="button" class="swap-menu-btn" id="btn-swap-menu" aria-label="Quick actions menu">&vellip;</button>
+        </div>
+
+        <!-- The Ticket Stub -->
+        <div class="ticket-stub" id="ticket-stub">
+          <div class="stub-top">
+            <div class="stub-badge-row">
+              <span class="stub-brand-chip">Homebound</span>
+              <span id="stub-id-badge" style="font-size: 11px; font-weight: 700; color: #8E98BA;"></span>
+            </div>
+            <h1 class="stub-holder-name" id="stub-name">Your Name</h1>
+            <div class="stub-handles" id="stub-handles"></div>
+          </div>
+
+          <!-- Perforated tab edge -->
+          <div class="stub-divider">
+            <div class="stub-notch-left"></div>
+            <div class="stub-perforation"></div>
+            <div class="stub-notch-right"></div>
+          </div>
+
+          <div class="stub-bottom">
+            <div class="stub-qr-container" id="stub-qr-container">
+              <!-- SVG QR generated here -->
+            </div>
+            <p class="stub-instruction">Point their camera at your code</p>
+          </div>
+        </div>
+
+        <!-- Action buttons below ticket stub -->
+        <div class="swap-actions">
+          <button type="button" class="btn-scan-theirs" id="btn-scan-theirs">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+              <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+            Scan theirs
+          </button>
+          <button type="button" class="btn-face-to-face" id="btn-face-to-face">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="3" width="20" height="18" rx="2"></rect>
+              <path d="M7 8h10"></path>
+              <path d="M7 12h10"></path>
+              <path d="M7 16h6"></path>
+            </svg>
+            Face to face
+          </button>
+        </div>
+      </section>
+
+      <!-- 2. PEOPLE VIEW -->
+      <section id="view-people" class="app-view people-view" style="display: none;">
+        <div class="view-header">
+          <h2 class="view-title">People</h2>
+          <span class="people-count-chip" id="people-count">0 contacts</span>
+        </div>
+
+        <ul class="people-list" id="people-list">
+          <!-- Contact rows populated here -->
+        </ul>
+
+        <div class="empty-state" id="people-empty" style="display: none;">
+          <div class="lock-badge-circle" style="color: var(--band-orange);">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <h3 class="empty-title">No contacts yet</h3>
+          <p class="empty-subtext">Tap Swap to scan someone&rsquo;s ticket code and save them.</p>
+        </div>
+      </section>
+
+      <!-- 3. NIGHT VIEW -->
+      <section id="view-night" class="app-view night-view" style="display: none;">
+        <!-- Locked View (Passcode Keypad) -->
+        <div id="night-locked-screen" class="passcode-screen">
+          <div class="lock-badge-circle">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+
+          <div class="passcode-header">
+            <h2 class="passcode-title">Night log</h2>
+            <p class="passcode-subtext">Enter your passcode to unlock your private on-device log.</p>
+          </div>
+
+          <!-- Passcode dots -->
+          <div class="passcode-dots" id="passcode-dots">
+            <span class="passcode-dot" data-idx="0"></span>
+            <span class="passcode-dot" data-idx="1"></span>
+            <span class="passcode-dot" data-idx="2"></span>
+            <span class="passcode-dot" data-idx="3"></span>
+          </div>
+
+          <p class="passcode-error-msg" id="passcode-error" aria-live="assertive"></p>
+
+          <!-- Numeric Keypad -->
+          <div class="keypad-grid" id="passcode-keypad">
+            <button type="button" class="keypad-btn" data-digit="1">1</button>
+            <button type="button" class="keypad-btn" data-digit="2">2</button>
+            <button type="button" class="keypad-btn" data-digit="3">3</button>
+            <button type="button" class="keypad-btn" data-digit="4">4</button>
+            <button type="button" class="keypad-btn" data-digit="5">5</button>
+            <button type="button" class="keypad-btn" data-digit="6">6</button>
+            <button type="button" class="keypad-btn" data-digit="7">7</button>
+            <button type="button" class="keypad-btn" data-digit="8">8</button>
+            <button type="button" class="keypad-btn" data-digit="9">9</button>
+            <button type="button" class="keypad-btn keypad-btn-fn" id="keypad-clear">Clear</button>
+            <button type="button" class="keypad-btn" data-digit="0">0</button>
+            <button type="button" class="keypad-btn keypad-btn-fn" id="keypad-backspace" aria-label="Backspace">&#9003;</button>
+          </div>
+        </div>
+
+        <!-- Unlocked View (Morning Recap & Timeline) -->
+        <div id="night-unlocked-screen" class="night-unlocked" style="display: none;">
+          <!-- Morning recap card at top -->
+          <div class="recap-card" id="recap-card">
+            <div class="recap-badge-row">
+              <span class="wristband-chip band-pink">The morning after</span>
+              <span id="recap-date" style="font-size: 13px; font-weight: 700; color: var(--text-muted);"></span>
+            </div>
+            <h3 class="recap-title" id="recap-headline">Last night</h3>
+            <p class="recap-text" id="recap-body">No entries recorded yet.</p>
+            <div id="recap-action-container" style="display: none;">
+              <a href="#" id="recap-action-btn" class="btn btn-primary recap-action-btn">Text</a>
+            </div>
+          </div>
+
+          <!-- Timeline Grouped by Night -->
+          <div id="night-timeline-container" class="timeline-container">
+            <!-- Timeline nodes rendered here -->
+          </div>
+
+          <!-- Controls: Share, Export, Lock -->
+          <div class="night-controls">
+            <button type="button" class="btn-night-secondary" id="btn-share-night">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="18" cy="5" r="3"></circle>
+                <circle cx="6" cy="12" r="3"></circle>
+                <circle cx="18" cy="19" r="3"></circle>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+              </svg>
+              Share this night
+            </button>
+            <button type="button" class="btn-night-secondary" id="btn-download-log">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Download log (JSON)
+            </button>
+            <button type="button" class="btn-night-secondary" id="btn-lock-night" style="color: var(--band-pink);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              Lock log
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="app-nav" aria-label="App tabs">
+      <button type="button" class="nav-tab active" id="tab-swap" data-view="swap">
+        <span class="nav-tab-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+            <line x1="7" y1="8" x2="17" y2="8"></line>
+            <line x1="7" y1="12" x2="17" y2="12"></line>
+            <line x1="7" y1="16" x2="13" y2="16"></line>
+          </svg>
+        </span>
+        <span>Swap</span>
+      </button>
+
+      <button type="button" class="nav-tab" id="tab-people" data-view="people">
+        <span class="nav-tab-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+        </span>
+        <span>People</span>
+      </button>
+
+      <button type="button" class="nav-tab tab-night" id="tab-night" data-view="night">
+        <span class="nav-tab-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </span>
+        <span>Night</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ========================================================================
+       MODALS, SHEETS & OVERLAYS
+       ======================================================================== -->
+
+  <!-- Quick Action Menu Sheet (Swap "...") -->
+  <div class="quick-menu-backdrop" id="quick-menu-backdrop"></div>
+  <div class="quick-menu-sheet" id="quick-menu-sheet">
+    <div class="quick-menu-title">Quick log</div>
+    <button type="button" class="quick-menu-item" id="quick-btn-note">
+      <span style="font-size: 20px;">&#9998;</span>
+      <span>Add a note</span>
+    </button>
+    <button type="button" class="quick-menu-item" id="quick-btn-home">
+      <span style="font-size: 20px;">&#127968;</span>
+      <span>I&rsquo;m home</span>
+    </button>
+    <button type="button" class="quick-menu-cancel" id="quick-btn-cancel">Cancel</button>
+  </div>
+
+  <!-- Add Note Modal -->
+  <div class="modal-backdrop" id="modal-note-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Add a note</h3>
+        <button type="button" class="header-btn" id="btn-close-note" aria-label="Close">&times;</button>
+      </div>
+      <form id="form-note">
+        <div class="form-group">
+          <label class="form-label" for="note-text">What happened or where are you?</label>
+          <textarea id="note-text" class="form-input" rows="3" maxlength="280" placeholder="e.g. at Sigma Chi, left with Priya" required style="resize: none;"></textarea>
+          <span class="form-hint" id="note-char-count">0 / 280</span>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top: 1rem; min-height: 48px;">
+          Save to your night
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scanner Modal: "Scan theirs" -->
+  <div class="scanner-modal" id="scanner-theirs-modal">
+    <div class="scanner-standard">
+      <video id="scanner-theirs-video" class="scanner-video-feed" playsinline></video>
+      <div class="scanner-overlay">
+        <div class="scanner-header-bar">
+          <h3 class="scanner-title">Scan ticket</h3>
+          <button type="button" class="scanner-close-btn" id="btn-close-scan-theirs" aria-label="Close camera">&times;</button>
+        </div>
+        <div class="scanner-reticle"></div>
+        <div class="scanner-instruction">Point camera at their QR code</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scanner Modal: "Face to face" -->
+  <div class="scanner-modal" id="scanner-face-modal">
+    <div class="face-split-screen">
+      <button type="button" class="scanner-close-btn face-close-btn" id="btn-close-scan-face" aria-label="Close">&times;</button>
+      
+      <!-- Top Half: Your QR Card -->
+      <div class="face-top-half">
+        <div class="face-mini-stub">
+          <span class="stub-brand-chip">Your QR</span>
+          <h4 class="face-mini-name" id="face-mini-name">Your Name</h4>
+          <div class="face-mini-qr" id="face-mini-qr"></div>
+        </div>
+      </div>
+
+      <div class="face-divider-banner">Hold your phones screen to screen</div>
+
+      <!-- Bottom Half: Front camera scanning theirs -->
+      <div class="face-bottom-half">
+        <video id="scanner-face-video" class="face-camera-feed" playsinline></video>
+        <div class="face-camera-reticle"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fullscreen Pink Scan Confirmation Screen -->
+  <div class="scan-confirm-screen" id="scan-confirm-screen">
+    <div class="confirm-top">
+      <span class="confirm-badge" id="confirm-badge">Saved</span>
+      <h2 class="confirm-heading" id="confirm-heading">Added Jordan</h2>
+      <p class="confirm-subhead" id="confirm-subhead">Saved to your contacts and private night log.</p>
+    </div>
+
+    <div class="confirm-actions-group">
+      <div class="confirm-btn-row">
+        <a href="#" class="confirm-action-btn" id="confirm-act-call" style="display: none;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+          </svg>
+          Call
+        </a>
+        <a href="#" class="confirm-action-btn" id="confirm-act-text" style="display: none;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          Text
+        </a>
+        <a href="#" class="confirm-action-btn" id="confirm-act-ig" target="_blank" rel="noopener noreferrer" style="display: none;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+          </svg>
+          Instagram
+        </a>
+        <button type="button" class="confirm-action-btn" id="confirm-act-vcard">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+          </svg>
+          Save vCard
+        </button>
+      </div>
+
+      <div class="confirm-hint-card">
+        <span style="font-size: 22px;">&#129309;</span>
+        <p class="confirm-hint-text">Have them scan you too if they haven&rsquo;t yet!</p>
+      </div>
+
+      <button type="button" class="confirm-done-btn" id="btn-confirm-done">Done</button>
+    </div>
+  </div>
+
+  <!-- Contact Detail Modal -->
+  <div class="modal-backdrop" id="modal-contact-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title" id="contact-modal-name">Contact</h3>
+        <button type="button" class="header-btn" id="btn-close-contact" aria-label="Close">&times;</button>
+      </div>
+      <div id="contact-modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
+        <div id="contact-modal-info" style="font-size: 15px; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.4rem;"></div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;" id="contact-modal-actions">
+          <a href="#" id="cmodal-act-call" class="btn btn-secondary" style="min-height: 44px; display: none;">Call</a>
+          <a href="#" id="cmodal-act-text" class="btn btn-primary" style="min-height: 44px; display: none;">Text</a>
+          <a href="#" id="cmodal-act-ig" target="_blank" class="btn btn-secondary" style="min-height: 44px; display: none;">Instagram</a>
+          <a href="#" id="cmodal-act-sc" target="_blank" class="btn btn-secondary" style="min-height: 44px; display: none;">Snapchat</a>
+        </div>
+        <button type="button" id="cmodal-act-vcard" class="btn btn-secondary btn-block" style="min-height: 44px;">
+          Save to Contacts (vCard)
+        </button>
+        <button type="button" id="cmodal-act-delete" class="btn btn-outline-danger btn-block" style="min-height: 44px; margin-top: 0.5rem;">
+          Delete Contact
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-backdrop" id="modal-settings-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Settings</h3>
+        <button type="button" class="header-btn" id="btn-close-settings" aria-label="Close">&times;</button>
+      </div>
+
+      <!-- Edit Card Form -->
+      <form id="form-edit-card" style="display: flex; flex-direction: column; gap: 0.85rem;">
+        <h4 style="font-size: 16px; font-weight: 700; color: var(--text); margin: 0.5rem 0 0 0;">Your contact card</h4>
+        <div class="form-group">
+          <label class="form-label" for="edit-card-name">Name *</label>
+          <input type="text" id="edit-card-name" class="form-input" required maxlength="40">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-card-phone">Phone number</label>
+          <input type="tel" id="edit-card-phone" class="form-input" placeholder="+15551234567">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-card-ig">Instagram handle</label>
+          <input type="text" id="edit-card-ig" class="form-input" placeholder="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-card-sc">Snapchat handle</label>
+          <input type="text" id="edit-card-sc" class="form-input" placeholder="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-card-email">Email</label>
+          <input type="email" id="edit-card-email" class="form-input" placeholder="you@domain.com">
+        </div>
+        <button type="submit" class="btn btn-primary" style="min-height: 46px;">Save card changes</button>
+      </form>
+
+      <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
+
+      <!-- Preferences -->
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <h4 style="font-size: 16px; font-weight: 700; color: var(--text); margin: 0;">Night log preferences</h4>
+        
+        <label style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
+          <input type="checkbox" id="settings-location-toggle" style="width: 20px; height: 20px; margin-top: 2px;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-weight: 600; font-size: 15px;">Record approximate location</span>
+            <span class="form-hint">Saves low-accuracy coordinates when logging an entry. Never sent anywhere. Off by default.</span>
+          </div>
+        </label>
+
+        <div class="form-group">
+          <label class="form-label" for="settings-autolock-select">Auto-lock timer</label>
+          <select id="settings-autolock-select" class="form-input">
+            <option value="1">1 minute</option>
+            <option value="5" selected>5 minutes</option>
+            <option value="15">15 minutes</option>
+          </select>
+        </div>
+      </div>
+
+      <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
+
+      <!-- Change Passcode -->
+      <form id="form-change-passcode" style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <h4 style="font-size: 16px; font-weight: 700; color: var(--text); margin: 0;">Change passcode</h4>
+        <div class="form-group">
+          <label class="form-label" for="change-old-pass">Current passcode</label>
+          <input type="password" id="change-old-pass" class="form-input" inputmode="numeric" pattern="[0-9]*" maxlength="8" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="change-new-pass">New passcode (4-8 digits)</label>
+          <input type="password" id="change-new-pass" class="form-input" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="8" required>
+        </div>
+        <p id="change-pass-error" class="form-hint" style="color: var(--stop);"></p>
+        <button type="submit" class="btn btn-secondary" style="min-height: 44px;">Update passcode</button>
+      </form>
+
+      <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
+
+      <!-- Danger Zone -->
+      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <h4 style="font-size: 16px; font-weight: 700; color: var(--stop); margin: 0;">Reset</h4>
+        <p class="form-hint">Delete all contacts, night logs, and encryption keys from this device.</p>
+        <button type="button" id="btn-delete-everything" class="btn btn-outline-danger btn-block" style="min-height: 48px;">
+          Delete everything
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Onboarding Modal (Step 1 & Step 2) -->
+  <div class="modal-backdrop" id="modal-onboarding-backdrop" style="display: none;">
+    <div class="modal-card">
+      <!-- Step 1: Your Card -->
+      <div id="onboarding-step-1">
+        <div class="modal-header">
+          <div>
+            <span class="wristband-chip band-orange">Welcome</span>
+            <h2 class="modal-title" style="margin-top: 0.25rem;">Create your card</h2>
+          </div>
+        </div>
+        <p style="font-size: 14px; color: var(--text-muted); margin: 0.5rem 0 1rem 0;">
+          Your card is what others see when they scan your code. Only your name is required.
+        </p>
+        <form id="form-onboard-card" style="display: flex; flex-direction: column; gap: 0.85rem;">
+          <div class="form-group">
+            <label class="form-label" for="onboard-name">Your Name *</label>
+            <input type="text" id="onboard-name" class="form-input" placeholder="e.g. Maya" required maxlength="40">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="onboard-phone">Phone number</label>
+            <input type="tel" id="onboard-phone" class="form-input" placeholder="+15551234567">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="onboard-ig">Instagram handle</label>
+            <input type="text" id="onboard-ig" class="form-input" placeholder="maya.k">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="onboard-sc">Snapchat handle</label>
+            <input type="text" id="onboard-sc" class="form-input" placeholder="mayak">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="onboard-email">Email</label>
+            <input type="email" id="onboard-email" class="form-input" placeholder="maya@example.com">
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" style="min-height: 52px; margin-top: 0.5rem;">
+            Continue &rarr;
+          </button>
+        </form>
+      </div>
+
+      <!-- Step 2: Passcode Setup -->
+      <div id="onboarding-step-2" style="display: none;">
+        <div class="modal-header">
+          <div>
+            <span class="wristband-chip band-pink">Night log</span>
+            <h2 class="modal-title" style="margin-top: 0.25rem;">Choose passcode</h2>
+          </div>
+        </div>
+        <div class="card glass" style="border-left: 3px solid var(--band-orange); padding: 0.85rem 1rem; margin: 0.75rem 0;">
+          <p style="font-size: 13px; font-weight: 600; color: var(--tyvek); margin: 0;">
+            If you forget it, the log can&rsquo;t be recovered.
+          </p>
+        </div>
+        <p style="font-size: 14px; color: var(--text-muted); margin: 0 0 1rem 0;">
+          Your private night log is encrypted on your device. Choose a 4 to 8 digit passcode to open it.
+        </p>
+        <form id="form-onboard-passcode" style="display: flex; flex-direction: column; gap: 0.85rem;">
+          <div class="form-group">
+            <label class="form-label" for="onboard-pass">Passcode (4&ndash;8 digits)</label>
+            <input type="password" id="onboard-pass" class="form-input" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="8" required placeholder="••••">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="onboard-pass-confirm">Confirm passcode</label>
+            <input type="password" id="onboard-pass-confirm" class="form-input" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="8" required placeholder="••••">
+          </div>
+          <p id="onboard-pass-error" class="form-hint" style="color: var(--stop);"></p>
+          <div style="display: flex; gap: 0.75rem; margin-top: 0.5rem;">
+            <button type="button" id="btn-onboard-back" class="btn btn-secondary" style="min-height: 50px; flex: 0.4;">
+              Back
+            </button>
+            <button type="submit" id="btn-onboard-finish" class="btn btn-primary" style="min-height: 50px; flex: 1;">
+              Finish setup
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

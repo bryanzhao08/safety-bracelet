@@ -8,6 +8,7 @@
   "scripts": {
     "start": "node server/index.js",
     "test": "node --test test/*.test.js",
-    "demo": "node scripts/demo.js"
+    "demo": "node scripts/demo.js",
+    "smoke:app": "node scripts/app-smoke.mjs"
   }
 }

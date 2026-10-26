@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Homebound &mdash; Get everyone home safe</title>
-  <meta name="description" content="NFC wristbands for parties. Tap at the door on the way in. When guests leave together, one tap records the group. Deleted after 30 days.">
+  <title>Homebound &mdash; Swap numbers. Remember the night.</title>
+  <meta name="description" content="Swap contacts at a party with a QR scan. Your phone quietly keeps a private, passcode-locked timeline of who you met and when.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Atkinson+Hyperlegible+Next:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
@@ -22,17 +22,13 @@
 
         <ul class="site-nav-links">
           <li><a href="#how-it-works">How it works</a></li>
-          <li><a href="#privacy">Privacy</a></li>
-          <li><a href="../dashboard/">Dashboard</a></li>
-          <li><a href="../pilot/">Pilot</a></li>
+          <li><a href="#private-log">Private log</a></li>
+          <li><a href="#install">Add to phone</a></li>
         </ul>
 
         <div class="site-nav-actions">
-          <a href="../door/" class="btn btn-secondary nav-btn-secondary">
-            Open door scanner
-          </a>
-          <a href="../pilot/" class="btn btn-primary nav-btn-primary">
-            Request a pilot
+          <a href="../app/" class="btn btn-primary nav-btn-primary">
+            Open the app
           </a>
         </div>
 
@@ -55,201 +51,220 @@
       </div>
       <ul class="mobile-nav-list">
         <li><a href="#how-it-works" class="mobile-nav-link">How it works</a></li>
-        <li><a href="#privacy" class="mobile-nav-link">Privacy</a></li>
-        <li><a href="../dashboard/" class="mobile-nav-link">Dashboard</a></li>
-        <li><a href="../pilot/" class="mobile-nav-link">Pilot</a></li>
+        <li><a href="#private-log" class="mobile-nav-link">Private log</a></li>
+        <li><a href="#install" class="mobile-nav-link">Add to phone</a></li>
       </ul>
       <div class="mobile-sheet-actions">
-        <a href="../pilot/" class="btn btn-primary btn-block">Request a pilot</a>
-        <a href="../door/" class="btn btn-secondary btn-block">Open door scanner</a>
+        <a href="../app/" class="btn btn-primary btn-block">Open the app</a>
       </div>
     </div>
   </header>
 
   <main id="top" class="site-container">
     <!-- Hero Section -->
-    <section class="hero-section">
-      <h1 class="hero-headline">
-        Get everyone home safe.
-      </h1>
+    <section class="hero-section" id="hero">
+      <div class="hero-content">
+        <h1 class="hero-headline">
+          Swap numbers.<br>
+          Remember the night.
+        </h1>
 
-      <p class="hero-subhead">
-        Every guest taps a wristband at the party door. When they leave together, one tap records the group. If anyone is missing the next morning, you know exactly who was with them.
+        <p class="hero-subhead">
+          Swap contact info in one second with a QR code. Your phone quietly keeps a private, passcode-locked timeline of who you were with and when &mdash; so the morning after, you know who to reach.
+        </p>
+
+        <div class="hero-actions-wrapper">
+          <div class="hero-actions">
+            <a href="../app/" class="btn btn-primary hero-btn-primary" id="btn-open-app">
+              Open the app
+            </a>
+            <a href="#how-it-works" class="btn btn-secondary hero-btn-secondary">
+              See how it works
+            </a>
+          </div>
+          <p class="hero-demo-subtext">Runs directly in your browser. Encrypted on your device.</p>
+        </div>
+      </div>
+
+      <!-- Ticket Stub Mockup Preview -->
+      <div class="hero-preview-wrapper" aria-hidden="true">
+        <div class="hero-stub-card">
+          <div class="stub-notch stub-notch-top"></div>
+          <div class="stub-header">
+            <div class="stub-chip">Homebound</div>
+            <div class="stub-name">Alex Rivera</div>
+            <div class="stub-handle">@alexrivera</div>
+          </div>
+          <div class="stub-perf"></div>
+          <div class="stub-body">
+            <div class="stub-qr-box">
+              <svg viewBox="0 0 100 100" width="140" height="140" class="stub-qr-svg">
+                <!-- Decorative QR preview pattern -->
+                <rect width="100" height="100" fill="#ffffff" />
+                <rect x="10" y="10" width="26" height="26" fill="#1B2340" />
+                <rect x="14" y="14" width="18" height="18" fill="#ffffff" />
+                <rect x="18" y="18" width="10" height="10" fill="#1B2340" />
+                <rect x="64" y="10" width="26" height="26" fill="#1B2340" />
+                <rect x="68" y="14" width="18" height="18" fill="#ffffff" />
+                <rect x="72" y="18" width="10" height="10" fill="#1B2340" />
+                <rect x="10" y="64" width="26" height="26" fill="#1B2340" />
+                <rect x="14" y="68" width="18" height="18" fill="#ffffff" />
+                <rect x="18" y="72" width="10" height="10" fill="#1B2340" />
+                <rect x="42" y="12" width="6" height="18" fill="#1B2340" />
+                <rect x="52" y="24" width="6" height="12" fill="#1B2340" />
+                <rect x="42" y="44" width="16" height="14" fill="#1B2340" />
+                <rect x="64" y="44" width="10" height="10" fill="#1B2340" />
+                <rect x="80" y="52" width="10" height="14" fill="#1B2340" />
+                <rect x="44" y="68" width="12" height="16" fill="#1B2340" />
+                <rect x="64" y="68" width="24" height="6" fill="#1B2340" />
+                <rect x="70" y="78" width="18" height="12" fill="#1B2340" />
+              </svg>
+            </div>
+            <div class="stub-caption">Hold phones screen to screen</div>
+          </div>
+          <div class="stub-notch stub-notch-bottom"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 1: How swapping works -->
+    <section class="site-section" id="how-it-works">
+      <div class="section-badge-wrap">
+        <span class="wristband-chip band-pink">Swap</span>
+      </div>
+      <h2 class="section-title">How swapping works</h2>
+      <p class="section-lead">
+        No typing numbers, no spelling handles in loud rooms, and no account to sign up for.
       </p>
 
-      <div class="hero-actions-wrapper">
-        <div class="hero-actions">
-          <button type="button" class="btn btn-primary hero-btn-primary" id="btn-try-demo">
-            Try a sample event
-          </button>
-          <a href="../pilot/" class="btn btn-secondary hero-btn-secondary">
-            Request free pilot kit
-          </a>
-        </div>
-        <p class="hero-demo-subtext">Opens a pretend party in your browser. No sign-up.</p>
-      </div>
-
-      <!-- Hero Wristband Animation -->
-      <div class="hero-band-stage" aria-label="Wristband departure grouping demonstration">
-        <div class="hero-stage-label">Wristband departure grouping</div>
-
-        <div class="hero-band-demo-track">
-          <!-- Maya band chip -->
-          <div class="hero-demo-chip hero-chip-maya wristband-chip">
-            <span class="chip-name">Maya</span>
-            <span class="chip-status chip-status-inside">Inside 11:15 pm</span>
-            <span class="chip-status chip-status-left">Left together 1:42 am</span>
-          </div>
-
-          <!-- Jess band chip -->
-          <div class="hero-demo-chip hero-chip-jess wristband-chip">
-            <span class="chip-name">Jess</span>
-            <span class="chip-status chip-status-inside">Inside 11:15 pm</span>
-            <span class="chip-status chip-status-left">Left together 1:42 am</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- How It Works Section -->
-    <section id="how-it-works" class="site-section">
-      <div>
-        <h2 class="section-title">How it works</h2>
-        <p class="section-desc">Built for a phone in one hand, dim light, and loud music.</p>
-      </div>
-
-      <div class="steps-sequence">
-        <div class="sequence-step">
-          <span class="sequence-num">1</span>
-          <div class="sequence-body">
-            <h3 class="sequence-title">Scan ID and tap wristband at the door</h3>
-            <p class="sequence-text">
-              The door phone scans the license barcode to verify 21+ in under a second. The monitor taps an NFC wristband to link it to the guest. No app download for guests.
-            </p>
-          </div>
-        </div>
-
-        <div class="sequence-step">
-          <span class="sequence-num">2</span>
-          <div class="sequence-body">
-            <h3 class="sequence-title">Tap out together</h3>
-            <p class="sequence-text">
-              When friends leave together, the monitor taps their wristbands in sequence. Tapping two or more bands within 30 seconds records them as leaving in the same group.
-            </p>
-          </div>
-        </div>
-
-        <div class="sequence-step">
-          <span class="sequence-num">3</span>
-          <div class="sequence-body">
-            <h3 class="sequence-title">Tap to log meetups</h3>
-            <p class="sequence-text">
-              Guests tap their phone to a friend's band to log that they met. It works on iPhone and Android with no app.
-            </p>
-          </div>
-        </div>
-
-        <div class="sequence-step">
-          <span class="sequence-num">4</span>
-          <div class="sequence-body">
-            <h3 class="sequence-title">Next-morning follow-up</h3>
-            <p class="sequence-text">
-              If an incident happens or someone hasn't checked in with their roommates, the risk chair searches their name to see when they left, who was in their departure group, and who they met.
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Privacy Section -->
-    <section id="privacy" class="site-section">
-      <div>
-        <h2 class="section-title">Privacy architecture</h2>
-        <p class="section-desc">We minimize what is collected and delete everything automatically.</p>
-      </div>
-
-      <div class="privacy-table-container">
-        <table class="privacy-table">
-          <thead>
-            <tr>
-              <th style="width: 50%;">What we record</th>
-              <th style="width: 50%;">What we never store</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Guest name from event RSVP (Luma or Partiful)</td>
-              <td>Driver's license number (discarded after one-way hash)</td>
-            </tr>
-            <tr>
-              <td>Door check-in and departure timestamps</td>
-              <td>Home address or license photo</td>
-            </tr>
-            <tr>
-              <td>Group companion links (who left with whom)</td>
-              <td>GPS location or phone tracking of any kind</td>
-            </tr>
-            <tr>
-              <td><strong>Deleted automatically after 30 days</strong></td>
-              <td>No advertising or cross-event profiling</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- Hardware Section -->
-    <section id="hardware" class="site-section">
-      <div>
-        <h2 class="section-title">Wristband logistics</h2>
-        <p class="section-desc">Inexpensive standard tags that survive the party.</p>
-      </div>
-
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
-        <div class="card glass">
-          <h3 style="font-size: var(--text-20); margin-bottom: 0.5rem;">$0.20 NFC stickers</h3>
-          <p class="text-muted" style="font-size: var(--text-14);">
-            Standard NTAG213 stickers adhere directly to disposable Tyvek paper bands or slide into 3D-printed reusable clips.
+      <div class="feature-grid">
+        <div class="card glass feature-card">
+          <div class="feature-step">01</div>
+          <h3 class="feature-title">Your ticket stub</h3>
+          <p class="feature-desc">
+            Your screen displays a clean ticket stub with your name and unique QR code encoding your card info.
           </p>
         </div>
-        <div class="card glass">
-          <h3 style="font-size: var(--text-20); margin-bottom: 0.5rem;">iPhone &amp; Android ready</h3>
-          <p class="text-muted" style="font-size: var(--text-14);">
-            Android Chrome reads NFC directly. iPhones scan the printed QR code with the camera in under 50 ms.
+
+        <div class="card glass feature-card">
+          <div class="feature-step">02</div>
+          <h3 class="feature-title">Scan theirs or Face to face</h3>
+          <p class="feature-desc">
+            Tap <strong>Scan theirs</strong> to read their code, or tap <strong>Face to face</strong> to split the screen: your QR on top, front camera below.
+          </p>
+        </div>
+
+        <div class="card glass feature-card">
+          <div class="feature-step">03</div>
+          <h3 class="feature-title">Instant contact actions</h3>
+          <p class="feature-desc">
+            Instantly see their info with one-tap buttons to call, text, open Instagram, or save to your phone contacts.
           </p>
         </div>
       </div>
     </section>
 
-    <!-- Closing Band Section -->
-    <section class="site-section closing-band-section">
-      <div class="closing-band glass">
-        <div class="closing-band-content">
-          <h2 class="closing-title">Ready to bring Homebound to your next event?</h2>
-          <p class="closing-subhead">
-            Get 100 free NFC wristbands, mobile door setup, and live dashboard access for your chapter or student organization.
+    <!-- Section 2: The private night log -->
+    <section class="site-section" id="private-log">
+      <div class="section-badge-wrap">
+        <span class="wristband-chip band-orange">Encrypted &bull; On-device</span>
+      </div>
+      <h2 class="section-title">The private night log</h2>
+      <p class="section-lead">
+        What happens at the party stays on your phone. Encrypted with keys generated on your device.
+      </p>
+
+      <div class="feature-grid">
+        <div class="card glass feature-card">
+          <div class="feature-dot dot-pink"></div>
+          <h3 class="feature-title">Quietly records your night</h3>
+          <p class="feature-desc">
+            Every swap adds a sealed timestamp to your timeline. You can also tap &ldquo;Add a note&rdquo; or &ldquo;I&rsquo;m home&rdquo; at any time without entering your passcode.
           </p>
         </div>
-        <div class="closing-band-action">
-          <a href="../pilot/" class="btn btn-primary closing-btn">
-            Request a pilot
-          </a>
+
+        <div class="card glass feature-card">
+          <div class="feature-dot dot-orange"></div>
+          <h3 class="feature-title">Hardware-grade encryption</h3>
+          <p class="feature-desc">
+            The log is sealed with public-key cryptography (ECDH P-256 + AES-GCM-256) and unlocked only with your chosen passcode. No server ever holds your key or your log.
+          </p>
         </div>
+
+        <div class="card glass feature-card">
+          <div class="feature-dot dot-lime"></div>
+          <h3 class="feature-title">The morning after</h3>
+          <p class="feature-desc">
+            Unlock your Night tab to see a clear timeline of who you were with, recap details, and quick links to reach out or share your night with a friend.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Add to Home Screen -->
+    <section class="site-section" id="install">
+      <div class="section-badge-wrap">
+        <span class="wristband-chip band-lime">Installable PWA</span>
+      </div>
+      <h2 class="section-title">Add to Home Screen</h2>
+      <p class="section-lead">
+        Homebound works offline and opens instantly like a native app. No app store download required.
+      </p>
+
+      <div class="install-grid">
+        <div class="card glass install-card">
+          <div class="install-platform">
+            <span class="platform-icon">&CirclePlus;</span>
+            <span class="platform-name">iPhone &amp; iPad (Safari)</span>
+          </div>
+          <ol class="install-steps">
+            <li>Open Safari and navigate to Homebound</li>
+            <li>Tap the <strong>Share</strong> button (the square with an arrow pointing up at the bottom)</li>
+            <li>Scroll down and tap <strong>Add to Home Screen</strong></li>
+            <li>Tap <strong>Add</strong> in the top right corner</li>
+          </ol>
+        </div>
+
+        <div class="card glass install-card">
+          <div class="install-platform">
+            <span class="platform-icon">&phone;</span>
+            <span class="platform-name">Android (Chrome)</span>
+          </div>
+          <ol class="install-steps">
+            <li>Open Chrome and navigate to Homebound</li>
+            <li>Tap the <strong>three dots</strong> menu (<strong>&vellip;</strong>) in the top-right corner</li>
+            <li>Tap <strong>Add to Home screen</strong> or <strong>Install app</strong></li>
+            <li>Tap <strong>Install</strong> to add Homebound to your home screen</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+      <div class="card glass cta-card">
+        <h2 class="cta-headline">Ready for tonight?</h2>
+        <p class="cta-subhead">
+          Set up your card in 30 seconds. No email verification, no ads, no cloud sync.
+        </p>
+        <a href="../app/" class="btn btn-primary cta-btn">
+          Open the app
+        </a>
       </div>
     </section>
   </main>
 
-  <!-- Footer -->
   <footer class="site-footer">
-    <div class="site-container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-      <div>
-        <strong>Homebound</strong> &middot; Campus event safety and departure verification
+    <div class="site-container footer-content">
+      <div class="footer-brand">
+        <span class="wristband-chip band-orange">Homebound</span>
+        <span class="footer-copy">Private contact swap &bull; On-device night log</span>
       </div>
-      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-        <a href="../door/">Door scanner</a>
-        <a href="../dashboard/">Live dashboard</a>
-        <a href="../pilot/">Pilot program</a>
-        <a href="../admin/">Admin console</a>
+      <div class="footer-links">
+        <a href="../app/">App</a>
+        <a href="#how-it-works">How it works</a>
+        <a href="#private-log">Private log</a>
+        <a href="#install">Install</a>
       </div>
     </div>
   </footer>

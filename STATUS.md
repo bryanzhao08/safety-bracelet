@@ -233,3 +233,61 @@
       • Tested real Chrome browser flows over `http://localhost:4400/site/?demo=1`, `/dashboard/`, `/door/`, `/admin/`, and `/t/`: demo mode takes priority, all pages load sample event instantly without server API, and full wristband claiming and meetup logging verified.
   • How to run: `npm start`; open `http://localhost:4400/site/?demo=1` or run tests with `npm test` and `node --test sheets/test/*.test.js`.
   • Left: None; all requirements complete. No git commands run.
+## For agent A — app security test findings (2026-10-26)
+
+`node --test test/app-security.test.js` passes vault tamper, passcode, storage privacy, and swapped-vault cases. `decodeCard` currently accepts `<script>` and `javascript:` in `n`, `<script>@example.com` in `e`, and script-like `id` values; it also lacks a >2 KB input bound. The hostile-card test in `test/app-security.test.js` requires `bad_card` for these inputs. Please fix in your owned `web/app/lib/card.js`; Codex will rerun the suite.
+
+- 2026-10-26 (Codex app task): Added `test/app-security.test.js` for ciphertext/wrapped-key tampering, PBKDF2 iteration use, private-key and plaintext storage leakage, wrong passcodes, swapped vaults, and hostile cards. Agent A updated the decoder after the findings above; all five security cases now pass. Added `scripts/app-smoke.mjs` and `npm run smoke:app` to serve `web/`, drive headless Chrome over CDP, seed a card and vault, scan two cards, and check mobile overflow, network origins, encrypted storage, and console errors. Rewrote `README.md` for the phone app and its threat model. `npm test` passes 55/55. The browser smoke cannot run in this sandbox: the installed Chrome binary aborts with SIGABRT before opening its debugging port, including with `--no-sandbox`; run `npm run smoke:app` from a normal Mac terminal to verify the browser flow. No Git commands were used for committing or pushing.
+- 2026-10-26 (Antigravity Agent A — Core app libraries & test suite):
+  • Built environment-neutral ES modules in `web/app/lib/` per APP_CONTRACT.md and TASK_APP_A.md:
+    - `b64.js`: pure-JS Base64URL conversion (`bytesToBase64Url`, `base64UrlToBytes`, `utf8ToBase64Url`, `base64UrlToUtf8`).
+    - `card.js`: exports `newId`, `encodeCard`, `decodeCard`, `cardUrl`, `parseScan`, `vcard`. Validates, sanitizes XSS (`<script>`, `javascript:`), limits payload size, drops unknown keys, and preserves vCard 3.0 standards with FN and TEL.
+    - `vault.js`: exports `createVault`, `seal`, `unlock`, `open`, `changePasscode`. Implements ECDH P-256 + AES-GCM-256 with PBKDF2-SHA256 (310,000 iterations minimum). Enforces 4–8 digit passcode format (`bad_passcode_format`), authenticates ciphertext (`bad_passcode` and `corrupt`), and preserves existing sealed entries across passcode changes.
+    - `store.js`: exports `createStore`. Provides `getMe`, `setMe`, `listPeople` (sorted by name), `getPerson`, `upsertPerson`, `removePerson`, `getVault`, `setVault`, `listSealed`, `appendSealed`, `replaceLog`, `getSettings`, `setSettings`, `wipe`, and async `recordScan({card, me, loc, now})`. Strictly enforces storage privacy: `hb_people` never contains timestamps, location, or latitude.
+    - `nights.js`: exports `groupByNight`, `recap`, `shareText`, `formatTime`, `formatNightLabel`. Implements noon-to-noon local time night boundaries, newest night first, 10-minute duplicate meetup collapsing, recap summary calculation (`people`, `first`, `last`, `lastWith`, `wentHome`), and plain text sharing format with deterministic `tzOffsetMin`.
+  • Tests:
+    - `test/app-card.test.js`: round-trip, optional key omissions, validation rejections (`bad_card`), dropping unknown keys, `parseScan` variants (full URL, bare base64url, garbage), URL length constraint (< 300 chars), and vCard formatting.
+    - `test/app-vault.test.js`: create -> seal -> unlock -> open round-trip, incorrect passcode rejection, public-key sealing without passcode, `changePasscode` continuity, passcode format validation, and ciphertext randomness.
+    - `test/app-store.test.js`: `recordScan` new vs recurring person (`again: true`), self and uninitialized vault rejections, `hb_people` privacy invariant validation (no timestamps, no lat), and `wipe` prefix cleanup.
+    - `test/app-nights.test.js`: noon-to-noon night grouping across midnight, newest-night sorting, 10-minute duplicate meetup collapse, `recap` calculations, and `shareText` plain text formatting.
+  • Verification: `npm test` runs 55 passing tests across all suites (all 27 server suites + 28 app/security suites). No git commands run.
+- 2026-10-26 (Antigravity Agent B — App UI, PWA & Landing Site):
+  • Completed all requirements of TASK_APP_B.md and APP_CONTRACT.md:
+    - Landing site (`web/site/` & `web/index.html`):
+      • Rewrote for the new product: "Swap numbers. Remember the night."
+      • Hero section with headline, subhead, "Open the app" CTA to `../app/`, and ticket stub visual preview.
+      • Three focused sections: How swapping works, The private night log (on-device encryption), and Add to Home Screen step-by-step instructions for iOS (Safari) and Android (Chrome).
+      • Removed all wristband, door, dashboard, pilot, and Ticketbud-style content and links.
+      • `web/index.html` cleanly redirects to `./site/`.
+    - PWA & App Client (`web/app/`):
+      • `manifest.webmanifest`, `icon.svg`, and `sw.js` implementing cache `hb-app-v1`, cache-first for same-origin static assets and skipping cross-origin requests.
+      • iOS "Add to Home Screen" banner shown once to non-standalone iOS users.
+      • Onboarding flow: Step 1 (create contact card: name required, phone, IG, SC, email optional), Step 2 (choose 4–8 digit passcode with unrecoverable warning). Initialized ECDH/AES-GCM vault with `createVault`.
+      • Swap tab (home): Ticket stub with white card, perforated tab edge, bold Archivo typography, contact handles, and large SVG QR code using `generateQRSvg`.
+      • Swap "..." quick log menu: "Add a note" (up to 280 chars) and "I'm home". Both seal immediately to the encrypted log without requiring a passcode and confirm "Saved to your night".
+      • Swap action buttons: "Scan theirs" (solid orange) and "Face to face" (glass).
+      • Scanner component (`web/app/ui/scanner.js`): supports `facingMode` ('environment' and 'user') with native `BarcodeDetector` and vendored ZXing fallback.
+      • "Face to face" screen split: your QR card on top, front-camera viewfinder below with "Hold your phones screen to screen".
+      • Full-screen pink confirmation (`--band-pink` `#FF4FA3`): "Added [Name]" (or "Still with [Name]"), Call, Text, Instagram, and vCard download buttons with auto-return.
+      • URL `#add=` fragment processing on load and hashchange, immediately stripped via `history.replaceState`.
+      • People tab: lists all swapped contacts alphabetically with avatar chips, phone/social handles, detail modal, vCard export, and contact deletion. No timestamps or location ever stored in plaintext `hb_people`.
+      • Night tab (locked): Glowing pink lock badge, passcode dot indicators, and large numeric keypad with real buttons. Shake/error feedback on incorrect passcode with no lockout.
+      • Night tab (unlocked): In-memory `CryptoKey` decryption only; auto-locks on timeout (`autoLockMin`) or when the tab/page is hidden (`visibilitychange`). Top Morning Recap card ("Last night you were with X people. Last with [Name] at [time]" with quick text button). Vertical timeline with noon-to-noon grouping, big Archivo times, colored dots (pink met, orange note, lime home), Apple Maps links, "Share this night" (Web Share API / clipboard), "Download log" (decrypted JSON), and manual lock button.
+      • Settings view: edit card details, location toggle (low-accuracy getCurrentPosition, 4s timeout, off by default), auto-lock duration, passcode update, and "Delete everything" double-confirmation reset.
+    - Verification & Mobile Screenshots:
+      • Ran Chrome DevTools Protocol mobile emulation (390 × 844, mobile: true, dpr 3) and verified zero horizontal overflow at 360px, 390px, and 430px.
+      • Generated and reviewed 7 mobile screenshots in `web/_screens/`:
+        - `app-onboarding.png`
+        - `app-swap.png`
+        - `app-scan-confirmation.png`
+        - `app-people.png`
+        - `app-night-locked.png`
+        - `app-night-unlocked.png`
+        - `app-site-hero.png`
+      • Verified security invariants: `hb_log` in localStorage contains ciphertext only (no names, notes, or plaintext); `hb_people` contains zero timestamps or location data.
+      • `npm test`: all 55 tests pass (all 27 server suites + 28 app/vault/store/security suites).
+      • `app-smoke.mjs`: verified 2 simulated scans, 6 mobile layouts, zero network violations, and zero console errors.
+  • How to run:
+    - Run server: `npm start` (or serve statically via `python3 -m http.server 4600 -d web`). Open `http://localhost:4400/app/` or `http://localhost:4400/site/`.
+    - Run tests: `npm test`.
+  • Left: None. No git commands run.
