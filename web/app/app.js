@@ -1389,7 +1389,7 @@ function setupSettingsYou() {
     store.setMe(me);
     renderSwap();
     showToast('Card updated');
-    document.getElementById('modal-settings')?.classList.remove('is-open');
+    document.getElementById('modal-settings')?.classList.remove('is-open', 'open');
   });
 
   // Location setting
@@ -1442,7 +1442,7 @@ function setupSettingsYou() {
 
     store.wipe();
     lockNightLog();
-    document.getElementById('modal-settings')?.classList.remove('is-open');
+    document.getElementById('modal-settings')?.classList.remove('is-open', 'open');
     checkOnboarding();
     showToast('All data erased');
   });
@@ -1826,8 +1826,8 @@ function setupOnboarding() {
       store.setMe(onboardCardData);
       store.setVault(meta);
 
-      document.getElementById('modal-onboarding').style.display = 'none';
-      renderSwap();
+      // Reload me/vaultMeta, close the onboarding modal (classes and inline style), render Swap
+      checkOnboarding();
       showToast('Welcome to Homebound');
 
       // Check pending scan

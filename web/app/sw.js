@@ -1,5 +1,5 @@
 // web/app/sw.js - Service Worker for Homebound App
-const CACHE_NAME = 'hb-app-v2';
+const CACHE_NAME = 'hb-app-v3';
 
 const PRECACHE_PATHS = [
   './',
