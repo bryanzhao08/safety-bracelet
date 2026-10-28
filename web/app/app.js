@@ -8,6 +8,7 @@ import { groupByNight, recap, shareText, formatTime, formatNightLabel } from './
 import { generateQRSvg } from '../shared/qr.js';
 import { QrCameraScanner } from './ui/scanner.js';
 import { mountKeypad, askPasscode, createPasscode } from './ui/keypad.js';
+import { drawThread } from './ui/thread.js';
 
 // Initialize Store with localStorage
 const store = createStore(localStorage);
@@ -19,6 +20,8 @@ let vaultMeta = store.getVault();
 let unlockedKey = null; // Stored in memory only!
 let autoLockTimer = null;
 let nightPad = null;
+let animateThreadNext = false;
+const threadCleanups = [];
 let activeScanner = null;
 let selectedContact = null;
 let confirmFlipTimer = null;
@@ -871,6 +874,7 @@ function setupPasscodeKeypad() {
       return false;
     }
     lastUnlockedPasscode = attempt;
+    animateThreadNext = true;
     if (!vaultMeta.len) {
       vaultMeta = { ...vaultMeta, len: attempt.length };
       store.setVault(vaultMeta);
@@ -1012,13 +1016,31 @@ function renderMorningRecap(latestNight) {
   }
 }
 
+const NODE_STYLE = {
+  met: { cls: 'tl-node-met', color: 'var(--signal)' },
+  again: { cls: 'tl-node-again', color: 'var(--signal)' },
+  arrive: { cls: 'tl-node-arrive', color: 'var(--lilac)' },
+  note: { cls: 'tl-node-note', color: 'var(--lilac)' },
+  home: { cls: 'tl-node-home', color: 'var(--dawn)' },
+};
+
+function initials(name = '') {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] || '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase() || '•';
+}
+
+// Night timeline: time | node on a fluid thread | what happened
 function renderNightTimeline(nights, tzOffsetMin) {
   const container = document.getElementById('night-timeline-container');
   if (!container) return;
+  while (threadCleanups.length) threadCleanups.pop()();
   container.innerHTML = '';
+  const animate = animateThreadNext;
+  animateThreadNext = false;
+  const lists = [];
 
   for (const night of nights) {
-    const group = document.createElement('div');
+    const group = document.createElement('section');
     group.className = 'night-group';
 
     const label = document.createElement('h3');
@@ -1027,64 +1049,74 @@ function renderNightTimeline(nights, tzOffsetMin) {
     group.appendChild(label);
 
     const list = document.createElement('div');
+    list.className = 'tl-list';
 
     for (const entry of night.entries) {
-      const item = document.createElement('div');
-      item.className = 'timeline-item';
+      const kind = entry.type === 'met' && entry.again ? 'again' : entry.type;
+      const style = NODE_STYLE[kind] || NODE_STYLE.note;
 
-      const dot = document.createElement('div');
-      dot.className = 'timeline-dot';
-      if (entry.type === 'met') {
-        dot.classList.add('timeline-dot-signal');
-      } else if (entry.type === 'home') {
-        dot.classList.add('timeline-dot-dawn');
-      } else if (entry.type === 'arrive') {
-        dot.classList.add('timeline-dot-lilac');
-      } else {
-        dot.classList.add('timeline-dot-lilac');
-      }
+      const row = document.createElement('div');
+      row.className = `tl-row tl-row-${kind}`;
 
       const time = document.createElement('div');
-      time.className = 'timeline-time';
+      time.className = 'tl-time';
       time.textContent = formatTime(entry.at, tzOffsetMin);
 
-      const content = document.createElement('div');
-      content.className = 'timeline-content';
+      const rail = document.createElement('div');
+      rail.className = 'tl-rail';
+      const node = document.createElement('span');
+      node.className = `tl-node ${style.cls}`;
+      node.dataset.color = style.color;
+      if (kind === 'met') node.textContent = initials(entry.name);
+      if (kind === 'home') node.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>';
+      rail.appendChild(node);
 
+      const content = document.createElement('div');
+      content.className = 'tl-content';
       const text = document.createElement('p');
+      text.className = 'tl-text';
       if (entry.type === 'met') {
         text.textContent = entry.again ? `Still with ${entry.name}` : `Met ${entry.name}`;
+        const person = entry.personId && store.getPerson(entry.personId);
+        if (person) {
+          text.classList.add('tl-person');
+          text.tabIndex = 0;
+          text.setAttribute('role', 'button');
+          const openIt = () => { selectedContact = person; openContactModal?.(person); };
+          text.addEventListener('click', openIt);
+          text.addEventListener('keydown', (e) => { if (e.key === 'Enter') openIt(); });
+        }
       } else if (entry.type === 'home') {
-        text.textContent = "I'm home";
+        text.textContent = 'Home';
       } else if (entry.type === 'arrive') {
-        text.className = 'timeline-arrive';
         text.textContent = `Arrived at ${entry.name}`;
-      } else if (entry.type === 'note') {
-        text.textContent = entry.text || 'Note';
       } else {
-        text.textContent = entry.text || entry.type;
+        text.textContent = entry.text || 'Note';
       }
       content.appendChild(text);
 
       if (entry.loc && typeof entry.loc.lat === 'number' && typeof entry.loc.lng === 'number') {
         const mapLink = document.createElement('a');
-        mapLink.className = 'timeline-map-link';
+        mapLink.className = 'tl-map';
         mapLink.href = `https://maps.apple.com/?ll=${entry.loc.lat},${entry.loc.lng}`;
         mapLink.target = '_blank';
         mapLink.rel = 'noopener noreferrer';
-        mapLink.textContent = 'View on map';
+        mapLink.textContent = 'Map';
         content.appendChild(mapLink);
       }
 
-      item.appendChild(dot);
-      item.appendChild(time);
-      item.appendChild(content);
-      list.appendChild(item);
+      row.append(time, rail, content);
+      list.appendChild(row);
     }
 
     group.appendChild(list);
     container.appendChild(group);
+    lists.push(list);
   }
+
+  // Measure after layout (and after fonts settle) so the thread hits each node's center
+  const draw = () => lists.forEach((list, i) => threadCleanups.push(drawThread(list, { animate: animate && i === 0 })));
+  requestAnimationFrame(() => (document.fonts?.ready || Promise.resolve()).then(draw));
 }
 
 function setupNightExports(nights, decryptedEntries) {

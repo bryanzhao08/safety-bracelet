@@ -1,5 +1,5 @@
 // web/app/sw.js - Service Worker for Homebound App
-const CACHE_NAME = 'hb-app-v4';
+const CACHE_NAME = 'hb-app-v5';
 
 const PRECACHE_PATHS = [
   './',
@@ -9,6 +9,7 @@ const PRECACHE_PATHS = [
   './manifest.webmanifest',
   './ui/scanner.js',
   './ui/keypad.js',
+  './ui/thread.js',
   './lib/b64.js',
   './lib/card.js',
   './lib/vault.js',
