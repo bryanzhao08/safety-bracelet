@@ -658,8 +658,15 @@ async function processScannedText(text, onComplete) {
   } else if (parsed.kind === 'party') {
     try {
       const loc = await getQuickLocation();
-      await store.joinParty(parsed.party, { now: new Date().toISOString(), loc });
-      showToast(`Joined ${parsed.party.name}`);
+      const joined = store.getParty();
+      if (joined && joined.id === parsed.party.id) {
+        // Same code at the door on the way out: log the exit
+        await store.exitParty({ now: new Date().toISOString(), loc });
+        showToast(`Left ${parsed.party.name} · saved to your night`);
+      } else {
+        await store.joinParty(parsed.party, { now: new Date().toISOString(), loc });
+        showToast(`Arrived at ${parsed.party.name} · saved to your night`);
+      }
       renderSwap();
     } catch (err) {
       console.error('Party join error:', err);
@@ -1020,6 +1027,7 @@ const NODE_STYLE = {
   met: { cls: 'tl-node-met', color: 'var(--signal)' },
   again: { cls: 'tl-node-again', color: 'var(--signal)' },
   arrive: { cls: 'tl-node-arrive', color: 'var(--lilac)' },
+  leave: { cls: 'tl-node-leave', color: 'var(--lilac)' },
   note: { cls: 'tl-node-note', color: 'var(--lilac)' },
   home: { cls: 'tl-node-home', color: 'var(--dawn)' },
 };
@@ -1090,6 +1098,8 @@ function renderNightTimeline(nights, tzOffsetMin) {
         text.textContent = 'Home';
       } else if (entry.type === 'arrive') {
         text.textContent = `Arrived at ${entry.name}`;
+      } else if (entry.type === 'leave') {
+        text.textContent = `Left ${entry.name}`;
       } else {
         text.textContent = entry.text || 'Note';
       }

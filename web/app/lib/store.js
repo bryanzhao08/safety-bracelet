@@ -157,6 +157,17 @@ export function createStore(storage) {
     return clean;
   }
 
+  // Exit scan: the same party code scanned again while joined seals a 'leave' entry
+  async function exitParty({ now, loc } = {}) {
+    const party = getParty();
+    if (!party) throw new Error('not_joined');
+    const entry = { type: 'leave', at: timestamp(now), partyId: party.id, name: party.name };
+    if (loc) entry.loc = loc;
+    await sealedEntry(entry);
+    leaveParty();
+    return party;
+  }
+
   function leaveParty() {
     storage.removeItem('hb_party');
     storage.removeItem('hb_party_home');
@@ -298,6 +309,7 @@ export function createStore(storage) {
     getParty,
     joinParty,
     leaveParty,
+    exitParty,
     listHosted,
     saveHosted,
     removeHosted,

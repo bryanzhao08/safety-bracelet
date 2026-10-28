@@ -165,6 +165,8 @@ export function shareText(night, options = {}) {
       desc = 'home';
     } else if (entry.type === 'arrive') {
       desc = `Arrived at ${entry.name}`;
+    } else if (entry.type === 'leave') {
+      desc = `Left ${entry.name}`;
     } else if (entry.type === 'note') {
       desc = entry.text || '';
     } else {

@@ -1629,3 +1629,11 @@ body.app-body {
   overflow-y: auto;
   padding-top: calc(28px + env(safe-area-inset-top));
 }
+.tl-node-leave {
+  width: 18px;
+  height: 18px;
+  background: #000;
+  border: 3px solid var(--lilac);
+  box-shadow: 0 0 12px rgba(185, 164, 255, .45);
+}
+.tl-row-leave .tl-text { color: var(--lilac); font-weight: 600; }
